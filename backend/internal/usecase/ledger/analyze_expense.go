@@ -22,14 +22,25 @@ type AnalyzeExpense struct {
 	analyzer ports.AIAnalyzer
 	logger   *slog.Logger
 	clock    domain.Clock
+	loc      *time.Location // fuso do dono (DIGEST_TIMEZONE): decide o "hoje" e o "este mês"
 }
 
 func NewAnalyzeExpense(repo ports.LedgerStore, analyzer ports.AIAnalyzer, logger *slog.Logger) *AnalyzeExpense {
-	return &AnalyzeExpense{repo: repo, analyzer: analyzer, logger: logger, clock: domain.SystemClock{}}
+	return &AnalyzeExpense{repo: repo, analyzer: analyzer, logger: logger, clock: domain.SystemClock{}, loc: time.UTC}
 }
 
 // SetClock troca o relógio (testes).
 func (uc *AnalyzeExpense) SetClock(c domain.Clock) { uc.clock = c }
+
+// SetLocation define o fuso do dono. O padrão é UTC.
+func (uc *AnalyzeExpense) SetLocation(loc *time.Location) {
+	if loc != nil {
+		uc.loc = loc
+	}
+}
+
+// now é o instante atual no fuso do dono: o dia e o mês de "hoje" saem dele, não do UTC.
+func (uc *AnalyzeExpense) now() time.Time { return uc.clock.Now().In(uc.loc) }
 
 type TextInput struct {
 	Text string
@@ -112,7 +123,7 @@ func (uc *AnalyzeExpense) ExecuteText(ctx context.Context, input TextInput) (*Ex
 	case ports.ExpenseTypeQuery:
 		return uc.processQuery(ctx, analysis)
 	case ports.ExpenseTypeExportCSV:
-		return processExportCSV(analysis)
+		return uc.processExportCSV(analysis)
 	case ports.ExpenseTypeInstallment:
 		return uc.processInstallment(ctx, analysis, payment, input.Text)
 	case ports.ExpenseTypeRecurring:
@@ -141,7 +152,7 @@ func (uc *AnalyzeExpense) ExecuteImage(ctx context.Context, input ImageInput) (*
 
 	switch analysis.Type {
 	case ports.ExpenseTypeExportCSV:
-		return processExportCSV(analysis)
+		return uc.processExportCSV(analysis)
 	case ports.ExpenseTypeInstallment:
 		return uc.processInstallment(ctx, analysis, payment, rawInput)
 	case ports.ExpenseTypeRecurring:
@@ -165,7 +176,8 @@ func (uc *AnalyzeExpense) GenerateRecurringExpenses(ctx context.Context) error {
 		return fmt.Errorf("erro ao buscar despesas recorrentes: %w", err)
 	}
 
-	now := uc.clock.Now().UTC()
+	// Dia e mês locais; firstOfMonth vai para uma coluna DATE, por isso é a meia-noite UTC do ano/mês locais.
+	now := uc.now()
 	firstOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
 
 	for i := range actives {
@@ -196,8 +208,8 @@ func (uc *AnalyzeExpense) GenerateRecurringExpenses(ctx context.Context) error {
 	return nil
 }
 
-func processExportCSV(analysis *ports.ExpenseAnalysis) (*ExpenseOutput, error) {
-	now := time.Now().UTC()
+func (uc *AnalyzeExpense) processExportCSV(analysis *ports.ExpenseAnalysis) (*ExpenseOutput, error) {
+	now := uc.now()
 	month := now.Month()
 	year := now.Year()
 

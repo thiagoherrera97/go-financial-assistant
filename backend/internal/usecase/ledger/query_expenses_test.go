@@ -239,7 +239,7 @@ func TestProcessQuery_EmptyWithTransfers_NotEmpty(t *testing.T) {
 func TestResolveQueryMonth_InvalidMonth(t *testing.T) {
 	info := &ports.QueryInfo{Month: 13, Year: 2025}
 	now := time.Now().UTC()
-	result := resolveQueryMonth(info)
+	result := resolveQueryMonth(info, now)
 
 	if result.Month() != now.Month() {
 		t.Errorf("mês inválido deveria usar mês atual, got %d", result.Month())

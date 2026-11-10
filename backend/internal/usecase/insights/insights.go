@@ -26,9 +26,8 @@ type Insights struct {
 
 func NewInsights(reader ports.InsightsReader) *Insights { return &Insights{reader: reader} }
 
-// MonthStart é o primeiro dia do mês de t, em UTC.
+// MonthStart é o primeiro dia do mês de t, no fuso de t (quem chama passa o instante já no fuso do dono), como data em UTC.
 func MonthStart(t time.Time) time.Time {
-	t = t.UTC()
 	return time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, time.UTC)
 }
 
@@ -129,7 +128,7 @@ func (i *Insights) Goals(ctx context.Context, today time.Time) ([]planning.GoalP
 	}
 	out := make([]planning.GoalProgress, len(goals))
 	for n, g := range goals {
-		out[n] = planning.BuildGoalProgress(g, wealth, proj, cats, today.UTC())
+		out[n] = planning.BuildGoalProgress(g, wealth, proj, cats, today)
 	}
 	return out, wealth, nil
 }

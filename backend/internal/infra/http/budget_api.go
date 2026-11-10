@@ -78,7 +78,7 @@ func (a *api) projection(w http.ResponseWriter, r *http.Request) {
 		}
 		months = n
 	}
-	now := a.now().UTC()
+	now := a.now()
 	start := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
 
 	p, err := a.insights.Projection(r.Context(), start, months)

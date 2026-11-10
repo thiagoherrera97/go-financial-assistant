@@ -47,7 +47,7 @@ func (uc *AnalyzeExpense) processInstallment(
 	purchase.InstallmentCount = &n
 	purchase.InstallmentAmount = &installmentAmount
 
-	now := uc.clock.Now().UTC()
+	now := uc.now()
 	payments := make([]domain.Payment, n)
 	for i := range n {
 		p := domain.NewPayment(purchase.ID, installmentAmount, domain.PaymentStatusPending)

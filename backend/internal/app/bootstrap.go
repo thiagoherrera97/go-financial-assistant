@@ -17,7 +17,7 @@ func (a *app) loadConfig() error {
 	if err != nil {
 		return err
 	}
-	if a.db, err = db.NewPostgres(a.ctx, databaseURL); err != nil {
+	if a.db, err = db.NewPostgres(a.ctx, databaseURL, nil); err != nil {
 		return fmt.Errorf("banco: %w", err)
 	}
 

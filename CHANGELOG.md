@@ -4,6 +4,9 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
 ## [Não lançado]
 
+### Corrigido
+- **Tarefas agendadas e meses no fuso configurado (H3)**: a geração diária das despesas recorrentes, o relatório mensal, o CSV (e as consultas do chat) sem mês definido e os painéis passam a usar o `DIGEST_TIMEZONE` (padrão America/Sao_Paulo) em vez de UTC; a rotina diária roda à meia-noite local e o relatório sai no dia 1 local. O banco abre a sessão no mesmo fuso, porque os lançamentos manuais avulsos não têm vencimento e o mês deles vem de `created_at`. **Mudança retroativa:** lançamentos manuais anotados entre 21h e 24h (Brasília) do último dia de um mês, que eram contados no mês seguinte, passam para o mês certo (os totais do mês fechado e do seguinte mudam; o total geral não). Quem usa `DIGEST_TIMEZONE=UTC` não tem nenhuma mudança. Trocar o fuso nas configurações vale depois de reiniciar. Sem migration.
+
 ### Interno
 - **Refatoração de estrutura** (sem mudança de comportamento): `usecase` dividido em contextos (`ledger`, `openfinance`, `planning`, `review`, `coach`, `balances`, `insights`) com teste de dependências; `ports` só com interfaces e entidades em `domain`; um repositório de banco por contexto; `api.go` e `dashboard_queries.go` divididos; guardas de HTTP (`jsonOnly`, `decodeJSON`); `internal/app` monta o aplicativo (`main.go` com 26 linhas); `config.Load(overrides)` sem estado global; `domain.Clock`; `AccountType` tipado; golangci-lint, CI e CONTRIBUTING; frontend em `features/` e `shared/`; documentação em `docs/` (arquitetura, regras de cálculo, decisões, API).
 

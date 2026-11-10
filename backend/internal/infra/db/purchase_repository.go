@@ -137,7 +137,7 @@ func (r *LedgerRepo) FindIncomeTotalByMonth(ctx context.Context, month time.Time
 		SELECT COALESCE(SUM(pay.amount), 0)
 		FROM payments pay
 		JOIN purchases p ON p.id = pay.purchase_id
-		WHERE DATE_TRUNC('month', COALESCE(pay.due_date, pay.reference_month, pay.created_at)) = DATE_TRUNC('month', $1::timestamptz)
+		WHERE DATE_TRUNC('month', COALESCE(pay.due_date, pay.reference_month, pay.created_at)) = DATE_TRUNC('month', $1::date)
 		  AND p.kind = 'INCOME'
 		  AND pay.status != 'CANCELLED'
 	`
@@ -155,7 +155,7 @@ func (r *LedgerRepo) FindTransferNetByMonth(ctx context.Context, month time.Time
 			COALESCE(SUM(CASE WHEN p.transfer_direction = 'IN'  THEN pay.amount ELSE 0 END), 0) AS redeemed
 		FROM payments pay
 		JOIN purchases p ON p.id = pay.purchase_id
-		WHERE DATE_TRUNC('month', COALESCE(pay.due_date, pay.reference_month, pay.created_at)) = DATE_TRUNC('month', $1::timestamptz)
+		WHERE DATE_TRUNC('month', COALESCE(pay.due_date, pay.reference_month, pay.created_at)) = DATE_TRUNC('month', $1::date)
 		  AND p.kind = 'TRANSFER'
 		  AND pay.status != 'CANCELLED'
 	`
