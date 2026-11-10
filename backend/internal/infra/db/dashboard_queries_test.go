@@ -734,3 +734,43 @@ func TestCategoryRules_RetroactiveFutureAndListing(t *testing.T) {
 		t.Error("o banco recusa categoria fora da lista")
 	}
 }
+
+// O saldo gravado no dia 30/11 (hora local) entra no patrimônio de fim de novembro, mesmo com o relógio já em dezembro em UTC.
+func TestInvestments_LastDayOfMonthBalanceCountsInThatMonth(t *testing.T) {
+	repo, pg := newTestRepo(t)
+	ctx := context.Background()
+	const item = "of-test-inv-h6"
+	t.Cleanup(func() { pg.Pool.Exec(ctx, `DELETE FROM investments WHERE item_id = $1`, item) })
+
+	sp, err := time.LoadLocation("America/Sao_Paulo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cdb := func(balance float64) []ports.ExternalInvestment {
+		return []ports.ExternalInvestment{{ID: "of-test-h6", Type: "FIXED_INCOME", Name: "CDB h6", Balance: balance}}
+	}
+	// Mesmo instante nos dois casos: 22:30 de 30/11 em São Paulo (01:30Z de 01/12). O primeiro saldo é do começo de novembro.
+	if err := repo.SaveInvestments(ctx, item, cdb(1000), time.Date(2026, 11, 5, 12, 0, 0, 0, time.UTC)); err != nil {
+		t.Fatal(err)
+	}
+	instant := time.Date(2026, 12, 1, 1, 30, 0, 0, time.UTC)
+	if err := repo.SaveInvestments(ctx, item, cdb(1100), instant.In(sp)); err != nil {
+		t.Fatal(err)
+	}
+
+	var day time.Time
+	if err := pg.Pool.QueryRow(ctx, `SELECT MAX(b.day) FROM investment_balances b JOIN investments i ON i.id = b.investment_id WHERE i.item_id = $1`, item).Scan(&day); err != nil {
+		t.Fatal(err)
+	}
+	if y, m, d := day.Date(); y != 2026 || m != time.November || d != 30 {
+		t.Fatalf("o saldo deveria ficar no dia 30/11, got %v", day)
+	}
+	hist, err := repo.PortfolioHistory(ctx, time.Date(2026, 11, 1, 0, 0, 0, 0, time.UTC), time.Date(2026, 12, 1, 0, 0, 0, 0, time.UTC))
+	if err != nil || len(hist) != 2 {
+		t.Fatalf("histórico: %v %v", hist, err)
+	}
+	nov := hist[0]
+	if nov.Balance == nil || *nov.Balance < 1100 {
+		t.Errorf("o patrimônio de fim de novembro deveria incluir o saldo do dia 30 (1100), got %v", nov.Balance)
+	}
+}

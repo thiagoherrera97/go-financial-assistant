@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"sync"
+	"time"
 
 	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/domain"
 	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/domain/ports"
@@ -35,6 +36,7 @@ type SyncOpenFinance struct {
 	categories   map[string]domain.Category // categoria do Pluggy (minúscula) -> categoria do app, para reclassificar Outros
 	logos        ports.LogoFetcher          // opcional: sem ele, o painel usa o monograma
 	clock        domain.Clock
+	loc          *time.Location // fuso do dono: o dia do saldo dos investimentos (nil = UTC)
 	mu           sync.Mutex
 	cfgMu        sync.RWMutex
 }
@@ -52,6 +54,18 @@ func (s *SyncOpenFinance) SetCategoryMapping(m map[string]domain.Category) { s.c
 
 // SetClock troca o relógio (testes).
 func (s *SyncOpenFinance) SetClock(c domain.Clock) { s.clock = c }
+
+// SetLocation define o fuso do dono (DIGEST_TIMEZONE). O saldo dos investimentos é gravado no dia civil dele: uma sincronização
+// às 22h do último dia do mês, em Brasília, é 01h UTC do dia seguinte e entraria no mês errado. nil mantém UTC.
+func (s *SyncOpenFinance) SetLocation(loc *time.Location) { s.loc = loc }
+
+// today é o instante atual no fuso do dono; o dia civil dele é o que o repositório grava.
+func (s *SyncOpenFinance) today() time.Time {
+	if s.loc == nil {
+		return s.clock.Now().UTC()
+	}
+	return s.clock.Now().In(s.loc)
+}
 
 // SetLogoFetcher liga o cache de logos dos bancos.
 func (s *SyncOpenFinance) SetLogoFetcher(f ports.LogoFetcher) { s.logos = f }
@@ -159,7 +173,7 @@ func (s *SyncOpenFinance) syncInvestments(ctx context.Context, itemID string, re
 		s.logger.Warn("investimentos não sincronizados", "error", err)
 		return
 	}
-	if err := s.repo.SaveInvestments(ctx, itemID, positions, s.clock.Now().UTC()); err != nil {
+	if err := s.repo.SaveInvestments(ctx, itemID, positions, s.today()); err != nil {
 		s.logger.Error("erro ao salvar investimentos", "error", err)
 		return
 	}
