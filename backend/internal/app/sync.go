@@ -14,6 +14,7 @@ func (a *app) startSync() error {
 	client := pluggy.NewClient(a.cfg.PluggyClientID, a.cfg.PluggyClientSecret)
 	a.syncer = openfinance.NewSyncOpenFinance(a.ledger, client, nil, a.cfg.OpenFinanceLookbackDays, a.logger)
 	a.syncer.SetLogoFetcher(logo.New())
+	a.syncer.SetCategoryMapping(pluggy.ExactExpenseCategories())
 	go a.runSync(client, a.onChange())
 	return nil
 }

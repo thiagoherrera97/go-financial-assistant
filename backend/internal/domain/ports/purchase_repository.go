@@ -57,6 +57,10 @@ type ExternalStore interface {
 	// a categoria de um lançamento que estava em OTHER (regras novas de classificação). Parcelas de cartão
 	// também têm a data corrigida para o mês da fatura (sincronizadas antes dessa correção estavam na data da compra).
 	RefreshExternal(ctx context.Context, tx ExternalTransaction, accountID uuid.UUID) (bool, error)
+	// RecategorizeExternalOther reclassifica despesas externas (com external_id) que estão em OTHER, lendo a categoria
+	// do Pluggy gravada em raw_input ("[open finance: X | ...]") e comparando por igualdade (minúsculas) com mapping.
+	// Respeita category_rules, é idempotente e altera só a coluna category. Devolve quantas linhas mudaram.
+	RecategorizeExternalOther(ctx context.Context, mapping map[string]domain.Category) (int64, error)
 	// SaveInvestments grava as posições do item e o saldo de hoje; posições do item que não
 	// vieram na lista (resgatadas) ficam inativas com saldo zero a partir de hoje.
 	SaveInvestments(ctx context.Context, itemID string, positions []ExternalInvestment, day time.Time) error

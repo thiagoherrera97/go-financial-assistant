@@ -380,3 +380,50 @@ func TestSync_WindowFollowsClock(t *testing.T) {
 		t.Errorf("from = %v, quer %v (60 dias antes do relógio)", prov.from, want)
 	}
 }
+
+func TestSync_RecategorizesOtherAtTheEnd(t *testing.T) {
+	var got map[string]domain.Category
+	calls := 0
+	repo := &mockStore{recategorizeFn: func(_ context.Context, m map[string]domain.Category) (int64, error) {
+		calls++
+		got = m
+		return 3, nil
+	}}
+	prov := &mockProvider{byItem: map[string][]ports.ExternalTransaction{"item": {extTx("t1", domain.KindExpense)}}}
+	s := newSync(repo, prov, "item")
+	s.SetCategoryMapping(map[string]domain.Category{"housing": domain.CategoryHousing})
+
+	res, err := s.Sync(context.Background())
+	if err != nil || res.Inserted != 1 {
+		t.Fatalf("sync: %+v %v", res, err)
+	}
+	if calls != 1 || got["housing"] != domain.CategoryHousing {
+		t.Errorf("deveria reclassificar uma vez com o mapa: calls=%d map=%v", calls, got)
+	}
+}
+
+func TestSync_WithoutMappingDoesNotRecategorize(t *testing.T) {
+	calls := 0
+	repo := &mockStore{recategorizeFn: func(context.Context, map[string]domain.Category) (int64, error) { calls++; return 0, nil }}
+	prov := &mockProvider{byItem: map[string][]ports.ExternalTransaction{"item": {extTx("t1", domain.KindExpense)}}}
+	if _, err := newSync(repo, prov, "item").Sync(context.Background()); err != nil || calls != 0 {
+		t.Errorf("sem mapa não deveria reclassificar: calls=%d err=%v", calls, err)
+	}
+}
+
+func TestSync_RecategorizeFailureIsAnErrorButKeepsTransactions(t *testing.T) {
+	repo := &mockStore{recategorizeFn: func(context.Context, map[string]domain.Category) (int64, error) {
+		return 0, errors.New("banco indisponível")
+	}}
+	prov := &mockProvider{byItem: map[string][]ports.ExternalTransaction{"item": {extTx("t1", domain.KindExpense), extTx("t2", domain.KindExpense)}}}
+	s := newSync(repo, prov, "item")
+	s.SetCategoryMapping(map[string]domain.Category{"housing": domain.CategoryHousing})
+
+	res, err := s.Sync(context.Background())
+	if err == nil {
+		t.Error("a falha da reclassificação deveria entrar nos erros da sync")
+	}
+	if res.Inserted != 2 {
+		t.Errorf("as transações já sincronizadas devem ficar: %+v", res)
+	}
+}

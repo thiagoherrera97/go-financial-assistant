@@ -497,3 +497,165 @@ func TestOwnTransferCandidatesAndCancel(t *testing.T) {
 		}
 	}
 }
+
+// h1Expense grava uma despesa externa em OTHER com a categoria do Pluggy no raw_input. A descrição só tem letras
+// (é o que forma a chave da regra de categoria).
+func h1Expense(t *testing.T, repo *testRepo, pg *DB, extID, desc, pluggyCat string, amount float64, daysAgo int) *domain.Purchase {
+	t.Helper()
+	ctx := context.Background()
+	p, _ := domain.NewPurchase(amount, &desc, domain.CategoryOther, domain.PaymentMethodPix, domain.PurchaseTypeSingle, "[open finance: "+pluggyCat+" | "+desc+"]")
+	cleanup(t, pg, p)
+	pay := domain.NewPayment(p.ID, amount, domain.PaymentStatusPaid)
+	day := time.Now().UTC().AddDate(0, 0, -daysAgo)
+	pay.DueDate, pay.PaidAt = &day, &day
+	if extID != "" {
+		pay.ExternalID = &extID
+	}
+	if err := repo.SaveExternal(ctx, p, pay); err != nil {
+		t.Fatal(err)
+	}
+	return p
+}
+
+func h1Rule(t *testing.T, pg *DB, key string, cat domain.Category) {
+	t.Helper()
+	ctx := context.Background()
+	if _, err := pg.Pool.Exec(ctx, `INSERT INTO category_rules (key, category) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET category = $2`, key, string(cat)); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { pg.Pool.Exec(context.Background(), `DELETE FROM category_rules WHERE key = $1`, key) })
+}
+
+func h1Category(t *testing.T, pg *DB, p *domain.Purchase) string {
+	t.Helper()
+	var c string
+	pg.Pool.QueryRow(context.Background(), `SELECT category FROM purchases WHERE id = $1`, p.ID).Scan(&c)
+	return c
+}
+
+func TestRefreshExternal_RespectsCategoryRules(t *testing.T) {
+	repo, pg := newTestRepo(t)
+	ctx := context.Background()
+	acc := testAccount(t, repo, pg)
+
+	keepOther := h1Expense(t, repo, pg, "of-h1-keep", "teste h um manter outros", "Housing", 10, 5)
+	other := h1Expense(t, repo, pg, "of-h1-other", "teste h um regra outra", "Housing", 10, 5)
+	free := h1Expense(t, repo, pg, "of-h1-free", "teste h um sem regra", "Housing", 10, 5)
+	h1Rule(t, pg, "teste h um manter outros", domain.CategoryOther)
+	h1Rule(t, pg, "teste h um regra outra", domain.CategoryFood)
+
+	for _, id := range []string{"of-h1-keep", "of-h1-other", "of-h1-free"} {
+		if found, err := repo.RefreshExternal(ctx, ports.ExternalTransaction{ID: id, Category: domain.CategoryHousing}, acc); err != nil || !found {
+			t.Fatalf("%s: found=%v err=%v", id, found, err)
+		}
+	}
+	if c := h1Category(t, pg, keepOther); c != "OTHER" {
+		t.Errorf("regra 'manter em Outros' foi sobrescrita: %s", c)
+	}
+	if c := h1Category(t, pg, other); c != "OTHER" {
+		t.Errorf("chave com regra de outra categoria não deve ser promovida pelo refresh: %s", c)
+	}
+	if c := h1Category(t, pg, free); c != "HOUSING" {
+		t.Errorf("sem regra deveria virar HOUSING: %s", c)
+	}
+}
+
+func TestRecategorizeExternalOther(t *testing.T) {
+	repo, pg := newTestRepo(t)
+	ctx := context.Background()
+	mapping := map[string]domain.Category{
+		"housing": domain.CategoryHousing, "services": domain.CategoryBills, "bookstore": domain.CategoryEducation,
+	}
+
+	old := h1Expense(t, repo, pg, "of-h1-old", "teste h um antiga moradia", "Housing", 100.10, 400) // fora da janela da sync
+	svc := h1Expense(t, repo, pg, "of-h1-svc", "teste h um servico", "Services", 50.05, 10)
+	digital := h1Expense(t, repo, pg, "of-h1-dig", "teste h um digital", "Digital services", 20, 10)
+	unknown := h1Expense(t, repo, pg, "of-h1-unk", "teste h um desconhecida", "Whatever", 30, 10)
+	manual := h1Expense(t, repo, pg, "", "teste h um manual", "Housing", 40, 10) // sem external_id
+	ruled := h1Expense(t, repo, pg, "of-h1-rule", "teste h um com regra", "Housing", 60, 10)
+	h1Rule(t, pg, "teste h um com regra", domain.CategoryOther)
+	income := h1Expense(t, repo, pg, "of-h1-inc", "teste h um receita", "Housing", 70, 10)
+	transfer := h1Expense(t, repo, pg, "of-h1-trf", "teste h um transferencia", "Housing", 80, 10)
+	pg.Pool.Exec(ctx, `UPDATE purchases SET kind = 'INCOME' WHERE id = $1`, income.ID)
+	pg.Pool.Exec(ctx, `UPDATE purchases SET kind = 'TRANSFER', transfer_direction = 'OUT' WHERE id = $1`, transfer.ID)
+
+	sum := func() (total float64, n int) {
+		pg.Pool.QueryRow(ctx, `
+			SELECT COALESCE(SUM(pay.amount), 0), COUNT(*) FROM payments pay JOIN purchases p ON p.id = pay.purchase_id
+			WHERE p.kind = 'EXPENSE' AND pay.status <> 'CANCELLED' AND p.description LIKE 'teste h um %'`).Scan(&total, &n)
+		return
+	}
+	totalBefore, nBefore := sum()
+
+	changed, err := repo.RecategorizeExternalOther(ctx, mapping)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// O banco de teste pode ter outras linhas reais de teste; as nossas são 2 (antiga e serviço).
+	if changed < 2 {
+		t.Errorf("esperava ao menos 2 linhas alteradas, got %d", changed)
+	}
+	want := map[*domain.Purchase]string{
+		old: "HOUSING", svc: "BILLS", digital: "OTHER", unknown: "OTHER", manual: "OTHER", ruled: "OTHER", income: "OTHER", transfer: "OTHER",
+	}
+	for p, c := range want {
+		if got := h1Category(t, pg, p); got != c {
+			t.Errorf("%s: got %s, esperado %s", *p.Description, got, c)
+		}
+	}
+
+	// A soma das despesas não muda (só a coluna category).
+	if totalAfter, nAfter := sum(); totalAfter != totalBefore || nAfter != nBefore {
+		t.Errorf("a soma mudou: antes %v (%d), depois %v (%d)", totalBefore, nBefore, totalAfter, nAfter)
+	}
+
+	// Idempotente: a segunda rodada não altera nada das nossas linhas.
+	again, err := repo.RecategorizeExternalOther(ctx, mapping)
+	if err != nil || again != 0 {
+		t.Errorf("segunda rodada deveria alterar 0 linhas, got %d err=%v", again, err)
+	}
+}
+
+func TestSaveExternal_CategoryRuleAlwaysWinsOnExpenses(t *testing.T) {
+	repo, pg := newTestRepo(t)
+	ctx := context.Background()
+
+	save := func(extID, desc string, kind domain.PurchaseKind, cat domain.Category) *domain.Purchase {
+		t.Helper()
+		var p *domain.Purchase
+		switch kind {
+		case domain.KindIncome:
+			p, _ = domain.NewIncome(15, &desc, cat, domain.PaymentMethodPix, domain.PurchaseTypeSingle, "[open finance]")
+		default:
+			p, _ = domain.NewPurchase(15, &desc, cat, domain.PaymentMethodPix, domain.PurchaseTypeSingle, "[open finance]")
+		}
+		cleanup(t, pg, p)
+		pay := domain.NewPayment(p.ID, 15, domain.PaymentStatusPaid)
+		pay.ExternalID = &extID
+		if err := repo.SaveExternal(ctx, p, pay); err != nil {
+			t.Fatal(err)
+		}
+		return p
+	}
+
+	h1Rule(t, pg, "teste h um save manter outros", domain.CategoryOther)
+	h1Rule(t, pg, "teste h um save regra comida", domain.CategoryFood)
+	h1Rule(t, pg, "teste h um save receita", domain.CategoryFood)
+
+	cases := []struct {
+		name string
+		p    *domain.Purchase
+		want string
+	}{
+		{"regra OTHER vence o Housing do Pluggy", save("of-h1s-1", "teste h um save manter outros", domain.KindExpense, domain.CategoryHousing), "OTHER"},
+		{"regra FOOD vence o Utilities (Contas) do Pluggy", save("of-h1s-2", "teste h um save regra comida", domain.KindExpense, domain.CategoryBills), "FOOD"},
+		{"regra FOOD também vale sobre OTHER", save("of-h1s-3", "teste h um save regra comida", domain.KindExpense, domain.CategoryOther), "FOOD"},
+		{"sem regra, Housing continua HOUSING", save("of-h1s-4", "teste h um save sem regra", domain.KindExpense, domain.CategoryHousing), "HOUSING"},
+		{"receita não é afetada pela regra", save("of-h1s-5", "teste h um save receita", domain.KindIncome, domain.CategorySalary), "SALARY"},
+	}
+	for _, tc := range cases {
+		if got := h1Category(t, pg, tc.p); got != tc.want {
+			t.Errorf("%s: got %s, esperado %s", tc.name, got, tc.want)
+		}
+	}
+}

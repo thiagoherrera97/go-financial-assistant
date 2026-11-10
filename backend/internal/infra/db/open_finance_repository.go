@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/domain"
@@ -76,8 +77,9 @@ func (r *LedgerRepo) RefreshExternal(ctx context.Context, tx ports.ExternalTrans
 				paid_at = CASE WHEN $4 AND paid_at IS NOT NULL THEN $5::timestamptz ELSE paid_at END
 			WHERE external_id = $1 RETURNING purchase_id
 		), recategorized AS (
-			UPDATE purchases SET category = $3
-			WHERE id IN (SELECT purchase_id FROM linked) AND category = 'OTHER' AND $3 <> 'OTHER'
+			UPDATE purchases p SET category = $3
+			WHERE p.id IN (SELECT purchase_id FROM linked) AND p.category = 'OTHER' AND $3 <> 'OTHER'
+			  AND (p.kind <> 'EXPENSE' OR NOT EXISTS (SELECT 1 FROM category_rules r WHERE r.key = ` + expenseKey + `))
 		)
 		SELECT COUNT(*) FROM linked
 	`
@@ -86,6 +88,37 @@ func (r *LedgerRepo) RefreshExternal(ctx context.Context, tx ports.ExternalTrans
 		return false, fmt.Errorf("erro ao verificar transação externa: %w", err)
 	}
 	return n > 0, nil
+}
+
+// RecategorizeExternalOther reclassifica as despesas do banco que estão em OTHER e ficaram fora da janela da sincronização
+// (RefreshExternal só vê as transações relidas). A categoria do Pluggy está em raw_input ("[open finance: X | ...]") e é
+// comparada por igualdade com o mapa. Regra por conta (category_rules, inclusive "manter em Outros") sempre vale. Um único
+// UPDATE: atômico, idempotente e só troca a coluna category.
+func (r *LedgerRepo) RecategorizeExternalOther(ctx context.Context, mapping map[string]domain.Category) (int64, error) {
+	pluggy := make([]string, 0, len(mapping))
+	target := make([]string, 0, len(mapping))
+	for k, c := range mapping {
+		if c == domain.CategoryOther {
+			continue
+		}
+		pluggy, target = append(pluggy, strings.ToLower(strings.TrimSpace(k))), append(target, string(c))
+	}
+	if len(pluggy) == 0 {
+		return 0, nil
+	}
+	query := `
+		UPDATE purchases p SET category = m.category
+		FROM unnest($1::text[], $2::text[]) AS m(pluggy, category)
+		WHERE p.kind = 'EXPENSE' AND p.category = 'OTHER'
+		  AND LOWER(BTRIM(SUBSTRING(p.raw_input FROM '^\[open finance: (.*?) \| '))) = m.pluggy
+		  AND EXISTS (SELECT 1 FROM payments pay WHERE pay.purchase_id = p.id AND pay.external_id IS NOT NULL)
+		  AND NOT EXISTS (SELECT 1 FROM category_rules r WHERE r.key = ` + expenseKey + `)
+	`
+	tag, err := r.db.Pool.Exec(ctx, query, pluggy, target)
+	if err != nil {
+		return 0, fmt.Errorf("erro ao reclassificar despesas externas em Outros: %w", err)
+	}
+	return tag.RowsAffected(), nil
 }
 
 func (r *LedgerRepo) SaveExternal(ctx context.Context, purchase *domain.Purchase, payment *domain.Payment) error {
@@ -111,11 +144,12 @@ func (r *LedgerRepo) SaveExternal(ctx context.Context, purchase *domain.Purchase
 		return fmt.Errorf("erro ao salvar pagamento externo: %w", err)
 	}
 
-	// Regra de categoria da conta (escolhida pela pessoa) vale para o que chega do banco e ficou em Outros.
+	// Regra de categoria da conta (escolhida pela pessoa) vence sempre numa despesa que chega do banco, seja qual for a
+	// categoria vinda do Pluggy (mapeada ou não) e inclusive quando a regra é "manter em Outros" (OTHER).
 	if _, err := tx.Exec(ctx, `
 		UPDATE purchases p SET category = r.category
 		FROM category_rules r
-		WHERE p.id = $1 AND p.kind = 'EXPENSE' AND p.category = 'OTHER' AND r.category <> 'OTHER' AND r.key = `+expenseKey, purchase.ID); err != nil {
+		WHERE p.id = $1 AND p.kind = 'EXPENSE' AND r.key = `+expenseKey, purchase.ID); err != nil {
 		return fmt.Errorf("erro ao aplicar regra de categoria: %w", err)
 	}
 
