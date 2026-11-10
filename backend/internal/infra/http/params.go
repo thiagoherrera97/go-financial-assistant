@@ -39,7 +39,7 @@ func (a *api) monthParam(w http.ResponseWriter, r *http.Request, name string, re
 
 // rangeParams lê from e to (padrão: últimos 12 meses até o mês atual) e limita a janela.
 func (a *api) rangeParams(w http.ResponseWriter, r *http.Request) (from, to time.Time, ok bool) {
-	now := a.now().UTC()
+	now := a.now()
 	current := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
 	to, from = current, current.AddDate(0, -11, 0)
 

@@ -24,7 +24,7 @@ func (uc *AnalyzeExpense) processRecurring(
 		return nil, err
 	}
 
-	now := uc.clock.Now().UTC()
+	now := uc.now()
 
 	dayOfMonth := now.Day()
 	if analysis.RecurringInfo != nil && analysis.RecurringInfo.DayOfMonth >= 1 && analysis.RecurringInfo.DayOfMonth <= 31 {

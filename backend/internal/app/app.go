@@ -110,6 +110,7 @@ func (a *app) buildServices() error {
 
 	a.ledger = db.NewPurchaseRepository(a.db)
 	a.analyzeExpense = ledger.NewAnalyzeExpense(a.ledger, a.gemini, a.logger)
+	a.analyzeExpense.SetLocation(a.cfg.DigestLocation)
 	a.exportCSV = ledger.NewExportCSV(a.ledger)
 	a.insights = insights.NewInsights(db.NewDashboardReader(a.db))
 
@@ -120,9 +121,12 @@ func (a *app) buildServices() error {
 }
 
 // applyTimezone adota o fuso configurado: a imagem roda em UTC, então sem isto horários e vencimentos saem 3 h adiantados.
+// O banco recebe o mesmo fuso, para o dia e o mês dos lançamentos manuais (que só têm created_at) serem os do dono.
+// Vale a partir do início: trocar o fuso nas configurações pede reiniciar.
 func (a *app) applyTimezone() {
 	if a.cfg.DigestLocation != nil {
 		time.Local = a.cfg.DigestLocation
+		a.db.SetTimezone(a.cfg.DigestLocation)
 	}
 }
 

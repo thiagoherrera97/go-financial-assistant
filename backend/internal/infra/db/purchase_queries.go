@@ -53,7 +53,7 @@ func (r *LedgerRepo) ExistsPaymentByDateAndAmount(ctx context.Context, date time
 			SELECT 1 FROM payments
 			WHERE ABS(amount - $2) < 0.001
 			  AND due_date IS NOT NULL
-			  AND DATE_TRUNC('day', due_date) = DATE_TRUNC('day', $1::timestamptz)
+			  AND DATE_TRUNC('day', due_date) = DATE_TRUNC('day', $1::date)
 			  AND status != 'CANCELLED'
 		)
 	`
@@ -130,7 +130,7 @@ func (r *LedgerRepo) FindPaymentsByMonth(ctx context.Context, month time.Time) (
 		SELECT p.category, SUM(pay.amount) AS total
 		FROM payments pay
 		JOIN purchases p ON p.id = pay.purchase_id
-		WHERE DATE_TRUNC('month', COALESCE(pay.due_date, pay.reference_month, pay.created_at)) = DATE_TRUNC('month', $1::timestamptz)
+		WHERE DATE_TRUNC('month', COALESCE(pay.due_date, pay.reference_month, pay.created_at)) = DATE_TRUNC('month', $1::date)
 		  AND pay.status != 'CANCELLED'
 		  AND p.kind = 'EXPENSE'
 		GROUP BY p.category
@@ -170,7 +170,7 @@ func (r *LedgerRepo) FindPaymentDetailsByMonth(ctx context.Context, month time.T
 		    pay.created_at
 		FROM payments pay
 		JOIN purchases p ON p.id = pay.purchase_id
-		WHERE DATE_TRUNC('month', COALESCE(pay.due_date, pay.reference_month, pay.created_at)) = DATE_TRUNC('month', $1::timestamptz)
+		WHERE DATE_TRUNC('month', COALESCE(pay.due_date, pay.reference_month, pay.created_at)) = DATE_TRUNC('month', $1::date)
 		  AND pay.status != 'CANCELLED'
 		ORDER BY COALESCE(pay.due_date, pay.reference_month, pay.created_at)
 	`

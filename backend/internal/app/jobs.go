@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/domain"
 	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/domain/ports"
 	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/usecase/insights"
 	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/usecase/ledger"
@@ -31,14 +32,18 @@ func (a *app) startJobs() {
 		}
 	}
 	go insights.NewDigestJob(a.insights, &a.channel, "", a.logger, a.settings.Digest, a.onChange()).Run(a.ctx)
-	go a.runDaily(ledger.NewMonthlyReport(a.exportCSV, &a.channel, "", a.logger))
+	report := ledger.NewMonthlyReport(a.exportCSV, &a.channel, "", a.logger)
+	report.SetLocation(a.location())
+	go a.runDaily(report)
 }
 
-// runDaily gera as despesas recorrentes à meia-noite (UTC) e, no dia 1, envia o relatório mensal.
+// runDaily gera as despesas recorrentes à meia-noite do fuso do dono (DIGEST_TIMEZONE) e, no dia 1 dele, envia o
+// relatório mensal do mês que acabou.
 func (a *app) runDaily(monthlyReport *ledger.MonthlyReport) {
+	loc := a.location()
+	clock := domain.SystemClock{}
 	for {
-		now := time.Now().UTC()
-		next := time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, time.UTC)
+		next := nextMidnight(clock.Now(), loc)
 		select {
 		case <-a.ctx.Done():
 			return
@@ -46,11 +51,31 @@ func (a *app) runDaily(monthlyReport *ledger.MonthlyReport) {
 			if err := a.analyzeExpense.GenerateRecurringExpenses(a.ctx); err != nil {
 				a.logger.Error("erro ao gerar despesas recorrentes", "error", err)
 			}
-			if time.Now().UTC().Day() == 1 {
+			if isMonthStart(clock.Now(), loc) {
 				if err := monthlyReport.Send(a.ctx); err != nil {
 					a.logger.Error("erro ao enviar relatório mensal", "error", err)
 				}
 			}
 		}
 	}
+}
+
+// location é o fuso do dono; sem um configurado, UTC.
+func (a *app) location() *time.Location {
+	if a.cfg.DigestLocation != nil {
+		return a.cfg.DigestLocation
+	}
+	return time.UTC
+}
+
+// nextMidnight é a próxima meia-noite depois de now, no fuso loc. Montar a data pelo calendário (e não somar 24 h) é seguro
+// na mudança de horário.
+func nextMidnight(now time.Time, loc *time.Location) time.Time {
+	local := now.In(loc)
+	return time.Date(local.Year(), local.Month(), local.Day()+1, 0, 0, 0, 0, loc)
+}
+
+// isMonthStart diz se now é o dia 1 do calendário em loc.
+func isMonthStart(now time.Time, loc *time.Location) bool {
+	return now.In(loc).Day() == 1
 }

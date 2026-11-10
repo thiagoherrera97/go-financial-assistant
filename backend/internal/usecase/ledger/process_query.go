@@ -10,7 +10,7 @@ import (
 )
 
 func (uc *AnalyzeExpense) processQuery(ctx context.Context, analysis *ports.ExpenseAnalysis) (*ExpenseOutput, error) {
-	targetMonth := resolveQueryMonth(analysis.QueryInfo)
+	targetMonth := resolveQueryMonth(analysis.QueryInfo, uc.now())
 
 	summaries, err := uc.repo.FindPaymentsByMonth(ctx, targetMonth)
 	if err != nil {
@@ -60,8 +60,8 @@ func (uc *AnalyzeExpense) processQuery(ctx context.Context, analysis *ports.Expe
 	}, nil
 }
 
-func resolveQueryMonth(info *ports.QueryInfo) time.Time {
-	now := time.Now().UTC()
+// resolveQueryMonth devolve o mês pedido; sem ele, o mês de now (que deve vir no fuso do dono).
+func resolveQueryMonth(info *ports.QueryInfo, now time.Time) time.Time {
 	month, year := int(now.Month()), now.Year()
 
 	if info != nil {

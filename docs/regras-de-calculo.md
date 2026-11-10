@@ -1,6 +1,6 @@
 # Regras de cálculo
 
-Tudo é calculado por código (nada de IA nos números). Valores em reais; um mês é identificado pelo seu primeiro dia (UTC).
+Tudo é calculado por código (nada de IA nos números). Valores em reais; um mês é identificado pelo seu primeiro dia (data, no fuso configurado em `DIGEST_TIMEZONE`, padrão America/Sao_Paulo). O fuso decide o "hoje" e o "este mês" (recorrências, CSV e relatório mensal, consultas do chat, painéis) e o mês dos lançamentos manuais avulsos, que não têm vencimento e usam o instante em que foram anotados: um gasto das 22h do dia 30 conta no mês do dia 30, não no seguinte. O banco recebe o mesmo fuso na sessão; trocá-lo nas configurações vale depois de reiniciar.
 
 ## O que entra como gasto ou renda (sincronização)
 

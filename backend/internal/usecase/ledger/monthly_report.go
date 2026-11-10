@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/domain"
 	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/domain/ports"
 )
 
@@ -14,6 +15,8 @@ type MonthlyReport struct {
 	messenger ports.Messenger
 	phone     string
 	logger    *slog.Logger
+	clock     domain.Clock
+	loc       *time.Location // fuso do dono: o "mês anterior" é o do calendário dele
 }
 
 func NewMonthlyReport(exporter CSVExporter, messenger ports.Messenger, phone string, logger *slog.Logger) *MonthlyReport {
@@ -22,11 +25,23 @@ func NewMonthlyReport(exporter CSVExporter, messenger ports.Messenger, phone str
 		messenger: messenger,
 		phone:     phone,
 		logger:    logger,
+		clock:     domain.SystemClock{},
+		loc:       time.UTC,
+	}
+}
+
+// SetClock troca o relógio (testes).
+func (r *MonthlyReport) SetClock(c domain.Clock) { r.clock = c }
+
+// SetLocation define o fuso do dono. O padrão é UTC.
+func (r *MonthlyReport) SetLocation(loc *time.Location) {
+	if loc != nil {
+		r.loc = loc
 	}
 }
 
 func (r *MonthlyReport) Send(ctx context.Context) error {
-	prevMonth := previousMonth()
+	prevMonth := previousMonth(r.clock.Now().In(r.loc))
 
 	data, filename, summary, err := r.exporter.Execute(ctx, prevMonth)
 	if err != nil {
@@ -49,8 +64,8 @@ func (r *MonthlyReport) Send(ctx context.Context) error {
 	return nil
 }
 
-func previousMonth() time.Time {
-	now := time.Now().UTC()
+// previousMonth devolve o primeiro dia do mês anterior ao de now, como data (meia-noite UTC, para a coluna DATE).
+func previousMonth(now time.Time) time.Time {
 	first := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
 	return first.AddDate(0, -1, 0)
 }

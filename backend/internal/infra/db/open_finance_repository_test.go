@@ -21,7 +21,7 @@ func newTestRepo(t *testing.T) (*testRepo, *DB) {
 	if url == "" {
 		t.Skip("TEST_DATABASE_URL não definida")
 	}
-	pg, err := NewPostgres(context.Background(), url)
+	pg, err := NewPostgres(context.Background(), url, testLocation())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -495,5 +495,102 @@ func TestOwnTransferCandidatesAndCancel(t *testing.T) {
 		if strings.Contains(c.Description, "ZZ PESSOA TESTE") {
 			t.Error("cancelada não é mais candidata")
 		}
+	}
+}
+
+// testLocation é o fuso da sessão dos testes de banco. Vazio (padrão) é o do servidor (UTC); TEST_DB_TIMEZONE roda a
+// suíte inteira com a sessão no fuso de produção (ex.: America/Sao_Paulo).
+func testLocation() *time.Location {
+	name := os.Getenv("TEST_DB_TIMEZONE")
+	if name == "" {
+		return nil
+	}
+	loc, err := time.LoadLocation(name)
+	if err != nil {
+		panic(err)
+	}
+	return loc
+}
+
+// Um gasto manual avulso não tem vencimento: o mês dele vem de created_at. Anotado às 22h do dia 30/11 em São Paulo
+// (01h00Z de 01/12), é de novembro com a sessão em São Paulo; com a sessão em UTC (comportamento antigo) cairia em dezembro.
+func TestManualExpense_MonthFollowsSessionTimezone(t *testing.T) {
+	newTestRepo(t) // pula o teste sem banco
+	url := os.Getenv("TEST_DATABASE_URL")
+	pgUTC, err := NewPostgres(context.Background(), url, time.UTC)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(pgUTC.Close)
+	sp, err := time.LoadLocation("America/Sao_Paulo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	pgSP, err := NewPostgres(context.Background(), url, sp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(pgSP.Close)
+	ctx := context.Background()
+
+	desc := "teste h tres fuso"
+	p, _ := domain.NewPurchase(123.45, &desc, domain.CategoryFood, domain.PaymentMethodPix, domain.PurchaseTypeSingle, "teste")
+	pay := domain.NewPayment(p.ID, 123.45, domain.PaymentStatusPaid)
+	pay.CreatedAt = time.Date(2026, 11, 30, 22, 0, 0, 0, sp)
+	if err := (&LedgerRepo{db: pgUTC}).Save(ctx, p, []domain.Payment{*pay}); err != nil {
+		t.Fatal(err)
+	}
+	cleanup(t, pgUTC, p)
+
+	nov, dec := time.Date(2026, 11, 1, 0, 0, 0, 0, time.UTC), time.Date(2026, 12, 1, 0, 0, 0, 0, time.UTC)
+	has := func(pg *DB, month time.Time) bool {
+		details, err := (&LedgerRepo{db: pg}).FindPaymentDetailsByMonth(ctx, month)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, d := range details {
+			if d.Description != nil && *d.Description == desc {
+				return true
+			}
+		}
+		return false
+	}
+	totalOf := func(pg *DB, month time.Time) float64 {
+		var total float64
+		pg.Pool.QueryRow(ctx, `
+			SELECT COALESCE(SUM(pay.amount), 0) FROM payments pay JOIN purchases p ON p.id = pay.purchase_id
+			WHERE `+paymentMonth+` = $1::date AND p.description = $2`, month, desc).Scan(&total)
+		return total
+	}
+
+	if !has(pgSP, nov) || has(pgSP, dec) || totalOf(pgSP, nov) != 123.45 || totalOf(pgSP, dec) != 0 {
+		t.Error("sessão em São Paulo: o gasto das 22h do dia 30/11 deveria contar em novembro (CSV e totais)")
+	}
+	if has(pgUTC, nov) || !has(pgUTC, dec) || totalOf(pgUTC, dec) != 123.45 {
+		t.Error("sessão em UTC (comportamento antigo): o mesmo gasto cai em dezembro")
+	}
+}
+
+func TestSetTimezone_AppliesToNewConnections(t *testing.T) {
+	newTestRepo(t) // pula o teste sem banco
+	pg, err := NewPostgres(context.Background(), os.Getenv("TEST_DATABASE_URL"), time.UTC)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(pg.Close)
+	zone := func() string {
+		var z string
+		if err := pg.Pool.QueryRow(context.Background(), `SHOW TimeZone`).Scan(&z); err != nil {
+			t.Fatal(err)
+		}
+		return z
+	}
+	if z := zone(); z != "UTC" {
+		t.Fatalf("sessão inicial: %s", z)
+	}
+	sp, _ := time.LoadLocation("America/Sao_Paulo")
+	pg.SetTimezone(sp)
+	if z := zone(); z != "America/Sao_Paulo" {
+		t.Errorf("depois de SetTimezone: %s", z)
 	}
 }
