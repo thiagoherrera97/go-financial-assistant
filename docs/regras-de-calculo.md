@@ -13,6 +13,8 @@ Feito em `infra/pluggy/mapper.go`. A transação do Pluggy vira lançamento, sal
 
 Aplicações e resgates de investimento viram `TRANSFER` (aparecem em Investimentos, não em gastos). A categoria vem do texto do Pluggy e, quando fica em Outros, de regras por descrição.
 
+Algumas categorias do Pluggy casam pela categoria **inteira**, não por trecho (Housing → Moradia; Utilities, Telecommunications, Loans and financing e Services → Contas; Bookstore → Educação; Gyms and fitness centers → Saúde). Ao fim de cada sincronização, as despesas do banco que estão em Outros (também as mais antigas que a janela de datas) são reclassificadas pela categoria gravada em `raw_input`; só a categoria muda, e regras de categoria por conta (inclusive "manter em Outros") sempre valem.
+
 ### Parcelas no cartão
 
 Cada parcela é datada no **mês da fatura em que cai** (`creditCardMetadata.billForecastDate`), mantendo o dia da compra. O Pluggy dá a mesma data de compra a todas as parcelas; sem o ajuste, as 12 parcelas caíam no mês da compra. Parcelas ainda não cobradas ficam `PENDING`.

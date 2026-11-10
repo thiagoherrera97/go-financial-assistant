@@ -17,6 +17,7 @@ type mockStore struct {
 	upsertInstitutionFn func(ctx context.Context, itemID string, inst ports.ExternalInstitution) (uuid.UUID, bool, error)
 	saveLogoFn          func(ctx context.Context, id uuid.UUID, data []byte, mime string) error
 	reconcileExternalFn func(ctx context.Context, tx ports.ExternalTransaction, accountID uuid.UUID) (bool, error)
+	recategorizeFn      func(ctx context.Context, mapping map[string]domain.Category) (int64, error)
 	saveExternalFn      func(ctx context.Context, purchase *domain.Purchase, payment *domain.Payment) error
 }
 
@@ -67,4 +68,11 @@ func (m *mockStore) SaveExternal(ctx context.Context, purchase *domain.Purchase,
 		return m.saveExternalFn(ctx, purchase, payment)
 	}
 	return nil
+}
+
+func (m *mockStore) RecategorizeExternalOther(ctx context.Context, mapping map[string]domain.Category) (int64, error) {
+	if m.recategorizeFn != nil {
+		return m.recategorizeFn(ctx, mapping)
+	}
+	return 0, nil
 }

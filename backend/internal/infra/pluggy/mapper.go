@@ -49,6 +49,19 @@ var (
 	// Receitas cuja descrição indica salário (o Pluggy nem sempre classifica como "salary").
 	salaryDescriptions = []string{"salário", "salario", "folha de pagamento"}
 
+	// Categorias do Pluggy que casam pela categoria INTEIRA (minúscula, sem espaços nas pontas), e não por trecho:
+	// "services" como trecho pegaria "Digital services" (Lazer) e qualquer outra "... services". Vale antes das
+	// regras por trecho abaixo. É a única lista: a reclassificação do que já está em Outros usa o mesmo mapa.
+	exactExpenseCategories = map[string]domain.Category{
+		"housing":                  domain.CategoryHousing,
+		"utilities":                domain.CategoryBills,
+		"telecommunications":       domain.CategoryBills,
+		"loans and financing":      domain.CategoryBills,
+		"services":                 domain.CategoryBills,
+		"bookstore":                domain.CategoryEducation,
+		"gyms and fitness centers": domain.CategoryHealth,
+	}
+
 	expenseCategories = []struct {
 		keywords []string
 		category domain.Category
@@ -61,6 +74,31 @@ var (
 		{[]string{"shopping", "clothing", "electronics"}, domain.CategoryShopping},
 	}
 )
+
+// CategoryFromPluggy devolve a categoria do app para a categoria de despesa do Pluggy (sem olhar a descrição).
+// Categoria não mapeada devolve OTHER.
+func CategoryFromPluggy(pluggyCategory string) domain.Category {
+	category := strings.ToLower(strings.TrimSpace(pluggyCategory))
+	if c, ok := exactExpenseCategories[category]; ok {
+		return c
+	}
+	for _, rule := range expenseCategories {
+		if containsAny(category, rule.keywords) {
+			return rule.category
+		}
+	}
+	return domain.CategoryOther
+}
+
+// ExactExpenseCategories devolve uma cópia do mapa por igualdade (chave em minúsculas), para reclassificar o que
+// já foi gravado em Outros.
+func ExactExpenseCategories() map[string]domain.Category {
+	m := make(map[string]domain.Category, len(exactExpenseCategories))
+	for k, v := range exactExpenseCategories {
+		m[k] = v
+	}
+	return m
+}
 
 func containsAny(s string, keywords []string) bool {
 	for _, k := range keywords {
@@ -131,12 +169,7 @@ func toExternal(accountType domain.AccountType, t transaction) (ports.ExternalTr
 		}
 	default:
 		ext.Kind = domain.KindExpense
-		for _, rule := range expenseCategories {
-			if containsAny(category, rule.keywords) {
-				ext.Category = rule.category
-				break
-			}
-		}
+		ext.Category = CategoryFromPluggy(t.Category)
 		if ext.Category == domain.CategoryOther {
 			ext.Category = categoryFromDescription(description + " " + t.DescriptionRaw)
 		}

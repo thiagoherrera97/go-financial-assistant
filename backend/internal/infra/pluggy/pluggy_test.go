@@ -542,3 +542,60 @@ func TestToExternal_InstallmentDate(t *testing.T) {
 		t.Error("compra à vista não é parcela")
 	}
 }
+
+func TestToExternal_H1ExactCategories(t *testing.T) {
+	cases := []struct {
+		pluggy string
+		want   domain.Category
+	}{
+		{"Housing", domain.CategoryHousing},
+		{"Utilities", domain.CategoryBills},
+		{"Telecommunications", domain.CategoryBills},
+		{"Loans and financing", domain.CategoryBills},
+		{"Services", domain.CategoryBills},
+		{"Bookstore", domain.CategoryEducation},
+		{"Gyms and fitness centers", domain.CategoryHealth},
+		{"  services ", domain.CategoryBills}, // minúscula e sem espaços nas pontas
+		// Por igualdade, não por trecho: nada que só contenha a palavra muda.
+		{"Digital services", domain.CategoryEntertainment},
+		{"Financial services", domain.CategoryOther},
+		{"Public utilities and housing", domain.CategoryOther},
+		// As categorias que já existiam não mudam.
+		{"Groceries", domain.CategoryMarket},
+		{"Food and drinks", domain.CategoryFood},
+		{"Transport", domain.CategoryTransport},
+		{"Pharmacy", domain.CategoryHealth},
+		{"Entertainment", domain.CategoryEntertainment},
+		{"Shopping", domain.CategoryShopping},
+		{"", domain.CategoryOther},
+	}
+	for _, tc := range cases {
+		got, ok := toExternal("BANK", described("DEBIT", tc.pluggy, "Compra qualquer", -20))
+		if !ok || got.Kind != domain.KindExpense || got.Category != tc.want {
+			t.Errorf("%q: got %s, esperado %s", tc.pluggy, got.Category, tc.want)
+		}
+		if c := CategoryFromPluggy(tc.pluggy); c != tc.want && tc.pluggy != "" {
+			t.Errorf("CategoryFromPluggy(%q) = %s, esperado %s", tc.pluggy, c, tc.want)
+		}
+	}
+
+	// "Financial services" sem mapa ainda cai nas regras por descrição.
+	if got, _ := toExternal("BANK", described("DEBIT", "Financial services", "ANTHROPIC* CLAUDE", -20)); got.Category != domain.CategoryEntertainment {
+		t.Errorf("categoria não mapeada deveria seguir a descrição: %s", got.Category)
+	}
+	// Renda e transferência não passam pelo mapa de despesas.
+	if got, _ := toExternal("BANK", described("CREDIT", "Housing", "Aluguel recebido", 900)); got.Kind != domain.KindIncome || got.Category != domain.CategoryOther {
+		t.Errorf("renda não deveria ser mapeada: %+v", got)
+	}
+}
+
+func TestExactExpenseCategories_IsACopy(t *testing.T) {
+	m := ExactExpenseCategories()
+	if len(m) != 7 || m["housing"] != domain.CategoryHousing {
+		t.Fatalf("mapa inesperado: %v", m)
+	}
+	delete(m, "housing")
+	if CategoryFromPluggy("Housing") != domain.CategoryHousing {
+		t.Error("alterar a cópia não pode mudar o mapa original")
+	}
+}

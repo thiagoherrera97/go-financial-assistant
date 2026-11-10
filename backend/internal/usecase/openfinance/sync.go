@@ -32,7 +32,8 @@ type SyncOpenFinance struct {
 	itemIDs      []string
 	lookbackDays int
 	logger       *slog.Logger
-	logos        ports.LogoFetcher // opcional: sem ele, o painel usa o monograma
+	categories   map[string]domain.Category // categoria do Pluggy (minúscula) -> categoria do app, para reclassificar Outros
+	logos        ports.LogoFetcher          // opcional: sem ele, o painel usa o monograma
 	clock        domain.Clock
 	mu           sync.Mutex
 	cfgMu        sync.RWMutex
@@ -44,6 +45,10 @@ func (s *SyncOpenFinance) SetConfig(itemIDs []string, lookbackDays int) {
 	s.itemIDs, s.lookbackDays = itemIDs, lookbackDays
 	s.cfgMu.Unlock()
 }
+
+// SetCategoryMapping liga a reclassificação, ao fim da sincronização, das despesas do banco que estão em Outros
+// (inclusive as mais antigas que a janela de datas). Sem o mapa, ela não roda.
+func (s *SyncOpenFinance) SetCategoryMapping(m map[string]domain.Category) { s.categories = m }
 
 // SetClock troca o relógio (testes).
 func (s *SyncOpenFinance) SetClock(c domain.Clock) { s.clock = c }
@@ -106,6 +111,16 @@ func (s *SyncOpenFinance) Sync(ctx context.Context) (SyncResult, error) {
 				s.logger.Error("erro ao sincronizar transação", "external_id", tx.ID, "error", err)
 				errs = append(errs, err)
 			}
+		}
+	}
+	if len(s.categories) > 0 {
+		// Só a contagem vai para o log: nunca descrições ou valores.
+		n, err := s.repo.RecategorizeExternalOther(ctx, s.categories)
+		if err != nil {
+			s.logger.Error("erro ao reclassificar despesas em Outros", "error", err)
+			errs = append(errs, err)
+		} else if n > 0 {
+			s.logger.Info("despesas reclassificadas de Outros", "count", n)
 		}
 	}
 	return result, errors.Join(errs...)
