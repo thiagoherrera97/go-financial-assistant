@@ -380,3 +380,47 @@ func TestSync_WindowFollowsClock(t *testing.T) {
 		t.Errorf("from = %v, quer %v (60 dias antes do relógio)", prov.from, want)
 	}
 }
+
+// O repositório grava o dia civil do valor recebido ($2::date): o que importa é o Y/M/D do day que o Sync passa.
+func investmentDay(t *testing.T, now time.Time, loc *time.Location) time.Time {
+	t.Helper()
+	var got time.Time
+	repo := &mockStore{saveInvestmentsFn: func(_ context.Context, _ string, _ []ports.ExternalInvestment, day time.Time) error {
+		got = day
+		return nil
+	}}
+	s := newSync(repo, &mockProvider{}, "item")
+	s.SetClock(domain.FixedClock{T: now})
+	if loc != nil {
+		s.SetLocation(loc)
+	}
+	if _, err := s.Sync(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	return got
+}
+
+func TestSync_InvestmentBalanceIsSavedOnTheOwnersLocalDay(t *testing.T) {
+	sp, err := time.LoadLocation("America/Sao_Paulo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cases := []struct {
+		name string
+		now  time.Time
+		loc  *time.Location
+		want [3]int // ano, mês, dia
+	}{
+		{"22:30 de 30/11 em SP (01:30Z de 01/12)", time.Date(2026, 12, 1, 1, 30, 0, 0, time.UTC), sp, [3]int{2026, 11, 30}},
+		{"virada do ano: 22:30 de 31/12 em SP", time.Date(2027, 1, 1, 1, 30, 0, 0, time.UTC), sp, [3]int{2026, 12, 31}},
+		{"00:05 de 01/12 em SP", time.Date(2026, 12, 1, 3, 5, 0, 0, time.UTC), sp, [3]int{2026, 12, 1}},
+		{"sem SetLocation: UTC, como antes", time.Date(2026, 12, 1, 1, 30, 0, 0, time.UTC), nil, [3]int{2026, 12, 1}},
+		{"fuso UTC explícito não muda nada", time.Date(2026, 12, 1, 1, 30, 0, 0, time.UTC), time.UTC, [3]int{2026, 12, 1}},
+	}
+	for _, tc := range cases {
+		got := investmentDay(t, tc.now, tc.loc)
+		if y, m, d := got.Date(); [3]int{y, int(m), d} != tc.want {
+			t.Errorf("%s: dia %v, esperado %v", tc.name, got, tc.want)
+		}
+	}
+}

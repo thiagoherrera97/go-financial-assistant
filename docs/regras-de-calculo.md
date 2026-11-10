@@ -78,7 +78,7 @@ Valores do mês atual são parciais. As telas que comparam com o mês anterior a
 
 ## Investimentos
 
-O saldo vem do Pluggy (`/investments`, líquido de impostos) e é gravado a cada sincronização, formando o histórico do patrimônio. **Do mês da primeira sincronização em diante** o saldo ao fim de cada mês é exato (soma do último saldo gravado de cada posição). **Antes disso é estimado**, por posição: saldo do primeiro registro menos o que foi aplicado depois do mês (e antes desse registro), sem contar rendimentos; posição sem movimentação até o fim do mês ainda não existia e fica de fora; o saldo nunca é negativo. Posições que somem do Pluggy (resgatadas) ficam inativas com saldo zero.
+O saldo vem do Pluggy (`/investments`, líquido de impostos) e é gravado a cada sincronização, formando o histórico do patrimônio. **Do mês da primeira sincronização em diante** o saldo ao fim de cada mês é exato (soma do último saldo gravado de cada posição). **Antes disso é estimado**, por posição: saldo do primeiro registro menos o que foi aplicado depois do mês (e antes desse registro), sem contar rendimentos; posição sem movimentação até o fim do mês ainda não existia e fica de fora; o saldo nunca é negativo. Posições que somem do Pluggy (resgatadas) ficam inativas com saldo zero. O saldo é gravado no **dia civil do fuso configurado** (`DIGEST_TIMEZONE`), então uma sincronização às 22h do último dia do mês conta nesse mês; saldos gravados antes dessa regra (dia UTC) não foram corrigidos.
 
 ## Conciliação com lançamentos manuais
 
