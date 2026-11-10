@@ -1,6 +1,6 @@
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
-CREATE TABLE purchases (
+CREATE TABLE IF NOT EXISTS purchases (
     id                  UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
     description         TEXT,
     category            TEXT          NOT NULL DEFAULT 'OTHER',
@@ -17,7 +17,7 @@ CREATE TABLE purchases (
     created_at          TIMESTAMPTZ   NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE payments (
+CREATE TABLE IF NOT EXISTS payments (
     id                 UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
     purchase_id        UUID          NOT NULL REFERENCES purchases(id) ON DELETE CASCADE,
     amount             DECIMAL(12,2) NOT NULL CHECK (amount > 0),
@@ -29,7 +29,7 @@ CREATE TABLE payments (
     created_at         TIMESTAMPTZ   NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_payments_purchase_id ON payments(purchase_id);
-CREATE INDEX idx_payments_status      ON payments(status);
-CREATE INDEX idx_purchases_type       ON purchases(type);
-CREATE INDEX idx_purchases_is_active  ON purchases(is_active) WHERE type = 'RECURRING';
+CREATE INDEX IF NOT EXISTS idx_payments_purchase_id ON payments(purchase_id);
+CREATE INDEX IF NOT EXISTS idx_payments_status      ON payments(status);
+CREATE INDEX IF NOT EXISTS idx_purchases_type       ON purchases(type);
+CREATE INDEX IF NOT EXISTS idx_purchases_is_active  ON purchases(is_active) WHERE type = 'RECURRING';

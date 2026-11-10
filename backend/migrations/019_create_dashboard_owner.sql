@@ -26,6 +26,16 @@ CREATE TABLE IF NOT EXISTS setup_draft (
     updated_at         TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Os passos do setup entram no histórico de alterações (sem valores), com a ação "setup".
-ALTER TABLE settings_audit DROP CONSTRAINT IF EXISTS settings_audit_action_check;
-ALTER TABLE settings_audit ADD CONSTRAINT settings_audit_action_check CHECK (action IN ('set', 'reset', 'setup'));
+-- Os passos do setup entram no histórico de alterações (sem valores), com a ação "setup". Só troca a constraint se
+-- ela ainda não aceita "setup" (idempotente).
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conrelid = 'settings_audit'::regclass AND conname = 'settings_audit_action_check'
+          AND pg_get_constraintdef(oid) LIKE '%setup%'
+    ) THEN
+        ALTER TABLE settings_audit DROP CONSTRAINT IF EXISTS settings_audit_action_check;
+        ALTER TABLE settings_audit ADD CONSTRAINT settings_audit_action_check CHECK (action IN ('set', 'reset', 'setup'));
+    END IF;
+END $$;
