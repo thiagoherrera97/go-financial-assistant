@@ -11,7 +11,7 @@ import (
 	"google.golang.org/genai"
 )
 
-const modelName = "gemini-2.5-flash-lite"
+const modelName = "gemini-3.5-flash-lite"
 
 // Client fala com o Gemini. A chave é opcional e pode ser trocada com o app rodando (SetAPIKey): sem ela, toda chamada
 // devolve ports.ErrAIUnavailable e quem chama explica como ligar.
