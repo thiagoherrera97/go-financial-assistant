@@ -149,8 +149,15 @@ func TestAPI_CoachAnalyze(t *testing.T) {
 			t.Errorf("falta %s em %s", want, body)
 		}
 	}
-	if strings.Contains(body, "s9") || strings.Contains(body, "999") {
-		t.Errorf("ID desconhecido e número inventado pela IA devem sumir: %s", body)
+	// Só o conselho conta: o corpo inteiro tem UUIDs aleatórios, que às vezes contêm "999".
+	var resp struct {
+		Advice json.RawMessage `json:"advice"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil || len(resp.Advice) == 0 {
+		t.Fatalf("resposta sem o campo advice: %v %s", err, body)
+	}
+	if advice := string(resp.Advice); strings.Contains(advice, "s9") || strings.Contains(advice, "999") {
+		t.Errorf("ID desconhecido e número inventado pela IA devem sumir do conselho: %s", advice)
 	}
 }
 

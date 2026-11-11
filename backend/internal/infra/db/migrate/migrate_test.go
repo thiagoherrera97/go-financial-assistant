@@ -267,7 +267,13 @@ func TestRun_PgDumpDataOnlyIdenticalBeforeAndAfterFirstBoot(t *testing.T) {
 	u, _ := url.Parse(dbURL)
 	dbName := strings.TrimPrefix(u.Path, "/")
 	dump := func() string {
-		out, err := exec.Command("docker", "exec", container, "pg_dump", "-U", "t", "-d", dbName, "--data-only", "--exclude-table=schema_migrations").CombinedOutput()
+		// O usuário (e a senha, se houver) são os da própria URL de teste: o container pode ter qualquer usuário.
+		args := []string{"exec"}
+		if pw, ok := u.User.Password(); ok {
+			args = append(args, "-e", "PGPASSWORD="+pw)
+		}
+		args = append(args, container, "pg_dump", "-U", u.User.Username(), "-d", dbName, "--data-only", "--exclude-table=schema_migrations")
+		out, err := exec.Command("docker", args...).CombinedOutput()
 		if err != nil {
 			t.Fatalf("pg_dump: %v\n%s", err, out)
 		}

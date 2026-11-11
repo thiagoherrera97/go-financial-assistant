@@ -103,11 +103,16 @@ func TestPgDump_ReusesTheBackupOfTheSameTagAndMakesANewOneForAnotherTag(t *testi
 	dir := t.TempDir()
 	calls := filepath.Join(t.TempDir(), "calls")
 	bin := fakePgDump(t, `echo x >> `+calls+`; echo DUMPDATA`)
-	clock := time.Now().Truncate(time.Second)
+	// Relógio falso fixo, independente do real: o mtime do dump vem do disco (relógio real), então depois de cada backup
+	// novo ele é ajustado para o instante do relógio falso. Assim a idade que o código vê não depende de quanto o pg_dump demorou.
+	clock := time.Date(2026, 11, 10, 15, 0, 0, 0, time.UTC)
 	b := PgDump{Bin: bin, Dir: dir, URL: testURL, Now: func() time.Time { clock = clock.Add(time.Second); return clock }}
 
 	first, err := b.Run(context.Background(), "aaaaaaaa")
 	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chtimes(first, clock, clock); err != nil {
 		t.Fatal(err)
 	}
 	for i := 0; i < 4; i++ { // reinícios em laço: mesma tag
