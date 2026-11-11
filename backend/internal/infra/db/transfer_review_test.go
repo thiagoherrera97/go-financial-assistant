@@ -496,3 +496,66 @@ func TestTransferReview_DecisionRaceOnPrimaryKeyIsNotPending(t *testing.T) {
 		t.Fatalf("a segunda decisão deveria receber ErrTransferNotPending, got %v", err)
 	}
 }
+
+// A parcela de "Outros" usa a mesma conta (e os mesmos filtros) do total de despesas da Visão geral: só EXPENSE, sem CANCELLED.
+func TestMonthlyTotals_OtherExpenseUsesTheSameFiltersAsExpense(t *testing.T) {
+	repo, pg := newTestRepo(t)
+	ctx := context.Background()
+	seed(t, repo, pg, seedEntry{kind: domain.KindExpense, cat: domain.CategoryOther, desc: "oth-a", amount: 30, date: mar1999})
+	seed(t, repo, pg, seedEntry{kind: domain.KindExpense, cat: domain.CategoryFood, desc: "oth-b", amount: 70, date: mar1999})
+	seed(t, repo, pg, seedEntry{kind: domain.KindExpense, cat: domain.CategoryOther, desc: "oth-cancelled", amount: 999, date: mar1999, status: domain.PaymentStatusCancelled})
+	seed(t, repo, pg, seedEntry{kind: domain.KindIncome, cat: domain.CategoryOther, desc: "oth-income", amount: 500, date: mar1999})
+	seed(t, repo, pg, seedEntry{kind: domain.KindTransfer, dir: domain.TransferDirectionOut, desc: "oth-transfer", amount: 40, date: mar1999})
+
+	totals, err := repo.MonthlyTotals(ctx, mar1999.AddDate(0, -1, 0), mar1999)
+	if err != nil || len(totals) != 2 {
+		t.Fatalf("totais: %v %v", totals, err)
+	}
+	empty, m := totals[0], totals[1]
+	if m.Expense != 100 || m.OtherExpense != 30 {
+		t.Errorf("despesa 100 (30 em Outros), sem a cancelada, a renda nem a transferência: %+v", m)
+	}
+	if m.Income != 500 || m.Applied != 40 || m.Redeemed != 0 {
+		t.Errorf("os outros totais não mudam: %+v", m)
+	}
+	if share := m.OtherShare(); share == nil || *share != 0.3 {
+		t.Errorf("parcela = %v, esperado 0,3", share)
+	}
+	if empty.Expense != 0 || empty.OtherShare() != nil {
+		t.Errorf("mês sem despesas: parcela nula, got %+v", empty)
+	}
+}
+
+// Decidir uma transferência (H2a) muda a parcela: "para uma pessoa" sai de Outros e "entre contas minhas" some das despesas.
+func TestMonthlyTotals_OtherShareFollowsTransferDecisions(t *testing.T) {
+	repo, pg := newTestRepo(t)
+	ctx := context.Background()
+	_, a := trSeed(t, repo, pg, domain.KindExpense, "teste h dois share a", "Transfer - PIX", "of-h2c-a", 60)
+	_, b := trSeed(t, repo, pg, domain.KindExpense, "teste h dois share b", "Transfer - PIX", "of-h2c-b", 40)
+	share := func() (float64, float64, float64) {
+		totals, err := repo.MonthlyTotals(ctx, mar1999, mar1999)
+		if err != nil || len(totals) != 1 {
+			t.Fatal(totals, err)
+		}
+		s := totals[0].OtherShare()
+		if s == nil {
+			t.Fatal("deveria haver despesas")
+		}
+		return *s, totals[0].Expense, totals[0].OtherExpense
+	}
+	if s, e, o := share(); s != 1 || e != 100 || o != 100 {
+		t.Fatalf("antes: %v %v %v", s, e, o)
+	}
+	if err := repo.DecideTransfer(ctx, a, domain.TransferPerson, ""); err != nil {
+		t.Fatal(err)
+	}
+	if s, e, o := share(); e != 100 || o != 40 || s != 0.4 {
+		t.Errorf("Pessoa tira de Outros sem mudar o total: %v %v %v", s, e, o)
+	}
+	if err := repo.DecideTransfer(ctx, b, domain.TransferOwn, ""); err != nil {
+		t.Fatal(err)
+	}
+	if s, e, o := share(); e != 60 || o != 0 || s != 0 {
+		t.Errorf("Entre contas minhas sai das despesas: %v %v %v", s, e, o)
+	}
+}

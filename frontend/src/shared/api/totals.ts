@@ -15,6 +15,8 @@ export interface Summary {
   previous: Totals
   /** Soma das contas correntes; null quando não há conta sincronizada. */
   bankBalance: number | null
+  /** Parcela das despesas do mês que está em "Outros" (0 a 1); null quando o mês não tem despesas. */
+  otherShare: number | null
 }
 
 export type BreakdownBy = 'category' | 'payment_method' | 'account'

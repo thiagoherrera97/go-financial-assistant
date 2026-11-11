@@ -16,6 +16,7 @@ const monthlyCTE = `
 		SELECT ` + paymentMonth + ` AS month,
 		       COALESCE(SUM(pay.amount) FILTER (WHERE p.kind = 'INCOME'), 0)  AS income,
 		       COALESCE(SUM(pay.amount) FILTER (WHERE p.kind = 'EXPENSE'), 0) AS expense,
+		       COALESCE(SUM(pay.amount) FILTER (WHERE p.kind = 'EXPENSE' AND p.category = 'OTHER'), 0) AS other_expense,
 		       COALESCE(SUM(pay.amount) FILTER (WHERE p.kind = 'TRANSFER' AND p.transfer_direction = 'OUT'), 0) AS applied,
 		       COALESCE(SUM(pay.amount) FILTER (WHERE p.kind = 'TRANSFER' AND p.transfer_direction = 'IN'), 0)  AS redeemed
 		FROM payments pay
