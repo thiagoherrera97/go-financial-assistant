@@ -6,3 +6,11 @@
 .classify-row .btn-small { margin-left: 0; }
 @media (max-width: 640px) { .classify-row { grid-template-columns: 1fr; } }
 .classify-name .badge { align-self: flex-start; margin-left: 0; }
+
+/* Transferências a revisar */
+.classify-row.transfer-row { grid-template-columns: 1fr auto; }
+.transfer-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-end; }
+.transfer-payment { display: inline-flex; gap: 6px; align-items: center; }
+.transfer-payment select { padding: 5px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text-primary); }
+.transfer-row .btn-small { margin-left: 0; }
+@media (max-width: 640px) { .classify-row.transfer-row { grid-template-columns: 1fr; } .transfer-actions { justify-content: flex-start; } }
