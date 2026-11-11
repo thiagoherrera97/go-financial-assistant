@@ -47,6 +47,10 @@ type fakeReader struct {
 	dismissed      []domain.Dismissal
 	setDismissed   domain.Dismissal
 	setDismissedTo bool
+	pendingTr      []domain.TransferReviewItem
+	decidedTr      []domain.TransferReviewItem
+	decideCalls    []string
+	decideErr      error
 	err            error
 }
 
@@ -938,4 +942,19 @@ func TestAPI_SetDecision(t *testing.T) {
 type fakeLogo struct {
 	data []byte
 	mime string
+}
+
+func (f *fakeReader) PendingTransfers(context.Context, int) ([]domain.TransferReviewItem, int, error) {
+	return f.pendingTr, len(f.pendingTr), f.err
+}
+func (f *fakeReader) DecidedTransfers(context.Context, int) ([]domain.TransferReviewItem, error) {
+	return f.decidedTr, f.err
+}
+func (f *fakeReader) DecideTransfer(_ context.Context, id uuid.UUID, d domain.TransferDecision, category string) error {
+	f.decideCalls = append(f.decideCalls, id.String()+"|"+string(d)+"|"+category)
+	return f.decideErr
+}
+func (f *fakeReader) UndoTransferDecision(_ context.Context, id uuid.UUID) error {
+	f.decideCalls = append(f.decideCalls, "undo|"+id.String())
+	return f.decideErr
 }

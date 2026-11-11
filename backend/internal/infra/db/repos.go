@@ -31,6 +31,9 @@ type CoachRepo struct{ db *DB }
 // ClassifyRepo lê e grava a classificação das despesas em "Outros".
 type ClassifyRepo struct{ db *DB }
 
+// TransferReviewRepo lê e grava a revisão das transferências vindas do banco.
+type TransferReviewRepo struct{ db *DB }
+
 // DashboardRepo reúne os repositórios de leitura do dashboard; os métodos de cada um são promovidos e ele satisfaz ports.DashboardReader.
 type DashboardRepo struct {
 	*TotalsRepo
@@ -42,6 +45,7 @@ type DashboardRepo struct {
 	*GoalsRepo
 	*CoachRepo
 	*ClassifyRepo
+	*TransferReviewRepo
 }
 
 func NewDashboardRepo(db *DB) *DashboardRepo {
@@ -55,6 +59,7 @@ func NewDashboardRepo(db *DB) *DashboardRepo {
 		&GoalsRepo{db: db},
 		&CoachRepo{db: db},
 		&ClassifyRepo{db: db},
+		&TransferReviewRepo{db: db},
 	}
 }
 

@@ -11,6 +11,7 @@ import { formatBRL } from '../../shared/lib/format'
 import { setCategoryRule, suggestCategories, useCategorize } from './api'
 import { ApiError } from '../../shared/api/request'
 import type { Categorize as CategorizeData } from './api'
+import TransfersReview from './TransfersReview'
 
 const PAGE_SIZE = 10
 
@@ -69,6 +70,8 @@ export default function Categorize() {
                 chegam classificadas. &quot;Manter em Outros&quot; tira a conta da lista. Pix e transferências só você sabe do que se trata;
                 a IA nunca os vê.
               </p>
+
+              <TransfersReview />
 
               <AiCard data={data} agreedHash={agreedHash} setAgreedHash={setAgreedHash} suggest={suggest} />
 

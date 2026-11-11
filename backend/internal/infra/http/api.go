@@ -71,6 +71,7 @@ func (s *Server) mountAPI(password PasswordCheck, reader ports.DashboardReader, 
 	a.registerGoals(rt)
 	a.registerCoach(rt)
 	a.registerCategorize(rt)
+	a.registerTransfers(rt)
 	a.registerSavings(rt)
 	a.registerBalances(rt)
 	if s.settings != nil {

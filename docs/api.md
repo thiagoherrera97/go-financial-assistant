@@ -28,6 +28,9 @@ O app expõe uma API JSON sob `/api`, **somente leitura** (as únicas escritas, 
 | `PUT /api/review-dismissals` | dispensa (ou restaura) uma sugestão da revisão; só JSON na mesma origem |
 | `GET /api/categorize` | contas com despesa em "Outros" (da maior para a menor), as categorias atribuíveis e a prévia do que a IA receberia |
 | `PUT /api/categorize/rules` | classifica uma conta (ou mantém em Outros): reclassifica as despesas antigas e vale nas próximas sincronizações; só JSON na mesma origem |
+| `GET /api/transfers/review` | transferências do banco (Pix/TED que o Pluggy chamou de "Transfer") que esperam decisão (`pending`, `pendingTotal`), as já decididas (`decided`) e as categorias que "Pagamento" aceita. Nada daqui vai à IA |
+| `PUT /api/transfers/review/{paymentId}` | decide uma transferência: `{"decision":"OWN"}` (entre contas minhas: deixa de contar), `{"decision":"PERSON"}` (categoria Pessoas) ou `{"decision":"PAYMENT","category":"HOUSING"}` (a categoria escolhida; só saídas, sem Outros nem Pessoas). `404` se já foi decidida; só JSON na mesma origem; 60 por minuto por IP, junto com o `DELETE` (`429` acima disso) |
+| `DELETE /api/transfers/review/{paymentId}` | desfaz a decisão, só no que ninguém mudou depois: `OWN` devolve o status de antes se ainda está cancelado; `PERSON` e `PAYMENT` devolvem a categoria de antes se ela ainda é a aplicada, sem mexer no status; `404` sem decisão |
 | `POST /api/categorize/suggest` | pede à IA categorias para as contas de comércio e serviços da prévia (nunca Pix); não grava nada. Mesmas travas do Coach |
 | `GET /api/savings` | economia realizada: as contas que você marcou como canceladas, conferidas mês a mês (cobrança sumiu, voltou ou aguardando), com o total acumulado e o ritmo por mês e por ano |
 | `PUT /api/savings/decisions` | marca (ou desfaz) "cancelei" numa sugestão fixa ou de gasto formiga; só JSON na mesma origem |

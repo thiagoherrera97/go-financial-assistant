@@ -11,6 +11,8 @@ Feito em `infra/pluggy/mapper.go`. A transação do Pluggy vira lançamento, sal
 - **Crédito em cartão** (estorno ou pagamento): não é renda.
 - **Aplicação automática do Itaú** ("APLIC AUT MAIS"): varre o saldo para um CDB e de volta; os rendimentos pagos continuam sendo renda.
 
+**Revisão de transferências:** as transferências do banco (categoria `Transfer ...` do Pluggy) esperam a sua decisão na tela Classificar. "Entre contas minhas" cancela o pagamento (`CANCELLED`: deixa de contar em tudo, como a limpeza do `OWN_NAMES`; não vira `TRANSFER`, que é de investimento); "Para uma pessoa" muda a categoria para Pessoas; "Pagamento" muda para a categoria escolhida (só saídas). O tipo (despesa ou renda) nunca muda. Desfazer só reverte o que a decisão mudou, e só se ninguém mexeu depois: "Entre contas minhas" volta ao status anterior se o pagamento ainda está `CANCELLED`; "Para uma pessoa" e "Pagamento" voltam à categoria anterior se a atual ainda é a que a decisão aplicou (`applied_category`) e nunca mexem no status. Nada é decidido sozinho.
+
 Aplicações e resgates de investimento viram `TRANSFER` (aparecem em Investimentos, não em gastos). A categoria vem do texto do Pluggy e, quando fica em Outros, de regras por descrição.
 
 Algumas categorias do Pluggy casam pela categoria **inteira**, não por trecho (Housing → Moradia; Utilities, Telecommunications, Loans and financing e Services → Contas; Bookstore → Educação; Gyms and fitness centers → Saúde). Ao fim de cada sincronização, as despesas do banco que estão em Outros (também as mais antigas que a janela de datas) são reclassificadas pela categoria gravada em `raw_input`; só a categoria muda, e regras de categoria por conta (inclusive "manter em Outros") sempre valem.
