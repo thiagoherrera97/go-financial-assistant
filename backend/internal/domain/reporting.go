@@ -10,6 +10,18 @@ type MonthTotals struct {
 	Expense  float64
 	Applied  float64
 	Redeemed float64
+	// OtherExpense é a parte de Expense em "Outros" (categoria OTHER), com os mesmos filtros de Expense.
+	OtherExpense float64
+}
+
+// OtherShare é a parcela das despesas do mês que está em "Outros" (0 a 1), ou nil se o mês não tem despesas. Cálculo só em
+// código: quanto maior, menos os gráficos por categoria dizem alguma coisa.
+func (m MonthTotals) OtherShare() *float64 {
+	if m.Expense <= 0 {
+		return nil
+	}
+	share := min(max(m.OtherExpense/m.Expense, 0), 1)
+	return &share
 }
 
 // InvestmentMonth acumula o líquido aplicado (aplicado - resgatado) desde o primeiro

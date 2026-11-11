@@ -12,7 +12,7 @@ O app expõe uma API JSON sob `/api`, **somente leitura** (as únicas escritas, 
 | Rota | Conteúdo |
 | --- | --- |
 | `POST /api/login`, `POST /api/login/code`, `POST /api/logout`, `GET /api/me` | sessão |
-| `GET /api/summary?month=` | totais do mês e do mês anterior (receitas, despesas, aplicado, resgatado) e o saldo das contas correntes (`bankBalance`, `null` sem Open Finance) |
+| `GET /api/summary?month=` | totais do mês e do mês anterior (receitas, despesas, aplicado, resgatado) e o saldo das contas correntes (`bankBalance`, `null` sem Open Finance); `otherShare` é a parcela das despesas do mês em "Outros" (0 a 1; `null` se o mês não tem despesas), calculada com os mesmos filtros das despesas (só despesa, sem cancelados) |
 | `GET /api/timeseries?from=&to=` | os mesmos totais, mês a mês |
 | `GET /api/breakdown?month=&by=category\|payment_method\|account` | despesas do mês agrupadas |
 | `GET /api/investments?from=&to=` | aplicado, resgatado e **líquido acumulado desde o primeiro lançamento** |

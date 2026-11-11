@@ -11,7 +11,8 @@ import (
 func (r *TotalsRepo) MonthlyTotals(ctx context.Context, from, to time.Time) ([]domain.MonthTotals, error) {
 	query := `
 		WITH ` + monthlyCTE + `
-		SELECT s.month::date, COALESCE(m.income, 0), COALESCE(m.expense, 0), COALESCE(m.applied, 0), COALESCE(m.redeemed, 0)
+		SELECT s.month::date, COALESCE(m.income, 0), COALESCE(m.expense, 0), COALESCE(m.applied, 0), COALESCE(m.redeemed, 0),
+		       COALESCE(m.other_expense, 0)
 		FROM generate_series($1::date, $2::date, '1 month') AS s(month)
 		LEFT JOIN monthly m ON m.month = s.month::date
 		ORDER BY s.month
@@ -25,7 +26,7 @@ func (r *TotalsRepo) MonthlyTotals(ctx context.Context, from, to time.Time) ([]d
 	var result []domain.MonthTotals
 	for rows.Next() {
 		var m domain.MonthTotals
-		if err := rows.Scan(&m.Month, &m.Income, &m.Expense, &m.Applied, &m.Redeemed); err != nil {
+		if err := rows.Scan(&m.Month, &m.Income, &m.Expense, &m.Applied, &m.Redeemed, &m.OtherExpense); err != nil {
 			return nil, fmt.Errorf("erro ao escanear totais mensais: %w", err)
 		}
 		result = append(result, m)

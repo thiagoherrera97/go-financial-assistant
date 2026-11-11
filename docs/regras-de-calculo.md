@@ -78,6 +78,8 @@ O progresso é calculado na hora. Patrimônio = saldo das contas correntes + inv
 
 ## Mês em andamento
 
+**Aviso de "Outros" alto:** a Visão geral avisa quando as despesas em `OTHER` passam de **30%** das despesas do mês (exatamente 30% não avisa; mês sem despesas não avisa). A conta é a do total de despesas (só despesa, sem pagamentos cancelados) e é feita em código, sem IA; o aviso leva a Classificar (contas em Outros e transferências a revisar).
+
 Valores do mês atual são parciais. As telas que comparam com o mês anterior avisam, e a Visão geral não mostra a variação enquanto o mês não fecha.
 
 ## Investimentos

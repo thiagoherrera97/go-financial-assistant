@@ -20,7 +20,8 @@ func toTotalsJSON(m domain.MonthTotals) totalsJSON {
 	return totalsJSON{formatMonth(m.Month), m.Income, m.Expense, m.Applied, m.Redeemed}
 }
 
-// summary: totais do mês e do mês anterior, mais o saldo atual das contas correntes ("em conta").
+// summary: totais do mês e do mês anterior, mais o saldo atual das contas correntes ("em conta") e a parcela das despesas do
+// mês que está em "Outros" (otherShare, 0 a 1; null sem despesas), que a Visão geral usa para avisar.
 func (a *api) summary(w http.ResponseWriter, r *http.Request) {
 	month, ok := a.monthParam(w, r, "month", true)
 	if !ok {
@@ -39,6 +40,7 @@ func (a *api) summary(w http.ResponseWriter, r *http.Request) {
 	bank := insights.BankBalance(accounts)
 	writeJSON(w, http.StatusOK, map[string]any{
 		"month": formatMonth(month), "current": toTotalsJSON(totals[1]), "previous": toTotalsJSON(totals[0]), "bankBalance": bank,
+		"otherShare": totals[1].OtherShare(),
 	})
 }
 

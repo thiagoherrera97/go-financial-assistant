@@ -7,6 +7,8 @@ import { formatBRL, formatMonthTitle } from '../../shared/lib/format'
 import { shiftMonth } from '../../shared/lib/months'
 import { useMonth } from '../../shared/lib/useMonth'
 import { useSummary, useTimeseries } from '../../shared/api/totals'
+import { Link } from 'react-router'
+import { formatShare, shouldWarnOtherShare } from './lib/otherShare'
 
 export default function Overview() {
   const { month, setMonth, now } = useMonth()
@@ -18,12 +20,32 @@ export default function Overview() {
       <h1 className="page-title">{formatMonthTitle(month)}</h1>
       <MonthFilter month={month} now={now} onChange={setMonth} warnPartial />
 
-      <QueryState query={summary}>{(data) => <Tiles data={data} stale={summary.isPlaceholderData} partial={month === now} />}</QueryState>
+      <QueryState query={summary}>
+        {(data) => (
+          <>
+            <OtherShareNotice share={data.otherShare} />
+            <Tiles data={data} stale={summary.isPlaceholderData} partial={month === now} />
+          </>
+        )}
+      </QueryState>
 
       <QueryState query={series}>
         {(data) => <TrendChart series={INCOME_EXPENSE} title="Receitas e despesas por mês" rows={toMonthRows(data)} stale={series.isPlaceholderData} />}
       </QueryState>
     </>
+  )
+}
+
+/** "Outros" alto deixa os gráficos por categoria sem sentido: leva à tela onde se classifica e se revisam as transferências. */
+function OtherShareNotice({ share }: { share: number | null }) {
+  if (!shouldWarnOtherShare(share)) return null
+  return (
+    <p className="notice" role="note">
+      &quot;Outros&quot; é {formatShare(share)} das despesas deste mês, então os gráficos por categoria dizem pouco.{' '}
+      <Link className="link" to="/classificar">
+        Classificar contas e revisar transferências
+      </Link>
+    </p>
   )
 }
 

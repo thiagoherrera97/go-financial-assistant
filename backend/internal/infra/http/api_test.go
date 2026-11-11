@@ -2,6 +2,7 @@ package httpserver
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"log/slog"
@@ -957,4 +958,34 @@ func (f *fakeReader) DecideTransfer(_ context.Context, id uuid.UUID, d domain.Tr
 func (f *fakeReader) UndoTransferDecision(_ context.Context, id uuid.UUID) error {
 	f.decideCalls = append(f.decideCalls, "undo|"+id.String())
 	return f.decideErr
+}
+
+func TestAPI_SummaryOtherShare(t *testing.T) {
+	month := time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)
+	r := &fakeReader{monthly: []domain.MonthTotals{
+		{Month: month.AddDate(0, -1, 0), Income: 100, Expense: 40},
+		{Month: month, Income: 100, Expense: 200, OtherExpense: 60, Applied: 7},
+	}}
+	s := newTestAPI(t, r)
+	rec := do(s, "GET", "/api/summary?month=2026-09", "", nil, login(t, s))
+	var b struct {
+		OtherShare *float64 `json:"otherShare"`
+		Current    struct{ Income, Expense, Applied float64 }
+	}
+	if rec.Code != 200 || json.Unmarshal(rec.Body.Bytes(), &b) != nil {
+		t.Fatalf("%d %s", rec.Code, rec.Body)
+	}
+	if b.OtherShare == nil || *b.OtherShare != 0.3 {
+		t.Errorf("otherShare = %v, esperado 0,3", b.OtherShare)
+	}
+	if b.Current.Income != 100 || b.Current.Expense != 200 || b.Current.Applied != 7 {
+		t.Errorf("os outros totais não podem mudar: %+v", b.Current)
+	}
+
+	// Mês sem despesas: null, não 0 (não há o que avisar).
+	r.monthly = []domain.MonthTotals{{Month: month.AddDate(0, -1, 0)}, {Month: month, Income: 500}}
+	rec = do(s, "GET", "/api/summary?month=2026-09", "", nil, login(t, s))
+	if !strings.Contains(rec.Body.String(), `"otherShare":null`) {
+		t.Errorf("sem despesas o otherShare deve ser null: %s", rec.Body)
+	}
 }
