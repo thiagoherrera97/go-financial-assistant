@@ -2,12 +2,12 @@ package db
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/domain"
 	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/domain/ports"
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -64,20 +64,60 @@ func (r *LedgerRepo) ExistsPaymentByDateAndAmount(ctx context.Context, date time
 	return exists, nil
 }
 
-func (r *LedgerRepo) HasPaymentForMonth(ctx context.Context, purchaseID uuid.UUID, month time.Time) (bool, error) {
-	query := `SELECT EXISTS(SELECT 1 FROM payments WHERE purchase_id = $1 AND reference_month = $2)`
+func (r *LedgerRepo) SaveRecurringPaymentIfMissing(ctx context.Context, payment *domain.Payment) (bool, error) {
+	if payment.ReferenceMonth == nil {
+		return false, errors.New("pagamento recorrente sem mês de referência")
+	}
+	tx, err := r.db.Pool.Begin(ctx)
+	if err != nil {
+		return false, fmt.Errorf("erro ao iniciar transação: %w", err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	// A trava na recorrente serializa duas execuções sobre ela (subida e meia-noite, ou duas instâncias): a segunda espera
+	// a primeira terminar e então já vê o pagamento. Também pega um cancelamento feito depois da lista de ativas.
+	var active bool
+	err = tx.QueryRow(ctx, `SELECT is_active FROM purchases WHERE id = $1 AND type = 'RECURRING' FOR UPDATE`, payment.PurchaseID).Scan(&active)
+	if errors.Is(err, pgx.ErrNoRows) || (err == nil && !active) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("erro ao travar a recorrente: %w", err)
+	}
+
+	// Qualquer pagamento do mês conta, de qualquer status: um CANCELLED foi uma decisão da pessoa.
 	var exists bool
-	if err := r.db.Pool.QueryRow(ctx, query, purchaseID, month).Scan(&exists); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM payments WHERE purchase_id = $1 AND reference_month = $2)`,
+		payment.PurchaseID, payment.ReferenceMonth).Scan(&exists); err != nil {
 		return false, fmt.Errorf("erro ao verificar pagamento do mês: %w", err)
 	}
-	return exists, nil
+	if exists {
+		return false, nil
+	}
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO payments
+			(id, purchase_id, amount, status, installment_number, due_date, reference_month, paid_at, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+	`, payment.ID, payment.PurchaseID, payment.Amount, payment.Status,
+		payment.InstallmentNumber, payment.DueDate, payment.ReferenceMonth, payment.PaidAt, payment.CreatedAt,
+	); err != nil {
+		return false, fmt.Errorf("erro ao salvar pagamento recorrente: %w", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return false, fmt.Errorf("erro ao salvar pagamento recorrente: %w", err)
+	}
+	return true, nil
 }
+
+// purchaseColumns são as colunas de purchaseModel, na ordem da struct: pgx.RowToStructByName exige todas, e faltar uma
+// (ex.: kind) faz a leitura falhar com "cannot find field" sempre que há linha.
+const purchaseColumns = `id, description, category, payment_method, kind, transfer_direction, type, total_amount,
+		       installment_count, installment_amount, day_of_month, is_active,
+		       cancelled_at, cancellation_reason, raw_input, created_at`
 
 func (r *LedgerRepo) FindActiveRecurring(ctx context.Context) ([]domain.Purchase, error) {
 	query := `
-		SELECT id, description, category, payment_method, type, total_amount,
-		       installment_count, installment_amount, day_of_month, is_active,
-		       cancelled_at, cancellation_reason, raw_input, created_at
+		SELECT ` + purchaseColumns + `
 		FROM purchases
 		WHERE type = 'RECURRING' AND is_active = TRUE
 		ORDER BY description
@@ -101,9 +141,7 @@ func (r *LedgerRepo) FindActiveRecurring(ctx context.Context) ([]domain.Purchase
 
 func (r *LedgerRepo) FindByDescription(ctx context.Context, description string) ([]domain.Purchase, error) {
 	query := `
-		SELECT id, description, category, payment_method, type, total_amount,
-		       installment_count, installment_amount, day_of_month, is_active,
-		       cancelled_at, cancellation_reason, raw_input, created_at
+		SELECT ` + purchaseColumns + `
 		FROM purchases
 		WHERE type = 'RECURRING' AND is_active = TRUE AND description ILIKE $1
 		ORDER BY description

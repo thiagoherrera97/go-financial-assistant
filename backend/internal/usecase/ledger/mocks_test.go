@@ -82,11 +82,20 @@ func (m *mockLedger) SavePayment(ctx context.Context, payment *domain.Payment) e
 	return nil
 }
 
-func (m *mockLedger) HasPaymentForMonth(ctx context.Context, purchaseID uuid.UUID, month time.Time) (bool, error) {
+// SaveRecurringPaymentIfMissing: hasPaymentForMonthFn decide se o mês já tem pagamento; senão chama savePaymentFn.
+func (m *mockLedger) SaveRecurringPaymentIfMissing(ctx context.Context, payment *domain.Payment) (bool, error) {
 	if m.hasPaymentForMonthFn != nil {
-		return m.hasPaymentForMonthFn(ctx, purchaseID, month)
+		has, err := m.hasPaymentForMonthFn(ctx, payment.PurchaseID, *payment.ReferenceMonth)
+		if err != nil || has {
+			return false, err
+		}
 	}
-	return false, nil
+	if m.savePaymentFn != nil {
+		if err := m.savePaymentFn(ctx, payment); err != nil {
+			return false, err
+		}
+	}
+	return true, nil
 }
 
 func (m *mockLedger) FindPaymentsByMonth(ctx context.Context, month time.Time) ([]ports.PaymentSummary, error) {

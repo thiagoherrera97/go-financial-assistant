@@ -180,29 +180,44 @@ func (uc *AnalyzeExpense) GenerateRecurringExpenses(ctx context.Context) error {
 	now := uc.now()
 	firstOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
 
+	recovered := 0
 	for i := range actives {
 		p := &actives[i]
 
+		// Lança no dia programado ou, se o app estava fora nele, na primeira execução depois (subida ou meia-noite), só no
+		// mês corrente. O lançamento recuperado leva o carimbo da meia-noite local do dia programado, quando o ciclo diário o
+		// teria lançado.
+		var scheduled *time.Time
 		if p.DayOfMonth != nil {
 			target := lastValidDay(now.Year(), now.Month(), *p.DayOfMonth)
-			if now.Day() != target {
+			if now.Day() < target {
 				continue
+			}
+			if now.Day() > target {
+				day := time.Date(now.Year(), now.Month(), target, 0, 0, 0, 0, uc.loc).UTC()
+				scheduled = &day
 			}
 		}
 
-		has, err := uc.repo.HasPaymentForMonth(ctx, p.ID, firstOfMonth)
-		if err != nil {
-			uc.logger.Error("erro ao verificar pagamento mensal", "purchase_id", p.ID, "error", err)
-			continue
-		}
-		if has {
-			continue
-		}
 		payment := domain.NewPayment(p.ID, p.TotalAmount, domain.PaymentStatusPaid)
 		payment.ReferenceMonth = &firstOfMonth
-		if err := uc.repo.SavePayment(ctx, payment); err != nil {
-			uc.logger.Error("erro ao salvar pagamento recorrente", "purchase_id", p.ID, "error", err)
+		if scheduled != nil {
+			payment.CreatedAt = *scheduled
+			payment.PaidAt = scheduled
 		}
+		// Só grava se o mês ainda não tem pagamento desta recorrente (qualquer status) e ela continua ativa, num passo
+		// atômico: duas execuções juntas nunca duplicam.
+		saved, err := uc.repo.SaveRecurringPaymentIfMissing(ctx, payment)
+		if err != nil {
+			uc.logger.Error("erro ao salvar pagamento recorrente", "purchase_id", p.ID, "error", err)
+			continue
+		}
+		if saved && scheduled != nil {
+			recovered++
+		}
+	}
+	if recovered > 0 {
+		uc.logger.Info("despesas recorrentes do mês recuperadas (o app estava fora no dia programado)", "count", recovered)
 	}
 
 	return nil

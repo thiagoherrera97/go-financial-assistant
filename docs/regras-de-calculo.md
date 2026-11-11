@@ -2,6 +2,8 @@
 
 Tudo é calculado por código (nada de IA nos números). Valores em reais; um mês é identificado pelo seu primeiro dia (data, no fuso configurado em `DIGEST_TIMEZONE`, padrão America/Sao_Paulo). O fuso decide o "hoje" e o "este mês" (recorrências, CSV e relatório mensal, consultas do chat, painéis) e o mês dos lançamentos manuais avulsos, que não têm vencimento e usam o instante em que foram anotados: um gasto das 22h do dia 30 conta no mês do dia 30, não no seguinte. O banco recebe o mesmo fuso na sessão; trocá-lo nas configurações vale depois de reiniciar.
 
+**Recorrentes (despesa e renda):** cada recorrente ativa é lançada uma vez por mês no dia programado (dia 29, 30 ou 31 cai no último dia dos meses mais curtos). Se o app estava fora nesse dia, ela é lançada na subida ou no próximo ciclo da meia-noite do mesmo mês, com o mesmo valor e mês e a data do dia programado; um mês que já acabou não é lançado depois. Um mês que já tem qualquer pagamento dela, mesmo cancelado, não recebe outro; um pagamento do mês apagado à mão, depois do dia programado, volta a ser lançado na próxima subida (para não lançar, cancele a recorrente). Recorrente cancelada não é lançada.
+
 ## O que entra como gasto ou renda (sincronização)
 
 Feito em `infra/pluggy/mapper.go`. A transação do Pluggy vira lançamento, salvo quando é:
