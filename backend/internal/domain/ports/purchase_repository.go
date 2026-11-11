@@ -35,7 +35,10 @@ type LedgerStore interface {
 	FindByDescription(ctx context.Context, description string) ([]domain.Purchase, error)
 	Update(ctx context.Context, purchase *domain.Purchase) error
 	SavePayment(ctx context.Context, payment *domain.Payment) error
-	HasPaymentForMonth(ctx context.Context, purchaseID uuid.UUID, month time.Time) (bool, error)
+	// SaveRecurringPaymentIfMissing grava o pagamento da recorrente no mês de payment.ReferenceMonth só se ela ainda está
+	// ativa e o mês não tem nenhum pagamento dela (de qualquer status, inclusive CANCELLED). A checagem e o insert são
+	// atômicos (trava na linha da recorrente). Devolve se gravou.
+	SaveRecurringPaymentIfMissing(ctx context.Context, payment *domain.Payment) (bool, error)
 	FindPaymentsByMonth(ctx context.Context, month time.Time) ([]PaymentSummary, error)
 	FindPaymentDetailsByMonth(ctx context.Context, month time.Time) ([]PaymentDetail, error)
 	FindIncomeTotalByMonth(ctx context.Context, month time.Time) (float64, error)

@@ -44,11 +44,14 @@ func TestGenerateRecurringExpenses_UsesTheOwnersTimezone(t *testing.T) {
 	if err := uc.GenerateRecurringExpenses(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	if len(saved) != 1 || saved[0].PurchaseID != day30.ID {
-		t.Fatalf("só a recorrente do dia 30 deveria ser lançada, got %d lançamentos", len(saved))
+	// A do dia 30 é lançada no dia; a do dia 1, sem pagamento em novembro, é recuperada (H4). As duas em novembro.
+	if len(saved) != 2 {
+		t.Fatalf("deveria lançar as duas em novembro, got %d lançamentos", len(saved))
 	}
-	if want := time.Date(2026, 11, 1, 0, 0, 0, 0, time.UTC); !saved[0].ReferenceMonth.Equal(want) {
-		t.Errorf("reference_month = %v, esperado %v", saved[0].ReferenceMonth, want)
+	for _, p := range saved {
+		if want := time.Date(2026, 11, 1, 0, 0, 0, 0, time.UTC); !p.ReferenceMonth.Equal(want) {
+			t.Errorf("reference_month = %v, esperado %v", p.ReferenceMonth, want)
+		}
 	}
 }
 
