@@ -325,11 +325,14 @@ git pull
 docker compose up -d --build
 ```
 
-**Migrations novas:** o Postgres só roda os scripts de `backend/migrations/` quando o banco é criado. Em um banco existente, aplique à mão os que faltam (rodar de novo não estraga nada):
+**Migrations:** o app aplica sozinho as que faltam, ao subir, em ordem, e registra cada uma na tabela `schema_migrations` (versão, checksum e quando foi aplicada). Não há mais nada a rodar à mão.
 
-```bash
-for f in backend/migrations/01[0-9]_*.sql; do docker compose exec -T postgres psql -q -U finassist -d finassist < "$f"; done
-```
+- **Backup antes, sempre:** se houver migration pendente, o app grava um backup completo (`pg_dump`) em `./backups/pre-migration-AAAAMMDD-HHMMSS-<hash>.dump` (permissão 600) **antes** de aplicar. Ele não entra na retenção das 14 cópias diárias, então nenhum é apagado sozinho: apague à mão os antigos quando quiser. Sem nada pendente, não há backup nem alteração. O arquivo é criado pelo app, que roda como `root`: no host ele pertence ao `root` (use `sudo` para mover ou apagar).
+- **Se o backup falhar** (disco cheio, `./backups` sem permissão), **nada é aplicado**: o erro vai para o log (`docker compose logs app`) e o app sobe como antes, sem as migrations novas. Resolva a causa e reinicie (`docker compose restart app`).
+- **Se uma migration falhar**, ela é desfeita por inteiro (cada uma roda numa transação), o app não sobe e o log mostra o arquivo e o erro do Postgres. O banco continua como estava; o backup de antes está em `./backups`. O Docker reinicia o app em laço, mas o backup é feito **uma vez só** por conjunto de migrations pendentes (o `<hash>` no nome identifica o conjunto): as tentativas seguintes reaproveitam o mesmo arquivo se ele tiver menos de 1 hora ("backup já existe para estas migrations" no log); senão fazem um novo e removem os antigos da mesma tag. O disco não enche e um dump velho nunca substitui o "backup de antes". Corrigida a migration, o hash muda e um backup novo é feito.
+- **Restaurar um backup:** `make restore FILE=backups/pre-migration-AAAAMMDD-HHMMSS.dump` (substitui os dados atuais). Para conferir antes sem risco, restaure num banco à parte, como descrito em "Backup e restauração".
+- Dois apps ao mesmo tempo nunca aplicam juntos (trava no banco). Fora do Docker (`go run`), a pasta do backup é `./backups` (ou `MIGRATION_BACKUP_DIR`) e o `pg_dump` precisa estar no `PATH`; sem ele, nada é aplicado.
+- Um banco que já tinha as migrations aplicadas à mão é reconhecido na primeira subida: os scripts são idempotentes, rodam sem efeito e ficam registrados.
 
 | Migration | Para quê |
 | --- | --- |

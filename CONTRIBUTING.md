@@ -24,6 +24,6 @@ docker compose exec -T postgres psql -U finassist -d postgres -c "DROP DATABASE 
 - **Tudo verde antes de abrir PR:** `gofmt -l .` sem saída, `go vet`, `make lint`, `go test ./...`, `tsc`, `oxlint`, `vitest`. O CI roda o mesmo.
 - **Idioma:** identificadores em inglês; comentários, mensagens de erro, logs e textos da interface em português. Mensagens de erro em minúsculas.
 - **Comentários** explicam o *porquê* em poucas linhas. Algoritmos e decisões longas vão para `docs/` (regras de cálculo, decisões), não para o código.
-- **Migrations** novas: um arquivo numerado em `backend/migrations/`, idempotente (`IF NOT EXISTS`), com o comando de aplicar em bancos existentes no CHANGELOG e no README.
+- **Migrations** novas: um arquivo numerado em `backend/migrations/`, idempotente (`IF NOT EXISTS`, ou um bloco `DO $$ ... $$` para constraints), que roda dentro de uma transação (nada de `CONCURRENTLY`). O app a aplica sozinho ao subir (com backup antes) e registra em `schema_migrations`; um script já aplicado nunca é editado: mudança nova vai em outro arquivo. Basta descrever no CHANGELOG o que ela faz; não há comando manual. Os testes de `internal/infra/db/migrate` conferem que todas rodam duas vezes sem mudar o esquema nem os dados.
 - **Segredos** nunca em log, resposta de API ou commit. Veja a seção de Configurações no README.
 - **Sem abstração especulativa:** só extraia interface, tipo ou pacote com pelo menos dois usos reais.

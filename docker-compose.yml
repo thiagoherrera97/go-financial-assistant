@@ -139,6 +139,8 @@ services:
       APP_SECRET_KEY_FILE: ${APP_SECRET_KEY_FILE:-}
     volumes:
       - ./secrets:/run/secrets:ro
+      # Backup antes de aplicar migrations pendentes (pre-migration-*.dump). O app roda como root: o arquivo fica do root no host.
+      - ./backups:/app/backups
     depends_on:
       postgres:
         condition: service_healthy
