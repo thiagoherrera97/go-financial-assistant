@@ -101,6 +101,17 @@ func NewPurchase(
 	}, nil
 }
 
+// NewCardRefund é um estorno no cartão: uma despesa com valor negativo, que abate a fatura e a categoria. amount é o valor
+// estornado (positivo). Só a sincronização com o banco cria estornos.
+func NewCardRefund(amount float64, description *string, category Category, rawInput string) (*Purchase, error) {
+	p, err := NewPurchase(amount, description, category, PaymentMethodCreditCard, PurchaseTypeSingle, rawInput)
+	if err != nil {
+		return nil, err
+	}
+	p.TotalAmount = -amount
+	return p, nil
+}
+
 func NewIncome(
 	amount float64,
 	description *string,

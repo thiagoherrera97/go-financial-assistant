@@ -122,10 +122,12 @@ func ForecastCardInstallments(known []CardInstallment, dueDay map[uuid.UUID]int,
 // CardBillGapTolerance é a diferença mínima entre o total da fatura do banco e o que o app conhece para lançar o ajuste.
 const CardBillGapTolerance = 0.5
 
-// CardBillGap é quanto da fatura do banco não está detalhado no app (zero quando o app já cobre o total ou passa dele).
+// CardBillGap é a diferença entre o total da fatura do banco e o que o app conhece: positiva quando falta detalhe (compra ou
+// parcela que o Open Finance não mandou, saldo que veio da fatura anterior), negativa quando o app passa do banco (crédito
+// que não veio). Zero abaixo da tolerância.
 func CardBillGap(billTotal, known float64) float64 {
 	gap := math.Round((billTotal-known)*100) / 100
-	if gap < CardBillGapTolerance {
+	if math.Abs(gap) < CardBillGapTolerance {
 		return 0
 	}
 	return gap

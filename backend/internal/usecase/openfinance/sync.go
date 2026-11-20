@@ -268,13 +268,16 @@ func (s *SyncOpenFinance) syncOne(ctx context.Context, tx ports.ExternalTransact
 		return nil
 	}
 
-	reconciled, err := s.repo.ReconcileExternal(ctx, tx, accountID)
-	if err != nil {
-		return err
-	}
-	if reconciled {
-		result.Reconciled++
-		return nil
+	// Estorno não casa com lançamento manual (que é sempre positivo).
+	if !tx.Refund {
+		reconciled, err := s.repo.ReconcileExternal(ctx, tx, accountID)
+		if err != nil {
+			return err
+		}
+		if reconciled {
+			result.Reconciled++
+			return nil
+		}
 	}
 
 	purchase, err := newPurchaseFromExternal(tx)
@@ -282,8 +285,11 @@ func (s *SyncOpenFinance) syncOne(ctx context.Context, tx ports.ExternalTransact
 		return fmt.Errorf("transação externa inválida: %w", err)
 	}
 
-	payment := domain.NewPayment(purchase.ID, tx.Amount, domain.PaymentStatusPaid)
+	payment := domain.NewPayment(purchase.ID, purchase.TotalAmount, domain.PaymentStatusPaid)
 	payment.DueDate, payment.PaidAt, payment.ExternalID, payment.AccountID = &tx.Date, &tx.Date, &tx.ID, &accountID
+	if tx.BillID != "" {
+		payment.CardBillID = &tx.BillID
+	}
 	if tx.Pending {
 		payment.Status, payment.PaidAt = domain.PaymentStatusPending, nil
 	}
@@ -296,10 +302,12 @@ func (s *SyncOpenFinance) syncOne(ctx context.Context, tx ports.ExternalTransact
 }
 
 func newPurchaseFromExternal(tx ports.ExternalTransaction) (*domain.Purchase, error) {
-	switch tx.Kind {
-	case domain.KindIncome:
+	switch {
+	case tx.Refund:
+		return domain.NewCardRefund(tx.Amount, &tx.Description, tx.Category, tx.RawInput)
+	case tx.Kind == domain.KindIncome:
 		return domain.NewIncome(tx.Amount, &tx.Description, tx.Category, tx.PaymentMethod, domain.PurchaseTypeSingle, tx.RawInput)
-	case domain.KindTransfer:
+	case tx.Kind == domain.KindTransfer:
 		return domain.NewTransfer(tx.Amount, &tx.Description, tx.PaymentMethod, domain.PurchaseTypeSingle, tx.RawInput, tx.Direction)
 	default:
 		return domain.NewPurchase(tx.Amount, &tx.Description, tx.Category, tx.PaymentMethod, domain.PurchaseTypeSingle, tx.RawInput)

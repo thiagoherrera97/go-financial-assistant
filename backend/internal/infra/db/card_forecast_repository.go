@@ -189,7 +189,7 @@ func insertBillGaps(ctx context.Context, tx pgx.Tx) (int, error) {
 			rows.Close()
 			return 0, fmt.Errorf("erro ao ler fatura do cartão: %w", err)
 		}
-		if g.amount = domain.CardBillGap(total, known); g.amount > 0 {
+		if g.amount = domain.CardBillGap(total, known); g.amount != 0 {
 			gaps = append(gaps, g)
 		}
 	}
@@ -199,6 +199,9 @@ func insertBillGaps(ctx context.Context, tx pgx.Tx) (int, error) {
 	}
 	for _, g := range gaps {
 		desc := fmt.Sprintf("Fatura %s %s · não detalhado no Open Finance", g.name, g.due.Format("02/01"))
+		if g.amount < 0 {
+			desc = fmt.Sprintf("Fatura %s %s · créditos não detalhados no Open Finance", g.name, g.due.Format("02/01"))
+		}
 		raw := "[ajuste do FinAssist: total da fatura informado pelo banco menos os lançamentos conhecidos]"
 		if err := insertSynthetic(ctx, tx, desc, domain.CategoryOther, g.amount, domain.PaymentStatusPaid, raw, g.due, g.account, billGapPrefix+g.id); err != nil {
 			return 0, err
@@ -210,7 +213,13 @@ func insertBillGaps(ctx context.Context, tx pgx.Tx) (int, error) {
 // insertSynthetic grava um lançamento criado pelo app num cartão: compra avulsa no crédito, pagamento com a fatura já
 // definida (bill_due_date) e o external_id que o identifica como sintético.
 func insertSynthetic(ctx context.Context, tx pgx.Tx, desc string, category domain.Category, amount float64, status domain.PaymentStatus, raw string, billDue time.Time, account uuid.UUID, externalID string) error {
-	p, err := domain.NewPurchase(amount, &desc, category, domain.PaymentMethodCreditCard, domain.PurchaseTypeSingle, raw)
+	var p *domain.Purchase
+	var err error
+	if amount < 0 { // crédito da fatura: entra como estorno
+		p, err = domain.NewCardRefund(-amount, &desc, category, raw)
+	} else {
+		p, err = domain.NewPurchase(amount, &desc, category, domain.PaymentMethodCreditCard, domain.PurchaseTypeSingle, raw)
+	}
 	if err != nil {
 		return fmt.Errorf("lançamento do cartão inválido: %w", err)
 	}

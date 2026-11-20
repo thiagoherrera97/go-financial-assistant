@@ -97,7 +97,8 @@ func TestCardBillGap(t *testing.T) {
 		{100, 100.2, 0},
 		{100, 99.7, 0},
 		{100, 99.4, 0.6},
-		{100, 150, 0},
+		{100, 150, -50},
+		{100, 100.4, 0},
 	}
 	for _, c := range cases {
 		if got := CardBillGap(c.total, c.known); got != c.want {

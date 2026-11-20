@@ -124,9 +124,16 @@ func toExternal(accountType domain.AccountType, t transaction) (ports.ExternalTr
 	isCard := accountType == domain.AccountCredit
 	inflow := t.Type == "CREDIT"
 
-	// Em cartão, crédito é pagamento de fatura ou estorno: não é renda.
-	if containsAny(category, ignoredCategories) || (isCard && inflow) || isCardPayment(category, t.Description+" "+t.DescriptionRaw) {
+	// Em cartão, crédito é pagamento de fatura (ignorado: a fatura já conta pelas compras) ou estorno, que não é renda: entra
+	// como despesa negativa e abate a fatura, como no extrato do banco. O Pluggy marca o pagamento com "credit card payment";
+	// sem a categoria, a descrição de pagamento basta.
+	refund := isCard && inflow
+	if containsAny(category, ignoredCategories) || (refund && isCardBillPayment(category, t.Description+" "+t.DescriptionRaw)) ||
+		isCardPayment(category, t.Description+" "+t.DescriptionRaw) {
 		return ports.ExternalTransaction{}, false
+	}
+	if refund {
+		inflow = false
 	}
 
 	description := t.Description
@@ -150,10 +157,14 @@ func toExternal(accountType domain.AccountType, t transaction) (ports.ExternalTr
 		PaymentMethod: paymentMethod(isCard, t),
 		Pending:       t.Status == "PENDING",
 		Installment:   installment,
+		Refund:        refund,
+	}
+	if t.CreditCardMetadata != nil {
+		ext.BillID = t.CreditCardMetadata.BillID
 	}
 
 	switch {
-	case containsAny(category, investmentCategories):
+	case containsAny(category, investmentCategories) && !refund:
 		if containsAny(strings.ToLower(description), autoSweepDescriptions) {
 			return ports.ExternalTransaction{}, false
 		}
@@ -187,6 +198,11 @@ func installmentDate(purchase time.Time, forecast string) time.Time {
 	}
 	last := time.Date(m.Year(), m.Month()+1, 0, 0, 0, 0, 0, time.UTC).Day()
 	return time.Date(m.Year(), m.Month(), min(purchase.Day(), last), 0, 0, 0, 0, time.UTC)
+}
+
+// isCardBillPayment diz se um crédito no cartão é o pagamento da fatura (e não um estorno).
+func isCardBillPayment(category, description string) bool {
+	return strings.Contains(category, cardPaymentCategory) || strings.Contains(strings.ToLower(description), "pagamento")
 }
 
 // isCardPayment diz se a transação é pagamento de fatura de cartão: categoria "credit card payment" do Pluggy e a descrição
