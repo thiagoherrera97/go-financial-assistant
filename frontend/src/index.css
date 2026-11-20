@@ -225,6 +225,14 @@ table.tx td { vertical-align: top; }
 /* Em telas estreitas, categoria e conta descem para baixo da descrição */
 .tx-meta.always { display: block; }
 .tx-meta { display: none; font-size: 0.75rem; color: var(--text-muted); }
+.tx-note { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; margin-top: 2px; }
+.tx-note-text { font-size: 0.8125rem; font-style: italic; color: var(--text-secondary); overflow-wrap: anywhere; }
+.tx-note-btn { display: inline-flex; align-items: center; gap: 3px; padding: 2px 4px; border: 0; background: none; color: var(--text-muted); font: inherit; font-size: 0.75rem; cursor: pointer; border-radius: 6px; }
+.tx-note-btn:hover, .tx-note-btn:focus-visible { color: var(--accent); }
+.tx-note-form .btn-small { margin-left: 0; }
+.tx-note-form { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 4px; }
+.tx-note-input { flex: 1 1 220px; min-width: 0; padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--page); color: inherit; font: inherit; font-size: 0.875rem; }
+.tx-note-error { font-size: 0.75rem; color: var(--bad); }
 @media (max-width: 720px) {
   .col-wide { display: none; }
   .tx-meta { display: block; }

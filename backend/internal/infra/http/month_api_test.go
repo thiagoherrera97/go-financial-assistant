@@ -2,9 +2,11 @@ package httpserver
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/domain"
+	"github.com/google/uuid"
 )
 
 func TestAPI_MonthSheet(t *testing.T) {
@@ -37,5 +39,26 @@ func TestAPI_MonthSheet(t *testing.T) {
 	}
 	if rec := do(s, "GET", "/api/month", "", nil, c); rec.Code != 400 {
 		t.Errorf("sem mês deveria ser 400, got %d", rec.Code)
+	}
+}
+
+func TestAPI_SetTransactionNote(t *testing.T) {
+	r := &fakeReader{}
+	s := newTestAPI(t, r)
+	c := login(t, s)
+	id := uuid.New()
+	rec := do(s, "PUT", "/api/transactions/"+id.String()+"/note", `{"note":"  insulfilm,\n mãe ajudando "}`, jsonHdr, c)
+	if rec.Code != 200 || r.notes[id] != "insulfilm, mãe ajudando" {
+		t.Fatalf("%d %s %q", rec.Code, rec.Body.String(), r.notes[id])
+	}
+	long := strings.Repeat("a", 301)
+	if rec := do(s, "PUT", "/api/transactions/"+id.String()+"/note", `{"note":"`+long+`"}`, jsonHdr, c); rec.Code != 400 {
+		t.Errorf("nota longa: %d", rec.Code)
+	}
+	if rec := do(s, "PUT", "/api/transactions/"+uuid.Nil.String()+"/note", `{"note":"x"}`, jsonHdr, c); rec.Code != 404 {
+		t.Errorf("inexistente: %d", rec.Code)
+	}
+	if rec := do(s, "PUT", "/api/transactions/"+id.String()+"/note", `{"note":"x"}`, map[string]string{"Content-Type": "application/json", "Origin": "https://evil.example"}, c); rec.Code != 403 {
+		t.Errorf("outra origem: %d", rec.Code)
 	}
 }

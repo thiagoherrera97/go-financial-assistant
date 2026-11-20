@@ -63,4 +63,6 @@ type MonthLine struct {
 	AccountName string
 	Card        bool   // no cartão de crédito
 	Synthetic   string // "" (real), "forecast" (parcela prevista) ou "bill" (ajuste pelo total da fatura)
+	Date        time.Time
+	Note        string
 }

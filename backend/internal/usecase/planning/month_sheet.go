@@ -9,12 +9,21 @@ import (
 	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/domain"
 )
 
-// SheetItem é uma linha da tela do mês.
+// SheetItem é uma linha da tela do mês; Lines são os lançamentos que ela soma (para abrir e ver as notas).
 type SheetItem struct {
 	Label   string
 	Amount  float64
 	Count   int
 	Pending bool // tem lançamento pendente (ou é previsão)
+	Lines   []SheetLine
+}
+
+// SheetLine é um lançamento dentro de uma linha da tela do mês.
+type SheetLine struct {
+	Label  string
+	Date   time.Time
+	Amount float64
+	Note   string
 }
 
 // SheetCard é a fatura de um cartão no mês, por categoria.
@@ -77,7 +86,7 @@ func BuildMonthSheet(month time.Time, lines []domain.MonthLine, classes map[stri
 			if l.Category == string(domain.CategorySalary) {
 				label = salaryLabel
 			}
-			income.add(label, l.Amount, l.Pending)
+			income.add(label, l)
 		case string(domain.KindTransfer):
 			if l.Direction == string(domain.TransferDirectionIn) {
 				s.Invested -= l.Amount
@@ -107,16 +116,16 @@ func BuildMonthSheet(month time.Time, lines []domain.MonthLine, classes map[stri
 					if l.Amount < 0 {
 						c.sheet.Refunds += l.Amount
 					}
-					c.cats.add(domain.Category(l.Category).Label(), l.Amount, l.Pending)
+					c.cats.add(domain.Category(l.Category).Label(), l)
 				}
 				continue
 			}
 			if class := classes[l.Key]; class == domain.ClassFixed || class == domain.ClassInstallment {
-				fixed.add(l.Label, l.Amount, l.Pending)
+				fixed.add(l.Label, l)
 			} else if l.Category == string(domain.CategoryOther) {
-				other.add(l.Label, l.Amount, l.Pending) // sem categoria, o nome diz mais (Pix para uma pessoa, um boleto)
+				other.add(l.Label, l) // sem categoria, o nome diz mais (Pix para uma pessoa, um boleto)
 			} else {
-				other.add(domain.Category(l.Category).Label(), l.Amount, l.Pending)
+				other.add(domain.Category(l.Category).Label(), l)
 			}
 		}
 	}
@@ -156,16 +165,17 @@ type group struct {
 
 func newGroup() *group { return &group{byLabel: map[string]*SheetItem{}} }
 
-func (g *group) add(label string, amount float64, pending bool) {
+func (g *group) add(label string, l domain.MonthLine) {
 	it := g.byLabel[label]
 	if it == nil {
 		it = &SheetItem{Label: label}
 		g.byLabel[label] = it
 		g.order = append(g.order, label)
 	}
-	it.Amount += amount
+	it.Amount += l.Amount
 	it.Count++
-	it.Pending = it.Pending || pending
+	it.Pending = it.Pending || l.Pending
+	it.Lines = append(it.Lines, SheetLine{Label: l.Label, Date: l.Date, Amount: l.Amount, Note: l.Note})
 }
 
 // items devolve as linhas da maior para a menor e o total (em centavos).
@@ -175,6 +185,7 @@ func (g *group) items() ([]SheetItem, float64) {
 	for _, label := range g.order {
 		it := *g.byLabel[label]
 		it.Amount = round2(it.Amount)
+		sort.SliceStable(it.Lines, func(i, j int) bool { return it.Lines[i].Date.Before(it.Lines[j].Date) })
 		if it.Amount == 0 {
 			continue
 		}

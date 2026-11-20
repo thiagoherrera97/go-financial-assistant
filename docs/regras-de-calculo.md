@@ -42,6 +42,10 @@ Ao fim de cada sincronização (`ReclassifyOwnMoves`, idempotente, vale também 
 - **Caixinha do Mercado Pago** ("Dinheiro reservado …" / "Dinheiro retirado …"): vira aplicação e resgate (transferência de investimento), não gasto nem renda.
 - **Pagamento da fatura de um cartão seu por uma conta** (a descrição traz o nome do cartão, ex.: "Pagamento de conta SANTANDER UNIQUE VISA INFINITE"): fica cancelado, com o motivo registrado, porque as compras do cartão já contam no mês da fatura. Só casa nome de cartão com 10 letras ou mais que não seja também nome de conta corrente.
 
+### Notas das transações
+
+Cada transação pode ter uma **nota** sua (`payments.note`, até 300 caracteres), escrita em Transações ou pelo chat ("nota <valor> [dia] <texto>"). A sincronização nunca mexe na nota. Pelo chat, a transação é achada pelo valor (de qualquer sinal) no dia dito; sem resultado, ±3 dias; sem dia, nos últimos 60 dias. Nota de transação que ainda não chegou fica em `pending_notes` e é aplicada ao fim de cada sincronização quando há **exatamente uma** transação sem nota com o valor, a até 3 dias do dia dito (na dúvida, espera); some depois de 60 dias.
+
 ### Estornos no cartão
 
 Crédito no cartão que não é o pagamento da fatura (categoria "Credit card payment" do Pluggy ou "pagamento" na descrição) é **estorno**: entra como **despesa com valor negativo**, na categoria e na fatura do crédito, e abate o mês como no extrato do banco ("Total de créditos"). Só a sincronização grava valor negativo; lançamentos manuais continuam positivos, e o estorno nunca é conciliado com um deles.

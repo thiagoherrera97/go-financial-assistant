@@ -6,17 +6,29 @@ import (
 	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/usecase/planning"
 )
 
+type sheetLineJSON struct {
+	Label  string  `json:"label"`
+	Date   string  `json:"date"`
+	Amount float64 `json:"amount"`
+	Note   string  `json:"note"`
+}
+
 type sheetItemJSON struct {
-	Label   string  `json:"label"`
-	Amount  float64 `json:"amount"`
-	Count   int     `json:"count"`
-	Pending bool    `json:"pending"`
+	Label   string          `json:"label"`
+	Amount  float64         `json:"amount"`
+	Count   int             `json:"count"`
+	Pending bool            `json:"pending"`
+	Lines   []sheetLineJSON `json:"lines"`
 }
 
 func sheetItems(in []planning.SheetItem) []sheetItemJSON {
 	out := make([]sheetItemJSON, len(in))
 	for i, it := range in {
-		out[i] = sheetItemJSON(it)
+		lines := make([]sheetLineJSON, len(it.Lines))
+		for n, l := range it.Lines {
+			lines[n] = sheetLineJSON{l.Label, l.Date.Format("2006-01-02"), l.Amount, l.Note}
+		}
+		out[i] = sheetItemJSON{it.Label, it.Amount, it.Count, it.Pending, lines}
 	}
 	return out
 }

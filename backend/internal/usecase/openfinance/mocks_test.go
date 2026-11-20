@@ -23,6 +23,14 @@ type mockStore struct {
 	saveBillsFn         func(ctx context.Context, accountID uuid.UUID, bills []ports.ExternalBill) error
 	rebuildFn           func(ctx context.Context, closeDaysBefore int, today time.Time) (int, int, error)
 	reclassifyFn        func(ctx context.Context) (int64, int64, error)
+	applyNotesFn        func(ctx context.Context) (int, error)
+}
+
+func (m *mockStore) ApplyPendingNotes(ctx context.Context) (int, error) {
+	if m.applyNotesFn != nil {
+		return m.applyNotesFn(ctx)
+	}
+	return 0, nil
 }
 
 func (m *mockStore) ReclassifyOwnMoves(ctx context.Context) (int64, int64, error) {

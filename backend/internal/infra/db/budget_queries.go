@@ -166,7 +166,8 @@ func (r *BudgetRepo) MonthLines(ctx context.Context, month time.Time) ([]domain.
 		       pay.amount, pay.status = 'PENDING', COALESCE(a.id::text, ''), COALESCE(a.name, ''),
 		       COALESCE(a.type = 'CREDIT', p.payment_method = 'CREDIT_CARD'),
 		       CASE WHEN pay.external_id LIKE '` + forecastPrefix + `%' THEN 'forecast'
-		            WHEN pay.external_id LIKE '` + billGapPrefix + `%' THEN 'bill' ELSE '' END
+		            WHEN pay.external_id LIKE '` + billGapPrefix + `%' THEN 'bill' ELSE '' END,
+		       ` + txDate + `::date, COALESCE(pay.note, '')
 		FROM payments pay
 		JOIN purchases p ON p.id = pay.purchase_id
 		LEFT JOIN accounts a ON a.id = pay.account_id
@@ -183,7 +184,7 @@ func (r *BudgetRepo) MonthLines(ctx context.Context, month time.Time) ([]domain.
 	for rows.Next() {
 		var l domain.MonthLine
 		if err := rows.Scan(&l.Key, &l.Label, &l.Category, &l.Kind, &l.Direction, &l.Amount, &l.Pending, &l.AccountID,
-			&l.AccountName, &l.Card, &l.Synthetic); err != nil {
+			&l.AccountName, &l.Card, &l.Synthetic, &l.Date, &l.Note); err != nil {
 			return nil, fmt.Errorf("erro ao escanear lançamento do mês: %w", err)
 		}
 		result = append(result, l)

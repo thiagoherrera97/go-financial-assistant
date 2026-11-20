@@ -82,6 +82,8 @@ type ExternalStore interface {
 	// ReclassifyOwnMoves trata como dinheiro seu mudando de lugar a caixinha (vira aplicação e resgate) e o pagamento, por
 	// uma conta, da fatura de um cartão seu (cancelado). Devolve quantos de cada.
 	ReclassifyOwnMoves(ctx context.Context) (savings, cardPayments int64, err error)
+	// ApplyPendingNotes coloca as notas mandadas pelo chat antes da transação chegar nas transações que chegaram.
+	ApplyPendingNotes(ctx context.Context) (int, error)
 }
 
 // PurchaseRepository é o armazenamento completo dos lançamentos; quem usa só uma parte deve pedir LedgerStore ou ExternalStore.

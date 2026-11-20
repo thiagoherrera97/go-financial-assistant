@@ -134,6 +134,7 @@ func (a *api) transactions(w http.ResponseWriter, r *http.Request) {
 		AccountID         *uuid.UUID `json:"accountId,omitempty"`
 		AccountName       string     `json:"accountName,omitempty"`
 		Source            string     `json:"source"`
+		Note              string     `json:"note"`
 	}
 	items := make([]item, len(txs))
 	for i, t := range txs {
@@ -143,12 +144,45 @@ func (a *api) transactions(w http.ResponseWriter, r *http.Request) {
 		}
 		items[i] = item{t.ID, t.Date.Format(time.DateOnly), t.Description, t.Category, domain.Category(t.Category).Label(),
 			t.PaymentMethod, domain.PaymentMethod(t.PaymentMethod).Label(), t.Kind, t.TransferDirection, t.Type, t.Status,
-			t.Amount, t.InstallmentNumber, t.AccountID, t.AccountName, source}
+			t.Amount, t.InstallmentNumber, t.AccountID, t.AccountName, source, t.Note}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"items": items, "total": total, "page": page, "limit": f.Limit})
 }
 
+const maxNoteBody = 2 << 10
+
+// setTransactionNote grava a nota de uma transação ("o que foi"); nota vazia apaga.
+func (a *api) setTransactionNote(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(r.PathValue("id"))
+	if err != nil {
+		writeError(w, http.StatusNotFound, "transação não encontrada")
+		return
+	}
+	var body struct {
+		Note string `json:"note"`
+	}
+	if !decodeJSON(w, r, maxNoteBody, &body) {
+		return
+	}
+	note, err := domain.NormalizeNote(body.Note)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	found, err := a.reader.SetTransactionNote(r.Context(), id, note)
+	if err != nil {
+		a.fail(w, "nota da transação", err)
+		return
+	}
+	if !found {
+		writeError(w, http.StatusNotFound, "transação não encontrada")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"note": note})
+}
+
 func (a *api) registerTransactions(rt routes) {
+	rt.mux.Handle("PUT /api/transactions/{id}/note", rt.protected(jsonOnly(a.setTransactionNote)))
 	rt.mux.Handle("GET /api/transactions", rt.protected(a.transactions))
 	rt.mux.Handle("GET /api/transactions/groups", rt.protected(a.transactionGroups))
 }

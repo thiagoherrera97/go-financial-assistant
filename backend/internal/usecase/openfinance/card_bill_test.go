@@ -175,3 +175,12 @@ func TestSync_ReclassifiesOwnMovesEverySync(t *testing.T) {
 		t.Error("falha na reclassificação deveria voltar como erro")
 	}
 }
+
+func TestSync_AppliesPendingNotes(t *testing.T) {
+	calls := 0
+	repo := &mockStore{applyNotesFn: func(context.Context) (int, error) { calls++; return 1, nil }}
+	prov := &mockProvider{byItem: map[string][]ports.ExternalTransaction{"item": {extTx("t1", domain.KindExpense)}}}
+	if _, err := newSync(repo, prov, "item").Sync(context.Background()); err != nil || calls != 1 {
+		t.Errorf("notas pendentes deveriam ser aplicadas uma vez: calls=%d err=%v", calls, err)
+	}
+}
