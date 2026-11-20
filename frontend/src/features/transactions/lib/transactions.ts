@@ -28,12 +28,15 @@ export function toApiQuery(params: URLSearchParams, now = currentMonth()): strin
 }
 
 /** Valor com sinal e o que ele significa. Investimento não é gasto nem ganho: fica neutro. */
-export function describeAmount(t: Pick<Transaction, 'kind' | 'transferDirection' | 'amount'>) {
+export function describeAmount(t: Pick<Transaction, 'kind' | 'transferDirection' | 'amount'> & { category?: string }) {
   const value = formatBRL(t.amount)
   switch (t.kind) {
     case 'INCOME':
       return { text: `+${value}`, tone: 'in' as const, caption: 'Receita' }
     case 'TRANSFER':
+      if (t.category === 'RESERVE') {
+        return { text: value, tone: 'neutral' as const, caption: t.transferDirection === 'IN' ? 'Saiu da caixinha' : 'Foi para a caixinha' }
+      }
       return { text: value, tone: 'neutral' as const, caption: t.transferDirection === 'IN' ? 'Resgate' : 'Aplicação' }
     default:
       return { text: `-${value}`, tone: 'out' as const, caption: 'Despesa' }

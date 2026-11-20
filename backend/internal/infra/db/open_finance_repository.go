@@ -252,7 +252,8 @@ const ownCardPaymentReason = "pagamento da fatura de um cartão seu (as compras 
 
 // ReclassifyOwnMoves corrige o que o banco manda como gasto ou renda mas é dinheiro seu mudando de lugar. Roda ao fim de
 // cada sincronização (idempotente) e vale também para o que já estava gravado:
-//   - caixinha do Mercado Pago ("Dinheiro reservado ..." / "Dinheiro retirado ..."): vira aplicação e resgate (TRANSFER);
+//   - caixinha do Mercado Pago ("Dinheiro reservado ..." / "Dinheiro retirado ..."): vira transferência na categoria
+//     Caixinha (nem gasto, nem renda, nem investimento);
 //   - pagamento, por uma conta, da fatura de um cartão seu (a descrição traz o nome do cartão, ex.: "Pagamento de conta
 //     SANTANDER UNIQUE VISA INFINITE"): é cancelado com o motivo, porque as compras do cartão já contam. Só vale para nome
 //     de cartão com 10+ letras que não seja também o nome de uma conta corrente (evita "Mercado Pago" casar com tudo);
@@ -261,9 +262,9 @@ const ownCardPaymentReason = "pagamento da fatura de um cartão seu (as compras 
 func (r *LedgerRepo) ReclassifyOwnMoves(ctx context.Context) (savings, cardPayments, fundPayments int64, err error) {
 	tag, err := r.db.Pool.Exec(ctx, `
 		UPDATE purchases p SET
-			kind = 'TRANSFER', category = 'INVESTMENT',
-			transfer_direction = CASE WHEN p.kind = 'INCOME' THEN 'IN' ELSE 'OUT' END
-		WHERE p.kind IN ('EXPENSE', 'INCOME') AND p.type = 'SINGLE'
+			kind = 'TRANSFER', category = 'RESERVE',
+			transfer_direction = CASE WHEN p.kind = 'INCOME' THEN 'IN' WHEN p.kind = 'EXPENSE' THEN 'OUT' ELSE p.transfer_direction END
+		WHERE (p.kind IN ('EXPENSE', 'INCOME') OR (p.kind = 'TRANSFER' AND p.category <> 'RESERVE')) AND p.type = 'SINGLE'
 		  AND p.description ~* '^dinheiro (reservado|retirado)\M'
 		  AND EXISTS (SELECT 1 FROM payments pay WHERE pay.purchase_id = p.id AND pay.external_id IS NOT NULL
 		              AND pay.external_id NOT LIKE '`+syntheticPrefix+`%')
@@ -298,7 +299,7 @@ func (r *LedgerRepo) ReclassifyOwnMoves(ctx context.Context) (savings, cardPayme
 	tag, err = r.db.Pool.Exec(ctx, `
 		UPDATE purchases p SET kind = 'EXPENSE', category = 'OTHER', transfer_direction = NULL
 		WHERE p.kind = 'TRANSFER' AND p.transfer_direction = 'OUT' AND p.type = 'SINGLE'
-		  AND p.description ~* '^pagamento (com pix|de boleto|de conta)\M'
+		  AND p.description ~* '^pagamento (com (qr )?pix|de boleto|de conta)\M'
 		  AND EXISTS (SELECT 1 FROM payments pay WHERE pay.purchase_id = p.id AND pay.external_id IS NOT NULL
 		              AND pay.external_id NOT LIKE '`+syntheticPrefix+`%')
 	`)

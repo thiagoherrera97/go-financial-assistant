@@ -27,6 +27,7 @@ func TestBuildMonthSheet(t *testing.T) {
 		card("ajuste", "OTHER", 279.89, "bill"),
 		{Key: "cdb", Label: "CDB", Category: "INVESTMENT", Kind: "TRANSFER", Direction: "OUT", Amount: 1000},
 		{Key: "cdb", Label: "CDB", Category: "INVESTMENT", Kind: "TRANSFER", Direction: "IN", Amount: 300},
+		{Key: "caixinha", Label: "Dinheiro retirado Dívidas mensais", Category: "RESERVE", Kind: "TRANSFER", Direction: "IN", Amount: 5000},
 	}
 	classes := map[string]domain.ExpenseClass{"financiamento": domain.ClassInstallment, "aluguel": domain.ClassFixed, "padaria": domain.ClassVariable}
 	salary := []domain.SalaryStatus{

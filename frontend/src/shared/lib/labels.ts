@@ -2,7 +2,7 @@
 export const KINDS = [
   { value: 'EXPENSE', label: 'Despesa' },
   { value: 'INCOME', label: 'Receita' },
-  { value: 'TRANSFER', label: 'Investimento' },
+  { value: 'TRANSFER', label: 'Investimento ou caixinha' },
 ]
 
 export const CATEGORIES = [
@@ -19,6 +19,7 @@ export const CATEGORIES = [
   { value: 'EDUCATION', label: 'Educação' },
   { value: 'PEOPLE', label: 'Pessoas' },
   { value: 'OTHER', label: 'Outros' },
+  { value: 'RESERVE', label: 'Caixinha' },
 ]
 
 export const PAYMENT_METHODS = [

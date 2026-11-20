@@ -55,6 +55,9 @@ const (
 	CategoryEducation     Category = "EDUCATION"
 	CategoryPeople        Category = "PEOPLE"
 	CategoryOther         Category = "OTHER"
+	// CategoryReserve é a caixinha da conta (ex.: Mercado Pago): dinheiro do dia a dia separado para render. Movimento
+	// entre a conta e a caixinha é transferência (não é gasto nem renda) e também não é investimento.
+	CategoryReserve Category = "RESERVE"
 )
 
 type Purchase struct {

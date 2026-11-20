@@ -88,6 +88,9 @@ func BuildMonthSheet(month time.Time, lines []domain.MonthLine, classes map[stri
 			}
 			income.add(label, l)
 		case string(domain.KindTransfer):
+			if l.Category == string(domain.CategoryReserve) {
+				continue // caixinha: dinheiro da conta, não é investimento
+			}
 			if l.Direction == string(domain.TransferDirectionIn) {
 				s.Invested -= l.Amount
 			} else {

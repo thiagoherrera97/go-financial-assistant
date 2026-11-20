@@ -156,7 +156,7 @@ func (r *LedgerRepo) FindTransferNetByMonth(ctx context.Context, month time.Time
 		FROM payments pay
 		JOIN purchases p ON p.id = pay.purchase_id
 		WHERE ` + paymentMonth + ` = DATE_TRUNC('month', $1::date)::date
-		  AND p.kind = 'TRANSFER'
+		  AND p.kind = 'TRANSFER' AND p.category <> 'RESERVE' -- caixinha não é investimento
 		  AND pay.status != 'CANCELLED'
 	`
 	if err = r.db.Pool.QueryRow(ctx, query, month).Scan(&applied, &redeemed); err != nil {

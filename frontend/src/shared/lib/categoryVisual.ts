@@ -4,6 +4,7 @@ import {
   Clapperboard,
   GraduationCap,
   HeartPulse,
+  PiggyBank,
   House,
   ShoppingBag,
   ShoppingCart,
@@ -37,6 +38,7 @@ const VISUALS: Record<string, CategoryVisual> = {
   EDUCATION: { color: 'var(--cat-education)', Icon: GraduationCap },
   PEOPLE: { color: 'var(--cat-people)', Icon: Users },
   OTHER: { color: 'var(--cat-other)', Icon: CircleEllipsis },
+  RESERVE: { color: 'var(--cat-investment)', Icon: PiggyBank },
 }
 
 export const categoryVisual = (category: string): CategoryVisual => VISUALS[category] ?? VISUALS.OTHER

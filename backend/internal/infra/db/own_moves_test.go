@@ -68,16 +68,20 @@ func TestReclassifyOwnMoves(t *testing.T) {
 	}
 	read := func(id uuid.UUID) (kind, dir, status string) {
 		var d *string
-		pg.Pool.QueryRow(ctx, `SELECT p.kind, p.transfer_direction, pay.status FROM purchases p JOIN payments pay ON pay.purchase_id = p.id WHERE p.id = $1`, id).Scan(&kind, &d, &status) //nolint:errcheck
+		var cat string
+		pg.Pool.QueryRow(ctx, `SELECT p.kind, p.transfer_direction, pay.status, p.category FROM purchases p JOIN payments pay ON pay.purchase_id = p.id WHERE p.id = $1`, id).Scan(&kind, &d, &status, &cat) //nolint:errcheck
+		if kind == "TRANSFER" && cat == "RESERVE" {
+			kind = "RESERVE"
+		}
 		if d != nil {
 			dir = *d
 		}
 		return
 	}
-	if k, d, _ := read(reservado); k != "TRANSFER" || d != "OUT" {
+	if k, d, _ := read(reservado); k != "RESERVE" || d != "OUT" {
 		t.Errorf("reservado = %s %s", k, d)
 	}
-	if k, d, _ := read(retirado); k != "TRANSFER" || d != "IN" {
+	if k, d, _ := read(retirado); k != "RESERVE" || d != "IN" {
 		t.Errorf("retirado = %s %s", k, d)
 	}
 	if _, _, s := read(fatura); s != "CANCELLED" {

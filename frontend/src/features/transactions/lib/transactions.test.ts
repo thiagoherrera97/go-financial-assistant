@@ -40,6 +40,8 @@ describe('describeAmount', () => {
     expect(plain(describeAmount({ kind: 'INCOME', amount: 10 }).text)).toBe('+R$ 10,00')
     expect(describeAmount({ kind: 'TRANSFER', transferDirection: 'IN', amount: 1 })).toMatchObject({ tone: 'neutral', caption: 'Resgate' })
     expect(describeAmount({ kind: 'TRANSFER', transferDirection: 'OUT', amount: 1 }).caption).toBe('Aplicação')
+    expect(describeAmount({ kind: 'TRANSFER', transferDirection: 'OUT', amount: 1, category: 'RESERVE' }).caption).toBe('Foi para a caixinha')
+    expect(describeAmount({ kind: 'TRANSFER', transferDirection: 'IN', amount: 1, category: 'RESERVE' }).caption).toBe('Saiu da caixinha')
   })
 })
 
