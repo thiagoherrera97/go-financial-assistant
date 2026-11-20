@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { describeAmount, formatDay, formatDayLabel, monthFilter, toApiQuery, withGroupFilter } from './transactions'
+import { describeAmount, investSummary, formatDay, formatDayLabel, monthFilter, toApiQuery, withGroupFilter } from './transactions'
 
 const q = (s: string) => new URLSearchParams(s)
 const plain = (s: string) => s.replace(/ /g, ' ')
@@ -63,5 +63,13 @@ describe('withGroupFilter', () => {
 
   it('o filtro por dia troca o mês', () => {
     expect(withGroupFilter('month=2026-09&q=padaria', 'day', '2026-09-03')).toBe('q=padaria&day=2026-09-03&limit=100')
+  })
+})
+
+describe('investSummary', () => {
+  it('mostra o líquido: o mesmo dinheiro indo e voltando não se soma', () => {
+    expect(investSummary(1171.33, 5627.18)).toMatchObject({ net: -4455.85, headline: 'Tirou da reserva R$\u00a04.455,85' })
+    expect(investSummary(800, 800).headline).toBe('Guardou R$\u00a00,00')
+    expect(investSummary(1000, 200).detail).toBe('aplicado R$\u00a01.000,00 · resgatado R$\u00a0200,00')
   })
 })

@@ -32,7 +32,9 @@ type TransactionGroup struct {
 	Count    int
 	Expense  float64
 	Income   float64
-	Transfer float64
+	Transfer float64 // aplicações + resgates (volume movimentado)
+	// Aplicado (saiu para o investimento ou a caixinha) e resgatado (voltou). O que ficou guardado é Applied − Redeemed.
+	Applied, Redeemed float64
 }
 
 type Transaction struct {

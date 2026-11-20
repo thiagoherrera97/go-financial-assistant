@@ -9,7 +9,7 @@ import { categoryVisual } from '../../shared/lib/categoryVisual'
 import { formatBRL, formatMonthTitle } from '../../shared/lib/format'
 import { CATEGORIES, KINDS, PAYMENT_METHODS } from '../../shared/lib/labels'
 import { shiftMonth } from '../../shared/lib/months'
-import { formatDayLabel, withGroupFilter } from './lib/transactions'
+import { formatDayLabel, investSummary, withGroupFilter } from './lib/transactions'
 import { useTransactionFilters } from './lib/useTransactionFilters'
 import { useTransactionGroups, useTransactions } from './api'
 import { useAccounts } from '../../shared/api/accounts'
@@ -99,14 +99,21 @@ const VIEWS = [
 function Summary({ groups }: { groups: TransactionGroup[] | undefined }) {
   if (!groups) return null
   const total = groups.reduce(
-    (acc, g) => ({ expense: acc.expense + g.expense, income: acc.income + g.income, transfer: acc.transfer + g.transfer, count: acc.count + g.count }),
-    { expense: 0, income: 0, transfer: 0, count: 0 },
+    (acc, g) => ({
+      expense: acc.expense + g.expense,
+      income: acc.income + g.income,
+      applied: acc.applied + g.applied,
+      redeemed: acc.redeemed + g.redeemed,
+      count: acc.count + g.count,
+    }),
+    { expense: 0, income: 0, applied: 0, redeemed: 0, count: 0 },
   )
+  const invest = investSummary(total.applied, total.redeemed)
   return (
     <div className="tiles section-gap">
       <StatTile label="Despesas" value={formatBRL(total.expense)} />
       <StatTile label="Receitas" value={formatBRL(total.income)} />
-      <StatTile label="Investimentos" value={formatBRL(total.transfer)} note="Aplicações e resgates" />
+      <StatTile label="Investimentos e caixinhas" value={invest.headline} note={invest.detail} />
       <StatTile label="Lançamentos" value={String(total.count)} />
     </div>
   )
@@ -114,7 +121,7 @@ function Summary({ groups }: { groups: TransactionGroup[] | undefined }) {
 
 function CategoryCards({ groups, query, stale }: { groups: TransactionGroup[]; query: string; stale: boolean }) {
   if (groups.length === 0) return <p className="state">Nenhuma transação encontrada.</p>
-  const max = Math.max(...groups.map((g) => Math.max(g.expense, g.income, g.transfer)), 1)
+  const max = Math.max(...groups.map((g) => Math.max(g.expense, g.income, Math.abs(g.applied - g.redeemed))), 1)
   return (
     <div className={`group-grid chart-body ${stale ? 'is-stale' : ''}`}>
       {groups.map((g) => {
@@ -127,7 +134,7 @@ function CategoryCards({ groups, query, stale }: { groups: TransactionGroup[]; q
             title={g.label}
             subtitle={`${g.count} ${g.count === 1 ? 'lançamento' : 'lançamentos'}`}
             {...amounts(g)}
-            share={Math.max(g.expense, g.income, g.transfer) / max}
+            share={Math.max(g.expense, g.income, Math.abs(g.applied - g.redeemed)) / max}
           >
             {() => <GroupDetails query={withGroupFilter(query, 'category', g.key)} hideCategory />}
           </GroupCard>
@@ -143,7 +150,7 @@ function DayCards({ query }: { query: string }) {
     <QueryState query={days}>
       {(groups) => {
         if (groups.length === 0) return <p className="state">Nenhuma transação encontrada.</p>
-        const max = Math.max(...groups.map((g) => Math.max(g.expense, g.income, g.transfer)), 1)
+        const max = Math.max(...groups.map((g) => Math.max(g.expense, g.income, Math.abs(g.applied - g.redeemed))), 1)
         return (
           <div className={`group-grid chart-body ${days.isPlaceholderData ? 'is-stale' : ''}`}>
             {groups.map((g) => (
@@ -154,7 +161,7 @@ function DayCards({ query }: { query: string }) {
                 title={formatDayLabel(g.key)}
                 subtitle={`${g.count} ${g.count === 1 ? 'lançamento' : 'lançamentos'}`}
                 {...amounts(g)}
-                share={Math.max(g.expense, g.income, g.transfer) / max}
+                share={Math.max(g.expense, g.income, Math.abs(g.applied - g.redeemed)) / max}
               >
                 {() => <GroupDetails query={withGroupFilter(query, 'day', g.key)} />}
               </GroupCard>
@@ -171,12 +178,11 @@ function DayCards({ query }: { query: string }) {
  * investimento, e o valor vem com uma legenda curta embaixo (nunca texto longo no lugar do valor).
  */
 function amounts(g: TransactionGroup) {
-  const extras = [g.income > 0 && `Receitas ${formatBRL(g.income)}`, g.transfer > 0 && `Investimento ${formatBRL(g.transfer)}`].filter(
-    (e): e is string => !!e,
-  )
+  const invest = g.transfer > 0 ? investSummary(g.applied, g.redeemed) : null
+  const extras = [g.income > 0 && `Receitas ${formatBRL(g.income)}`, invest && invest.headline].filter((e): e is string => !!e)
   if (g.expense > 0) return { amount: `-${formatBRL(g.expense)}`, extras }
-  if (g.income > 0) return { amount: `+${formatBRL(g.income)}`, extras: ['Receitas', ...(g.transfer > 0 ? [`Investimento ${formatBRL(g.transfer)}`] : [])] }
-  if (g.transfer > 0) return { amount: formatBRL(g.transfer), extras: ['Aplicações e resgates'] }
+  if (g.income > 0) return { amount: `+${formatBRL(g.income)}`, extras: ['Receitas', ...(invest ? [invest.headline] : [])] }
+  if (invest) return { amount: invest.headline, extras: [invest.detail] }
   return { amount: formatBRL(0), extras: [] }
 }
 

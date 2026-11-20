@@ -62,3 +62,16 @@ export function formatDay(iso: string): string {
   const [y, m, d] = iso.split('-')
   return `${d}/${m}/${y}`
 }
+
+/**
+ * Aplicação e resgate são o mesmo dinheiro indo e voltando (ex.: caixinha): somar os dois não diz nada. O que importa é o
+ * líquido, aplicado − resgatado: quanto ficou guardado (ou saiu da reserva) no período.
+ */
+export function investSummary(applied: number, redeemed: number) {
+  const net = Math.round((applied - redeemed) * 100) / 100
+  return {
+    net,
+    headline: net >= 0 ? `Guardou ${formatBRL(net)}` : `Tirou da reserva ${formatBRL(-net)}`,
+    detail: `aplicado ${formatBRL(applied)} · resgatado ${formatBRL(redeemed)}`,
+  }
+}

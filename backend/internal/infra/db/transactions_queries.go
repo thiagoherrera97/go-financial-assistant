@@ -103,7 +103,9 @@ func (r *TransactionsRepo) TransactionGroups(ctx context.Context, f domain.Trans
 		SELECT %s AS key, COUNT(*),
 		       COALESCE(SUM(pay.amount) FILTER (WHERE p.kind = 'EXPENSE'), 0)  AS expense,
 		       COALESCE(SUM(pay.amount) FILTER (WHERE p.kind = 'INCOME'), 0)   AS income,
-		       COALESCE(SUM(pay.amount) FILTER (WHERE p.kind = 'TRANSFER'), 0) AS transfer
+		       COALESCE(SUM(pay.amount) FILTER (WHERE p.kind = 'TRANSFER'), 0) AS transfer,
+		       COALESCE(SUM(pay.amount) FILTER (WHERE p.kind = 'TRANSFER' AND p.transfer_direction = 'OUT'), 0) AS applied,
+		       COALESCE(SUM(pay.amount) FILTER (WHERE p.kind = 'TRANSFER' AND p.transfer_direction = 'IN'), 0) AS redeemed
 		FROM payments pay
 		JOIN purchases p ON p.id = pay.purchase_id
 		WHERE %s
@@ -120,7 +122,7 @@ func (r *TransactionsRepo) TransactionGroups(ctx context.Context, f domain.Trans
 	var result []domain.TransactionGroup
 	for rows.Next() {
 		var g domain.TransactionGroup
-		if err := rows.Scan(&g.Key, &g.Count, &g.Expense, &g.Income, &g.Transfer); err != nil {
+		if err := rows.Scan(&g.Key, &g.Count, &g.Expense, &g.Income, &g.Transfer, &g.Applied, &g.Redeemed); err != nil {
 			return nil, fmt.Errorf("erro ao escanear grupo: %w", err)
 		}
 		result = append(result, g)

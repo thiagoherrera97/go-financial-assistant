@@ -77,6 +77,8 @@ func (a *api) transactionGroups(w http.ResponseWriter, r *http.Request) {
 		Expense  float64 `json:"expense"`
 		Income   float64 `json:"income"`
 		Transfer float64 `json:"transfer"`
+		Applied  float64 `json:"applied"`
+		Redeemed float64 `json:"redeemed"`
 	}
 	out := make([]item, len(groups))
 	for i, g := range groups {
@@ -84,7 +86,7 @@ func (a *api) transactionGroups(w http.ResponseWriter, r *http.Request) {
 		if by == domain.GroupByCategory {
 			label = domain.Category(g.Key).Label()
 		}
-		out[i] = item{g.Key, label, g.Count, g.Expense, g.Income, g.Transfer}
+		out[i] = item{g.Key, label, g.Count, g.Expense, g.Income, g.Transfer, g.Applied, g.Redeemed}
 	}
 	writeJSON(w, http.StatusOK, out)
 }

@@ -29,7 +29,12 @@ export interface TransactionGroup {
   count: number
   expense: number
   income: number
+  /** Aplicações + resgates (volume movimentado, não é dinheiro novo). */
   transfer: number
+  /** Saiu para o investimento ou a caixinha. */
+  applied: number
+  /** Voltou do investimento ou da caixinha. */
+  redeemed: number
 }
 
 export interface TransactionPage {
