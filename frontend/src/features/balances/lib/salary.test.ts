@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { salaryPartText, shortDay } from './salary'
+import { salaryBonus, salaryPartText, shortDay } from './salary'
 
 describe('salário', () => {
   it('mostra o dia com a semana', () => {
@@ -14,5 +14,12 @@ describe('salário', () => {
     expect(salaryPartText({ ...base, expectedDate: '2026-11-13', received: true, receivedDate: '2026-11-13', receivedAmount: 5200 })).toBe(
       'caiu 13/11 (sex)',
     )
+  })
+
+  it('mostra o que veio acima do combinado', () => {
+    const p = { day: 30, amount: 4366.62, expectedDate: '2026-09-30', received: true, receivedDate: '2026-09-30', receivedAmount: 9213.81 }
+    expect(salaryBonus(p)).toBe(4847.19)
+    expect(salaryBonus({ ...p, receivedAmount: 4366.62 })).toBeNull()
+    expect(salaryBonus({ ...p, received: false, receivedAmount: null })).toBeNull()
   })
 })

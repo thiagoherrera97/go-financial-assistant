@@ -35,7 +35,7 @@ func newSalaryAPI(t *testing.T, schedule string, reader *fakeReader, now time.Ti
 }
 
 func TestAPI_Salary(t *testing.T) {
-	r := &fakeReader{salaryCredits: []domain.SalaryCredit{{Date: time.Date(2026, 11, 13, 0, 0, 0, 0, time.UTC), Amount: 5200}}}
+	r := &fakeReader{salaryCredits: []domain.SalaryCredit{{Date: time.Date(2026, 11, 13, 0, 0, 0, 0, time.UTC), Amount: 5200}, {Date: time.Date(2026, 11, 18, 0, 0, 0, 0, time.UTC), Amount: 1234.5}}}
 	s := newSalaryAPI(t, "15=5200; 30=4366,62", r, time.Date(2026, 11, 20, 15, 0, 0, 0, time.UTC))
 
 	rec := do(s, "GET", "/api/salary", "", nil, login(t, s))
@@ -48,7 +48,12 @@ func TestAPI_Salary(t *testing.T) {
 		Expected   float64 `json:"expected"`
 		Received   float64 `json:"received"`
 		Pending    float64 `json:"pending"`
-		Parts      []struct {
+		Extras     []struct {
+			Date   string  `json:"date"`
+			Amount float64 `json:"amount"`
+		} `json:"extras"`
+		ExtrasTotal float64 `json:"extrasTotal"`
+		Parts       []struct {
 			Day          int     `json:"day"`
 			ExpectedDate string  `json:"expectedDate"`
 			Received     bool    `json:"received"`
@@ -60,6 +65,9 @@ func TestAPI_Salary(t *testing.T) {
 	}
 	if !got.Configured || got.Month != "2026-11" || got.Expected != 9566.62 || got.Received != 5200 || got.Pending != 4366.62 {
 		t.Errorf("totais: %+v", got)
+	}
+	if len(got.Extras) != 1 || got.Extras[0].Date != "2026-11-18" || got.ExtrasTotal != 1234.5 {
+		t.Errorf("extras: %+v", got.Extras)
 	}
 	if len(got.Parts) != 2 || got.Parts[0].ExpectedDate != "2026-11-13" || !got.Parts[0].Received || *got.Parts[0].ReceivedDate != "2026-11-13" ||
 		got.Parts[1].ExpectedDate != "2026-11-30" || got.Parts[1].Received {

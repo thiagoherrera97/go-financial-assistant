@@ -80,9 +80,9 @@ type SalaryStatus struct {
 }
 
 // SalaryMonth confere as partes do mês contra os créditos de salário que chegaram. Cada parte fica com o crédito mais
-// perto da data prevista, até SalaryMatchDays de distância; um crédito serve a uma parte só. Créditos extras (férias,
-// 13º) não entram.
-func SalaryMonth(parts []SalaryPart, month time.Time, credits []SalaryCredit) []SalaryStatus {
+// perto da data prevista, até SalaryMatchDays de distância; um crédito serve a uma parte só. Os créditos do mês que não
+// ficaram com nenhuma parte (13º, PLR, férias, hora extra paga à parte) voltam em extras, por data.
+func SalaryMonth(parts []SalaryPart, month time.Time, credits []SalaryCredit) (status []SalaryStatus, extras []SalaryCredit) {
 	out := make([]SalaryStatus, len(parts))
 	for i, p := range parts {
 		out[i] = SalaryStatus{Day: p.Day, Expected: SalaryPayDate(month.Year(), month.Month(), p.Day), Amount: p.Amount}
@@ -111,7 +111,13 @@ func SalaryMonth(parts []SalaryPart, month time.Time, credits []SalaryCredit) []
 		out[p.part].Received = &c
 		used[p.credit] = true
 	}
-	return out
+	for j, c := range credits {
+		if !used[j] && c.Date.Year() == month.Year() && c.Date.Month() == month.Month() {
+			extras = append(extras, c)
+		}
+	}
+	sort.SliceStable(extras, func(a, b int) bool { return extras[a].Date.Before(extras[b].Date) })
+	return out, extras
 }
 
 // SalaryTotal soma o valor esperado das partes.

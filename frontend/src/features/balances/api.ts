@@ -81,6 +81,9 @@ export interface Salary {
   expected: number
   received: number
   pending: number
+  /** Créditos de salário do mês fora das partes (13º, PLR, férias, hora extra à parte), por data. */
+  extras: { date: string; amount: number }[]
+  extrasTotal: number
 }
 
 export const useSalary = () => useQuery({ queryKey: ['salary'], queryFn: () => request<Salary>('/api/salary') })

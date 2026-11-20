@@ -1,6 +1,6 @@
-import { CircleCheck, Clock } from 'lucide-react'
+import { CircleCheck, Clock, Sparkles } from 'lucide-react'
 import { formatMonthLong } from '../../../shared/lib/format'
-import { salaryPartText } from '../lib/salary'
+import { salaryBonus, salaryPartText, shortDay } from '../lib/salary'
 import { StaticMoney } from './Money'
 import type { Salary } from '../api'
 
@@ -28,13 +28,36 @@ export function SalaryCard({ salary, hidden }: { salary: Salary; hidden: boolean
           <li key={p.day} className={p.received ? 'is-received' : undefined}>
             {p.received ? <CircleCheck size={16} aria-label="recebido" /> : <Clock size={16} aria-label="a receber" />}
             <span className="bal-salary-day">Dia {p.day}</span>
-            <span className="bal-salary-when">{salaryPartText(p)}</span>
+            <span className="bal-salary-when">
+              {salaryPartText(p)}
+              {salaryBonus(p) !== null && (
+                <>
+                  {' · '}
+                  <StaticMoney value={salaryBonus(p) ?? 0} hidden={hidden} /> acima do combinado
+                </>
+              )}
+            </span>
             <span className="bal-salary-amount">
               <StaticMoney value={p.received && p.receivedAmount !== null ? p.receivedAmount : p.amount} hidden={hidden} />
             </span>
           </li>
         ))}
+        {salary.extras.map((e) => (
+          <li key={`extra-${e.date}-${e.amount}`} className="is-received is-extra">
+            <Sparkles size={16} aria-label="extra" />
+            <span className="bal-salary-day">Extra</span>
+            <span className="bal-salary-when">caiu {shortDay(e.date)} · 13º, PLR, férias ou hora extra</span>
+            <span className="bal-salary-amount">
+              <StaticMoney value={e.amount} hidden={hidden} />
+            </span>
+          </li>
+        ))}
       </ul>
+      {salary.extras.length > 1 && (
+        <p className="bal-aside">
+          Extras no mês: <strong><StaticMoney value={salary.extrasTotal} hidden={hidden} /></strong>
+        </p>
+      )}
     </section>
   )
 }

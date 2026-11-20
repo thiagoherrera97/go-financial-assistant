@@ -19,7 +19,7 @@ O app expõe uma API JSON sob `/api`, **somente leitura** (as únicas escritas, 
 | `GET /api/transactions?month=&kind=&category=&payment_method=&account=&q=&page=&limit=` | lista paginada (padrão 50, máx. 100), manual e Open Finance |
 | `GET /api/accounts` | contas e cartões, com saldo e limite |
 | `GET /api/balances` | painel: total em conta, bancos, contas e cartões (saldo devedor, limite, vencimento) |
-| `GET /api/salary` | salário do mês: cada parte (dia combinado, data no dia útil, valor), se já caiu e quanto falta receber; `configured: false` sem `SALARY_SCHEDULE` |
+| `GET /api/salary` | salário do mês: cada parte (dia combinado, data no dia útil, valor), se já caiu e quanto falta receber, e os créditos extras do mês (`extras`, `extrasTotal`); `configured: false` sem `SALARY_SCHEDULE` |
 | `GET /api/institutions/{id}/logo` | logo do banco em cache |
 | `POST /api/sync` | sincroniza o Open Finance agora (JSON, mesma origem; 409 se já houver uma em andamento) |
 | `GET /api/budget?month=` | despesas do mês e dos 11 anteriores por classe (fixas, parceladas, variáveis) e as contas do mês |

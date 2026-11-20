@@ -102,7 +102,7 @@ O progresso é calculado na hora. Patrimônio = saldo das contas correntes + inv
 - **Data de cada parte:** o dia combinado; se passar do fim do mês, o último dia (30 em fevereiro = 28 ou 29); se não for dia útil, o **dia útil anterior**.
 - **Dia útil:** segunda a sexta, menos os feriados nacionais (1/1, 21/4, 1/5, 7/9, 12/10, 2/11, 15/11, 20/11, 25/12), os bancários móveis (Carnaval segunda e terça, Sexta-feira Santa, Corpus Christi, pela Páscoa) e os de São Paulo (25/1 e 9/7).
 - **Conferência com o banco:** cada parte fica com o crédito da categoria Salário mais perto da data prevista, até 5 dias de distância; um crédito serve a uma parte só, e créditos extras (férias, 13º) ficam de fora. Parte sem crédito = **a receber**. Nada é lançado: o salário real continua vindo só do Open Finance, então não duplica.
-- **Painel:** mostra as partes do mês, quando caem ou caíram e quanto falta receber.
+- **Painel:** mostra as partes do mês, quando caem ou caíram e quanto falta receber. Parte que veio acima do combinado (hora extra no mesmo crédito) mostra a diferença. Créditos de salário do mês que não ficaram com nenhuma parte (13º, PLR, férias, hora extra à parte) aparecem como **extras**; eles contam nas entradas do mês, mas não no "a receber" nem na projeção, que usa só o combinado.
 
 ## Mês em andamento
 

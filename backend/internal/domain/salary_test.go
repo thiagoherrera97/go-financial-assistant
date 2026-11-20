@@ -89,7 +89,10 @@ func TestSalaryMonth(t *testing.T) {
 
 	// Só a primeira caiu (dia 13); o crédito de outubro e o de férias ficam de fora.
 	credits := []SalaryCredit{{ymd(2026, 10, 30), 4366.62}, {ymd(2026, 11, 13), 5200}, {ymd(2026, 11, 3), 10797.79}}
-	got := SalaryMonth(parts, month, credits)
+	got, extras := SalaryMonth(parts, month, credits)
+	if len(extras) != 1 || extras[0].Amount != 10797.79 {
+		t.Errorf("extras = %+v: só o crédito de férias de novembro (o de outubro é de outro mês)", extras)
+	}
 	if len(got) != 2 {
 		t.Fatalf("partes = %d", len(got))
 	}
@@ -101,11 +104,14 @@ func TestSalaryMonth(t *testing.T) {
 	}
 
 	// Valor diferente do combinado ainda é a mesma parte; um crédito não serve a duas partes.
-	got = SalaryMonth(parts, ymd(2026, 9, 1), []SalaryCredit{{ymd(2026, 9, 15), 5200}, {ymd(2026, 9, 30), 9213.81}})
+	got, _ = SalaryMonth(parts, ymd(2026, 9, 1), []SalaryCredit{{ymd(2026, 9, 15), 5200}, {ymd(2026, 9, 30), 9213.81}})
 	if got[0].Received == nil || got[0].Received.Amount != 5200 || got[1].Received == nil || got[1].Received.Amount != 9213.81 {
 		t.Errorf("setembro = %+v / %+v", got[0].Received, got[1].Received)
 	}
-	got = SalaryMonth([]SalaryPart{{14, 100}, {16, 100}}, month, []SalaryCredit{{ymd(2026, 11, 16), 100}})
+	got, extras = SalaryMonth([]SalaryPart{{14, 100}, {16, 100}}, month, []SalaryCredit{{ymd(2026, 11, 16), 100}})
+	if len(extras) != 0 {
+		t.Errorf("crédito usado não é extra: %+v", extras)
+	}
 	if got[0].Received != nil || got[1].Received == nil {
 		t.Errorf("crédito único foi para a parte errada: %+v / %+v", got[0].Received, got[1].Received)
 	}

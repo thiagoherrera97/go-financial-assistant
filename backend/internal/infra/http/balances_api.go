@@ -199,11 +199,12 @@ func (a *api) salary(w http.ResponseWriter, r *http.Request) {
 	if a.settings != nil {
 		now = now.In(a.settings.Service.Location())
 	}
-	status, err := a.insights.Salary(r.Context(), now)
+	view, err := a.insights.Salary(r.Context(), now)
 	if err != nil {
 		a.fail(w, "salário", err)
 		return
 	}
+	status := view.Parts
 	parts := make([]salaryPartJSON, len(status))
 	var expected, received, pending float64
 	for i, s := range status {
@@ -220,8 +221,19 @@ func (a *api) salary(w http.ResponseWriter, r *http.Request) {
 		}
 		parts[i] = p
 	}
+	type extraJSON struct {
+		Date   string  `json:"date"`
+		Amount float64 `json:"amount"`
+	}
+	extras := make([]extraJSON, len(view.Extras))
+	var extrasTotal float64
+	for i, e := range view.Extras {
+		extras[i] = extraJSON{e.Date.Format("2006-01-02"), e.Amount}
+		extrasTotal += e.Amount
+	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"configured": len(status) > 0, "month": formatMonth(insights.MonthStart(now)), "parts": parts,
+		"extras": extras, "extrasTotal": cents(extrasTotal),
+		"configured": view.Configured, "month": formatMonth(insights.MonthStart(now)), "parts": parts,
 		"expected": cents(expected), "received": cents(received), "pending": cents(pending),
 	})
 }
