@@ -258,6 +258,7 @@ Além do que chega pelo banco, você pode registrar o que quiser em linguagem na
 | `recebi 6000 reais de salário` | Entrada |
 | `coloquei 2000 no cofrinho` | Transferência entre contas suas (não conta como gasto) |
 | `quanto gastei em março?` | Resumo do mês por categoria |
+| `quanto gastei com comida esse mês?` | Total de uma categoria e onde mais gastou |
 | `exportar meus gastos de março` | Planilha CSV na conversa |
 | Foto de recibo ou nota fiscal | Lê e registra a despesa |
 | PDF do extrato do banco | Importa as transações e pergunta sobre as que já existem |

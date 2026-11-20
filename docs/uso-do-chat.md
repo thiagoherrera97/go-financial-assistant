@@ -48,6 +48,14 @@ O resumo mostra:
 - **Investimentos no mês**: quanto foi aplicado, quanto foi resgatado
 - **Em conta**: resultado descontando o líquido que ficou investido
 
+### Consultar uma categoria
+```
+quanto gastei com comida esse mês?
+quanto gastei com mercado em outubro?
+```
+
+Quando a pergunta cita uma categoria, a resposta mostra só ela: o total do mês, quantos lançamentos e os 5 estabelecimentos onde mais gastou (lançamentos com o mesmo nome são somados). Conta como na **Despesas** do resumo: só despesas, sem cancelados.
+
 ### Importar extrato bancário (PDF)
 
 Envie o PDF do extrato do seu banco diretamente no WhatsApp. O assistente processa todas as transações automaticamente:

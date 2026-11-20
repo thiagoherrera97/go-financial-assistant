@@ -76,4 +76,6 @@ type CancelInfo struct {
 type QueryInfo struct {
 	Month int
 	Year  int
+	// Category filtra a consulta por uma categoria (ex.: "FOOD"); vazio = todas. Só vem preenchida em QUERY.
+	Category string
 }

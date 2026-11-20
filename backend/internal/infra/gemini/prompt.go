@@ -85,7 +85,8 @@ Responda SOMENTE com JSON válido no seguinte formato:
   },
   "query": {
     "month": <número do mês 1-12, null para mês atual>,
-    "year": <ano ex: 2025, null para ano atual>
+    "year": <ano ex: 2025, null para ano atual>,
+    "category": "<FOOD|TRANSPORT|HEALTH|ENTERTAINMENT|SHOPPING|MARKET|HOUSING|BILLS|EDUCATION|PEOPLE|OTHER|null>"
   },
   "export": {
     "month": <número do mês 1-12, null para mês atual>,
@@ -117,7 +118,8 @@ Regras de preenchimento:
 - Para TRANSFER: category deve ser INVESTMENT (cofrinho/CDB/poupança) ou OTHER (transferência para conta própria)
 - Para TRANSFER: transfer_direction deve ser OUT quando dinheiro SAI da conta (aplicar, colocar no cofrinho, poupança) ou IN quando dinheiro ENTRA na conta (resgatar, tirar do cofrinho). Para outros tipos, use null.
 - Para QUERY: inclua o campo query com month e year. SEMPRE converta o nome do mês para número (janeiro=1, fevereiro=2, março=3, abril=4, maio=5, junho=6, julho=7, agosto=8, setembro=9, outubro=10, novembro=11, dezembro=12). Use null SOMENTE quando o usuário não mencionar o mês nem o ano.
-- Para EXPORT_CSV: mesma regra do QUERY aplicada ao campo export.
+- Para QUERY: query.category é a categoria perguntada, SOMENTE quando o usuário citar uma ("quanto gastei com comida" = FOOD, "com restaurante/delivery/lanche" = FOOD, "com mercado/supermercado" = MARKET, "com uber/gasolina/transporte" = TRANSPORT, "com farmácia/saúde" = HEALTH, "com lazer/streaming" = ENTERTAINMENT, "com compras/roupas" = SHOPPING, "com casa/aluguel" = HOUSING, "com contas/luz/internet" = BILLS, "com educação/curso" = EDUCATION, "com pix para pessoas" = PEOPLE). Sem categoria citada ("quanto gastei esse mês", "resumo de março"), use null. Não confunda com o campo category do topo.
+- Para EXPORT_CSV: mesma regra de mês e ano do QUERY aplicada ao campo export (export não tem category).
 - Omita campos não aplicáveis ao tipo (ex: installments para SINGLE)
 - confidence 1.0 = certeza total, 0.0 = chute completo
 - Nunca inclua texto fora do JSON`

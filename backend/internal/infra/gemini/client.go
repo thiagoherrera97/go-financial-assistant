@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/domain"
 	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/domain/ports"
 	"google.golang.org/genai"
 )
@@ -200,8 +202,9 @@ type geminiCancelRecurring struct {
 }
 
 type geminiQuery struct {
-	Month *int `json:"month"`
-	Year  *int `json:"year"`
+	Month    *int    `json:"month"`
+	Year     *int    `json:"year"`
+	Category *string `json:"category"`
 }
 
 type geminiResponse struct {
@@ -262,6 +265,11 @@ func (g *geminiResponse) toAnalysis(rawJSON string) *ports.ExpenseAnalysis {
 		}
 		if g.Query.Year != nil {
 			info.Year = *g.Query.Year
+		}
+		if g.Query.Category != nil {
+			if c := domain.Category(strings.ToUpper(strings.TrimSpace(*g.Query.Category))); c.IsKnown() {
+				info.Category = string(c)
+			}
 		}
 		analysis.QueryInfo = info
 	}
