@@ -371,3 +371,21 @@ func TestBuildBalances_NextBillEstimate(t *testing.T) {
 		t.Errorf("sem vencimento não deveria estimar, got %v / %v", c.NextBillDue, c.NextClose)
 	}
 }
+
+// Caixinha é dinheiro da conta separado para render: entra no total em conta e no banco, e aparece à parte.
+func TestBuildBalances_ReservedBalancesCountInAccount(t *testing.T) {
+	mp := uuid.New()
+	acc := bank(&mp, "mp", "Mercado Pago", 0, balNow.Add(-time.Hour))
+	acc.Reserved = []domain.ReservedBalance{{Name: "Dívidas mensais", Amount: 322.89}, {Name: "Cofrinho da virada", Amount: 0}}
+	v := BuildBalances([]domain.Account{acc}, []domain.Institution{{ID: mp, ItemID: "mp", Name: "Mercado Pago"}}, balNow, 6)
+	if v.TotalInAccount == nil || *v.TotalInAccount != 322.89 {
+		t.Fatalf("total em conta deveria somar a caixinha: %v", v.TotalInAccount)
+	}
+	a := v.Institutions[0].Accounts[0]
+	if v.Institutions[0].Total != 322.89 || a.Balance != 0 || a.ReservedTotal != 322.89 || len(a.Reserved) != 2 {
+		t.Errorf("conta: %+v", a)
+	}
+	if text := FormatBalances(v, balNow); !strings.Contains(text, "caixinhas R$") {
+		t.Errorf("o /saldos deveria mostrar as caixinhas:\n%s", text)
+	}
+}

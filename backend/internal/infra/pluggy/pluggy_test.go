@@ -251,7 +251,7 @@ func TestFetchItem_PaginatesAndAuthenticatesOnce(t *testing.T) {
 		t.Errorf("transações inesperadas: %+v", txs)
 	}
 	want := ports.ExternalAccount{ID: "acc1", ItemID: "item", Type: "BANK", Name: "Conta Corrente", Last4: "3450", Balance: 150.5}
-	if len(got.Accounts) != 1 || got.Accounts[0] != want {
+	if len(got.Accounts) != 1 || !reflect.DeepEqual(got.Accounts[0], want) {
 		t.Errorf("conta inesperada: %+v", got.Accounts)
 	}
 	if _, err := c.FetchItem(context.Background(), "item", time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)); err != nil {
@@ -618,5 +618,21 @@ func TestExactExpenseCategories_IsACopy(t *testing.T) {
 	delete(m, "housing")
 	if CategoryFromPluggy("Housing") != domain.CategoryHousing {
 		t.Error("alterar a cópia não pode mudar o mapa original")
+	}
+}
+
+func TestAccountReservedBalances(t *testing.T) {
+	var a account
+	raw := `{"id":"mp","type":"BANK","name":"Mercado Pago","number":"0001/9020425468-1","balance":0,
+		"bankData":{"automaticallyInvestedBalance":0,"reservedBalances":[
+			{"name":"Cofrinho da virada","availableAmounts":[{"amount":0,"currencyCode":"BRL"}]},
+			{"name":" Dívidas  mensais ","availableAmounts":[{"amount":322.89,"currencyCode":"BRL"},{"amount":5,"currencyCode":"USD"}]}]}}`
+	if err := json.Unmarshal([]byte(raw), &a); err != nil {
+		t.Fatal(err)
+	}
+	ext := a.toExternal("item")
+	want := []domain.ReservedBalance{{Name: "Cofrinho da virada", Amount: 0}, {Name: "Dívidas mensais", Amount: 322.89}}
+	if !reflect.DeepEqual(ext.Reserved, want) {
+		t.Errorf("caixinhas = %+v", ext.Reserved)
 	}
 }

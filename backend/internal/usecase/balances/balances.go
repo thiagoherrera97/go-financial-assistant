@@ -40,6 +40,10 @@ type BalanceAccount struct {
 	Last4        string
 	Balance      float64
 	AutoInvested *float64 // aplicado automaticamente; fora do total em conta
+	// Caixinhas da conta (dinheiro do dia a dia separado para render): entram no total em conta. Balance é só o que está
+	// na conta; o saldo da conta com as caixinhas é Balance + ReservedTotal.
+	Reserved      []domain.ReservedBalance
+	ReservedTotal float64
 }
 
 // BalanceCard é um cartão de crédito. Cartões nunca são somados entre si.
@@ -138,8 +142,10 @@ func BuildBalances(accounts []domain.Account, institutions []domain.Institution,
 		}
 		if a.Type == domain.AccountBank {
 			g.HasBank = true
-			g.Total += a.Balance
-			g.Accounts = append(g.Accounts, BalanceAccount{ID: a.ID.String(), Name: a.Name, Last4: a.Last4, Balance: a.Balance, AutoInvested: autoInvested(a)})
+			reserved := a.ReservedTotal()
+			g.Total += a.Balance + reserved
+			g.Accounts = append(g.Accounts, BalanceAccount{ID: a.ID.String(), Name: a.Name, Last4: a.Last4, Balance: a.Balance,
+				AutoInvested: autoInvested(a), Reserved: a.Reserved, ReservedTotal: reserved})
 		} else {
 			g.Cards = append(g.Cards, buildCard(a, now, closeDays))
 		}
@@ -357,6 +363,9 @@ func FormatBalances(v BalancesView, now time.Time) string {
 			}
 			head.WriteString(line + "\n")
 			for _, a := range in.Accounts {
+				if a.ReservedTotal > 0 {
+					fmt.Fprintf(&head, "   Na conta %s · caixinhas %s\n", format.FormatBRL(a.Balance), format.FormatBRL(a.ReservedTotal))
+				}
 				if a.AutoInvested != nil && *a.AutoInvested > 0 {
 					fmt.Fprintf(&head, "   Aplicado automaticamente: %s (fora do total)\n", format.FormatBRL(*a.AutoInvested))
 				}

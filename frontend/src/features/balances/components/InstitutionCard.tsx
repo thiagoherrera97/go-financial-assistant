@@ -28,8 +28,22 @@ export function InstitutionCard({ institution: i, hidden, now }: { institution: 
             {a.last4 && ` · final ${a.last4}`}
           </p>
           <p className="bal-balance">
-            <Money value={a.balance} hidden={hidden} />
+            <Money value={a.balance + a.reservedTotal} hidden={hidden} />
           </p>
+          {a.reservedTotal > 0 && (
+            <ul className="bal-reserved">
+              <li>
+                <span>Na conta</span> <StaticMoney value={a.balance} hidden={hidden} />
+              </li>
+              {a.reserved
+                .filter((r) => r.amount > 0)
+                .map((r) => (
+                  <li key={r.name}>
+                    <span>Caixinha {r.name}</span> <StaticMoney value={r.amount} hidden={hidden} />
+                  </li>
+                ))}
+            </ul>
+          )}
           {a.autoInvested !== null && a.autoInvested > 0 && (
             <p className="tile-note">
               Aplicado automaticamente <StaticMoney value={a.autoInvested} hidden={hidden} /> (fora do total, já está no Patrimônio)

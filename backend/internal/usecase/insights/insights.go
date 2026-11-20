@@ -75,7 +75,7 @@ func BankBalance(accounts []domain.Account) *float64 {
 	var bank *float64
 	for _, acc := range accounts {
 		if acc.Type == domain.AccountBank {
-			sum := acc.Balance
+			sum := acc.Balance + acc.ReservedTotal() // caixinhas são dinheiro da conta
 			if bank != nil {
 				sum += *bank
 			}

@@ -29,7 +29,23 @@ type Account struct {
 	DueDate              *time.Time
 	MinimumPayment       *float64
 	AutoInvested         *float64
+	Reserved             []ReservedBalance // caixinhas da conta corrente
 	UpdatedAt            time.Time
+}
+
+// ReservedBalance é uma caixinha da conta corrente: dinheiro separado que rende e volta para a conta quando se quer.
+type ReservedBalance struct {
+	Name   string  `json:"name"`
+	Amount float64 `json:"amount"`
+}
+
+// ReservedTotal soma as caixinhas da conta.
+func (a Account) ReservedTotal() float64 {
+	var t float64
+	for _, r := range a.Reserved {
+		t += r.Amount
+	}
+	return t
 }
 
 // Institution é o banco de uma conexão, sem os bytes do logo.

@@ -36,6 +36,14 @@ type account struct {
 	} `json:"creditData"`
 	BankData *struct {
 		AutomaticallyInvestedBalance *float64 `json:"automaticallyInvestedBalance"`
+		// Caixinhas (ex.: Mercado Pago): cada uma com nome e saldo, em uma ou mais moedas.
+		ReservedBalances []struct {
+			Name             string `json:"name"`
+			AvailableAmounts []struct {
+				Amount       float64 `json:"amount"`
+				CurrencyCode string  `json:"currencyCode"`
+			} `json:"availableAmounts"`
+		} `json:"reservedBalances"`
 	} `json:"bankData"`
 }
 
@@ -54,6 +62,19 @@ func (a account) toExternal(itemID string) ports.ExternalAccount {
 	}
 	if a.BankData != nil {
 		ext.AutoInvested = a.BankData.AutomaticallyInvestedBalance
+		for _, r := range a.BankData.ReservedBalances {
+			var amount float64
+			for _, v := range r.AvailableAmounts {
+				if v.CurrencyCode == "" || v.CurrencyCode == "BRL" {
+					amount += v.Amount
+				}
+			}
+			name := strings.Join(strings.Fields(r.Name), " ")
+			if name == "" {
+				name = "Caixinha"
+			}
+			ext.Reserved = append(ext.Reserved, domain.ReservedBalance{Name: name, Amount: amount})
+		}
 	}
 	return ext
 }

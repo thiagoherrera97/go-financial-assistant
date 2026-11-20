@@ -41,12 +41,13 @@ type ExternalAccount struct {
 	AvailableCreditLimit *float64 // só cartões
 
 	// Opcionais: dependem do que o banco informa.
-	Brand          string     // bandeira do cartão
-	CloseDate      *time.Time // fechamento da fatura
-	DueDate        *time.Time // vencimento da fatura
-	MinimumPayment *float64   // pagamento mínimo da fatura
-	AutoInvested   *float64   // saldo aplicado automaticamente (conta corrente)
-	InstitutionID  *uuid.UUID // preenchido na sincronização, depois de salvar a instituição
+	Brand          string                   // bandeira do cartão
+	CloseDate      *time.Time               // fechamento da fatura
+	DueDate        *time.Time               // vencimento da fatura
+	MinimumPayment *float64                 // pagamento mínimo da fatura
+	AutoInvested   *float64                 // saldo aplicado automaticamente (conta corrente)
+	Reserved       []domain.ReservedBalance // caixinhas da conta corrente
+	InstitutionID  *uuid.UUID               // preenchido na sincronização, depois de salvar a instituição
 }
 
 // ExternalInstitution é o banco da conexão (conector do Pluggy). Color é hexadecimal de 6

@@ -13,7 +13,7 @@ import (
 func (r *AccountsRepo) Accounts(ctx context.Context) ([]domain.Account, error) {
 	rows, err := r.db.Pool.Query(ctx, `
 		SELECT id, item_id, institution_id, type, name, last4, balance, credit_limit, available_credit_limit,
-			brand, close_date, due_date, minimum_payment, auto_invested_balance, updated_at
+			brand, close_date, due_date, minimum_payment, auto_invested_balance, reserved_balances, updated_at
 		FROM accounts
 		ORDER BY type, name
 	`)
@@ -23,7 +23,7 @@ func (r *AccountsRepo) Accounts(ctx context.Context) ([]domain.Account, error) {
 	result, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (domain.Account, error) {
 		var a domain.Account
 		err := row.Scan(&a.ID, &a.ItemID, &a.InstitutionID, &a.Type, &a.Name, &a.Last4, &a.Balance, &a.CreditLimit, &a.AvailableCreditLimit,
-			&a.Brand, &a.CloseDate, &a.DueDate, &a.MinimumPayment, &a.AutoInvested, &a.UpdatedAt)
+			&a.Brand, &a.CloseDate, &a.DueDate, &a.MinimumPayment, &a.AutoInvested, &a.Reserved, &a.UpdatedAt)
 		return a, err
 	})
 	if err != nil {

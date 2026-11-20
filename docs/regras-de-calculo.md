@@ -107,7 +107,8 @@ O progresso é calculado na hora. Patrimônio = saldo das contas correntes + inv
 
 ## Saldos (`balances/`)
 
-- **Total em conta** = soma do saldo das contas `BANK` (negativo entra com sinal). **Participação** do banco = saldo ÷ soma dos saldos positivos (banco negativo não ganha fatia).
+- **Caixinhas** (`accounts.reserved_balances`, ex.: Mercado Pago): dinheiro da conta separado para render; entra no saldo do banco e no total em conta, e aparece à parte ("na conta" e cada caixinha).
+- **Total em conta** = soma do saldo das contas `BANK` (com as caixinhas) (negativo entra com sinal). **Participação** do banco = saldo ÷ soma dos saldos positivos (banco negativo não ganha fatia).
 - **Fatura das compras de hoje:** cada cartão mostra em que fatura entram as compras feitas agora e quando ela fecha, pela mesma regra do mês das compras; com "~" quando o fechamento é estimado.
 - **Cartão** (nunca somado entre cartões): o valor mostrado é o **saldo devedor** informado pelo banco = limite usado (inclui parcelas futuras; não é a fatura aberta, que o Open Finance não expõe). Uso do limite: ≥ 70% atenção, ≥ 90% crítico. Vencimento em até 3 dias: atenção; data já passada não alerta (o banco mantém o vencimento da fatura paga).
 - **Desatualizado**: mais de 36 h desde a última atualização *do Pluggy* (`lastUpdatedAt` do item), não desde a última cópia do app. O Meu Pluggy não permite forçar a atualização pela API; ela acontece sozinha (cerca de 1x/dia) ou a pedido em meu.pluggy.ai.

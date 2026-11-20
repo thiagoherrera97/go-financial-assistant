@@ -14,8 +14,8 @@ import (
 func (r *LedgerRepo) UpsertAccount(ctx context.Context, a ports.ExternalAccount) (uuid.UUID, error) {
 	query := `
 		INSERT INTO accounts (external_id, item_id, type, name, last4, balance, credit_limit, available_credit_limit,
-			institution_id, brand, close_date, due_date, minimum_payment, auto_invested_balance, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW())
+			institution_id, brand, close_date, due_date, minimum_payment, auto_invested_balance, reserved_balances, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW())
 		ON CONFLICT (external_id) DO UPDATE SET
 			item_id = EXCLUDED.item_id, type = EXCLUDED.type, name = EXCLUDED.name, last4 = EXCLUDED.last4,
 			balance = EXCLUDED.balance, credit_limit = EXCLUDED.credit_limit,
@@ -23,13 +23,18 @@ func (r *LedgerRepo) UpsertAccount(ctx context.Context, a ports.ExternalAccount)
 			institution_id = COALESCE(EXCLUDED.institution_id, accounts.institution_id),
 			brand = EXCLUDED.brand, close_date = EXCLUDED.close_date, due_date = EXCLUDED.due_date,
 			minimum_payment = EXCLUDED.minimum_payment, auto_invested_balance = EXCLUDED.auto_invested_balance,
+			reserved_balances = EXCLUDED.reserved_balances,
 			updated_at = NOW()
 		RETURNING id
 	`
+	reserved := a.Reserved
+	if reserved == nil {
+		reserved = []domain.ReservedBalance{}
+	}
 	var id uuid.UUID
 	if err := r.db.Pool.QueryRow(ctx, query,
 		a.ID, a.ItemID, a.Type, a.Name, a.Last4, a.Balance, a.CreditLimit, a.AvailableCreditLimit,
-		a.InstitutionID, a.Brand, a.CloseDate, a.DueDate, a.MinimumPayment, a.AutoInvested,
+		a.InstitutionID, a.Brand, a.CloseDate, a.DueDate, a.MinimumPayment, a.AutoInvested, reserved,
 	).Scan(&id); err != nil {
 		return uuid.Nil, fmt.Errorf("erro ao salvar conta: %w", err)
 	}

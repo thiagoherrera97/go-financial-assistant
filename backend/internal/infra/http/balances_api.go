@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/domain"
 	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/usecase/balances"
 	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/usecase/insights"
 
@@ -35,11 +36,13 @@ func (a *api) oldestSourceUpdate(ctx context.Context) *time.Time {
 }
 
 type balanceAccountJSON struct {
-	ID           string   `json:"id"`
-	Name         string   `json:"name"`
-	Last4        string   `json:"last4"`
-	Balance      float64  `json:"balance"`
-	AutoInvested *float64 `json:"autoInvested"`
+	ID            string                   `json:"id"`
+	Name          string                   `json:"name"`
+	Last4         string                   `json:"last4"`
+	Balance       float64                  `json:"balance"`
+	AutoInvested  *float64                 `json:"autoInvested"`
+	Reserved      []domain.ReservedBalance `json:"reserved"`
+	ReservedTotal float64                  `json:"reservedTotal"`
 }
 
 type balanceCardJSON struct {
@@ -110,7 +113,11 @@ func (a *api) balances(w http.ResponseWriter, r *http.Request) {
 			j.Total = &t
 		}
 		for n, acc := range in.Accounts {
-			j.Accounts[n] = balanceAccountJSON(acc)
+			reserved := acc.Reserved
+			if reserved == nil {
+				reserved = []domain.ReservedBalance{}
+			}
+			j.Accounts[n] = balanceAccountJSON{acc.ID, acc.Name, acc.Last4, acc.Balance, acc.AutoInvested, reserved, cents(acc.ReservedTotal)}
 		}
 		for n, c := range in.Cards {
 			j.Cards[n] = balanceCardJSON{

@@ -27,8 +27,9 @@ export function BalanceTable({ data, hidden }: { data: Balances; hidden: boolean
                   <td>
                     {a.name}
                     {a.last4 && ` · final ${a.last4}`}
+                    {a.reservedTotal > 0 && ' (com caixinhas)'}
                   </td>
-                  <td>{money(a.balance, hidden)}</td>
+                  <td>{money(a.balance + a.reservedTotal, hidden)}</td>
                   <td>—</td>
                   <td>—</td>
                 </tr>

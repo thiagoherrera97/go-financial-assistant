@@ -10,6 +10,9 @@ export interface BalanceAccount {
   balance: number
   /** Aplicado automaticamente pelo banco; fora do total em conta. */
   autoInvested: number | null
+  /** Caixinhas da conta (dinheiro separado para render); entram no total em conta. balance é só o que está na conta. */
+  reserved: { name: string; amount: number }[]
+  reservedTotal: number
 }
 
 export interface BalanceCard {
