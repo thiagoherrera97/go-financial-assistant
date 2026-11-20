@@ -40,6 +40,7 @@ Como na planilha, **toda despesa no cartão conta no mês em que a fatura vence*
 Ao fim de cada sincronização (`ReclassifyOwnMoves`, idempotente, vale também para o que já estava gravado):
 
 - **Caixinha do Mercado Pago** ("Dinheiro reservado …" / "Dinheiro retirado …"): vira aplicação e resgate (transferência de investimento), não gasto nem renda.
+- **Pagamento que o banco chama de aplicação** ("Pagamento com Pix …", "Pagamento de boleto …", "Pagamento de conta …" com categoria de investimento, ex.: Pix para um FIDC): volta a ser gasto, em Outros.
 - **Pagamento da fatura de um cartão seu por uma conta** (a descrição traz o nome do cartão, ex.: "Pagamento de conta SANTANDER UNIQUE VISA INFINITE"): fica cancelado, com o motivo registrado, porque as compras do cartão já contam no mês da fatura. Só casa nome de cartão com 10 letras ou mais que não seja também nome de conta corrente.
 
 ### Notas das transações

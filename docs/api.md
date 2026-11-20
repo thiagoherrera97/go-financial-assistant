@@ -19,6 +19,7 @@ O app expõe uma API JSON sob `/api`, **somente leitura** (as únicas escritas, 
 | `GET /api/transactions?month=&kind=&category=&payment_method=&account=&q=&page=&limit=` | lista paginada (padrão 50, máx. 100), manual e Open Finance |
 | `GET /api/accounts` | contas e cartões, com saldo e limite |
 | `GET /api/balances` | painel: total em conta, bancos, contas e cartões (saldo devedor, limite, vencimento) |
+| `DELETE /api/transactions/{id}` | apaga um lançamento manual avulso (204); do banco, parcelado ou recorrente: 404. Exige mesma origem |
 | `PUT /api/transactions/{id}/note` | grava a nota da transação (`{"note": "..."}`, até 300 caracteres; vazia apaga). Exige JSON e mesma origem |
 | `GET /api/month?month=AAAA-MM` | o mês como na planilha: entradas (e salário a receber), despesas fixas, fatura de cada cartão por categoria (com previstas, ajuste e estornos), outras despesas e a sobra |
 | `GET /api/salary` | salário do mês: cada parte (dia combinado, data no dia útil, valor), se já caiu e quanto falta receber, e os créditos extras do mês (`extras`, `extrasTotal`); `configured: false` sem `SALARY_SCHEDULE` |
