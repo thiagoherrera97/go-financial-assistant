@@ -165,6 +165,12 @@ func (s *SyncOpenFinance) Sync(ctx context.Context) (SyncResult, error) {
 			}
 		}
 	}
+	if n, err := s.repo.ApplyPendingNotes(ctx); err != nil {
+		s.logger.Error("erro ao aplicar notas pendentes", "error", err)
+		errs = append(errs, err)
+	} else if n > 0 {
+		s.logger.Info("notas pendentes aplicadas", "count", n)
+	}
 	if savings, cardPayments, err := s.repo.ReclassifyOwnMoves(ctx); err != nil {
 		s.logger.Error("erro ao reclassificar movimentações entre contas suas", "error", err)
 		errs = append(errs, err)

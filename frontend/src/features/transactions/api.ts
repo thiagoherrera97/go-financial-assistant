@@ -18,6 +18,8 @@ export interface Transaction {
   accountId?: string
   accountName?: string
   source: 'MANUAL' | 'OPEN_FINANCE'
+  /** Nota escrita por você ("o que foi"); vazia sem nota. */
+  note: string
 }
 
 export interface TransactionGroup {
@@ -51,4 +53,12 @@ export const useTransactionGroups = (query: string, by: 'category' | 'day') =>
     queryKey: ['transaction-groups', by, query],
     queryFn: () => request<TransactionGroup[]>(`/api/transactions/groups?${query}&by=${by}`),
     placeholderData: keepPreviousData,
+  })
+
+/** Grava a nota da transação; vazia apaga. */
+export const setTransactionNote = (id: string, note: string) =>
+  request<{ note: string }>(`/api/transactions/${id}/note`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ note }),
   })

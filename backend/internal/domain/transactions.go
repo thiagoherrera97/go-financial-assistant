@@ -13,7 +13,7 @@ type TransactionFilter struct {
 	PaymentMethod string
 	AccountID     *uuid.UUID
 	Day           *time.Time // um dia específico (sobrepõe Month)
-	Search        string     // trecho da descrição
+	Search        string     // trecho da descrição ou da nota
 	Limit         int
 	Offset        int
 }
@@ -50,6 +50,7 @@ type Transaction struct {
 	AccountID         *uuid.UUID
 	AccountName       string
 	FromOpenFinance   bool
+	Note              string // escrita pela pessoa; vazia sem nota
 }
 
 // TransferCandidate é um lançamento do banco que parece Pix, TED ou DOC.

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/domain"
+	"github.com/google/uuid"
 )
 
 // transactionWhere monta a cláusula WHERE (e os argumentos) do filtro, compartilhada pela lista e
@@ -39,7 +40,7 @@ func transactionWhere(f domain.TransactionFilter) (string, []any) {
 		add("pay.account_id = ?", *f.AccountID)
 	}
 	if f.Search != "" {
-		add(`p.description ILIKE ? ESCAPE '\'`, "%"+escapeLike(f.Search)+"%")
+		add(`(p.description ILIKE ? ESCAPE '\' OR pay.note ILIKE ? ESCAPE '\')`, "%"+escapeLike(f.Search)+"%")
 	}
 	return strings.Join(where, " AND "), args
 }
@@ -54,7 +55,7 @@ func (r *TransactionsRepo) Transactions(ctx context.Context, f domain.Transactio
 		       COALESCE(p.description, ''), p.category, p.payment_method, p.kind,
 		       COALESCE(p.transfer_direction, ''), p.type, pay.status, pay.amount,
 		       pay.installment_number, a.id, COALESCE(a.name || ' ' || a.last4, ''),
-		       pay.external_id IS NOT NULL, COUNT(*) OVER ()
+		       pay.external_id IS NOT NULL, COALESCE(pay.note, ''), COUNT(*) OVER ()
 		FROM payments pay
 		JOIN purchases p ON p.id = pay.purchase_id
 		LEFT JOIN accounts a ON a.id = pay.account_id
@@ -77,7 +78,7 @@ func (r *TransactionsRepo) Transactions(ctx context.Context, f domain.Transactio
 		var t domain.Transaction
 		if err := rows.Scan(&t.ID, &t.Date, &t.Description, &t.Category, &t.PaymentMethod, &t.Kind,
 			&t.TransferDirection, &t.Type, &t.Status, &t.Amount, &t.InstallmentNumber,
-			&t.AccountID, &t.AccountName, &t.FromOpenFinance, &total); err != nil {
+			&t.AccountID, &t.AccountName, &t.FromOpenFinance, &t.Note, &total); err != nil {
 			return nil, 0, fmt.Errorf("erro ao escanear transação: %w", err)
 		}
 		result = append(result, t)
@@ -125,4 +126,12 @@ func (r *TransactionsRepo) TransactionGroups(ctx context.Context, f domain.Trans
 		result = append(result, g)
 	}
 	return result, rows.Err()
+}
+
+func (r *TransactionsRepo) SetTransactionNote(ctx context.Context, id uuid.UUID, note string) (bool, error) {
+	tag, err := r.db.Pool.Exec(ctx, `UPDATE payments SET note = NULLIF($2, '') WHERE id = $1`, id, note)
+	if err != nil {
+		return false, fmt.Errorf("erro ao gravar a nota: %w", err)
+	}
+	return tag.RowsAffected() > 0, nil
 }

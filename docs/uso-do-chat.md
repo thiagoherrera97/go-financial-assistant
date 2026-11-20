@@ -56,6 +56,20 @@ quanto gastei com mercado em outubro?
 
 Quando a pergunta cita uma categoria, a resposta mostra só ela: o total do mês, quantos lançamentos e os 5 estabelecimentos onde mais gastou (lançamentos com o mesmo nome são somados). Conta como na **Despesas** do resumo: só despesas, sem cancelados.
 
+### Anotar o que foi uma transação
+```
+nota 5400 dia 10 insulfilm, minha mãe está ajudando
+nota 393 dia 1/11: jantar pizza com os pais da Isa
+nota 99,99 tomada da sala
+```
+
+Mande o **valor**, o **dia** (opcional) e a **nota**; o app acha a transação sozinho, sem você saber qual é. A nota aparece em Transações (onde também dá para escrever e editar) e na tela do mês, e a busca de Transações procura nela.
+
+- **Dia:** "dia 10", "10/11" ou "10/11/2026". Sem mês ou ano, vale a data mais recente até hoje. Sem o dia, procura o valor nos últimos 60 dias.
+- **Uma transação com esse valor:** grava a nota. **Mais de uma:** lista as opções e você responde com o número.
+- **Ainda não chegou do banco:** o app guarda a nota e a coloca na transação quando a sincronização a trouxer (mesmo valor, até 3 dias do dia dito, sem outra nota). Nada é lançado em dobro. Nota pendente espera até 60 dias.
+- Funciona sem a IA. Tamanho máximo: 300 caracteres.
+
 ### Importar extrato bancário (PDF)
 
 Envie o PDF do extrato do seu banco diretamente no WhatsApp. O assistente processa todas as transações automaticamente:

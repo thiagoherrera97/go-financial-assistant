@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/infra/db"
 	"os"
 	"strconv"
 	"time"
@@ -76,6 +77,7 @@ func (a *app) startTelegram(token string, chatID, offset int64) {
 		handler.SetSyncer(a.syncer)
 		handler.SetDigester(a.insights)
 		handler.SetBalancer(a.insights)
+		handler.SetNoter(db.NewNotesRepo(a.db))
 		bot := telegram.NewBot(tg, chatID, handler, a.logger).StartFrom(offset)
 		a.channel.publish(tg, owner)
 		go bot.Run(a.ctx)

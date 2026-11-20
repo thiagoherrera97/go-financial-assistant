@@ -1,12 +1,23 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { request } from '../../shared/api/request'
 
+export interface SheetLine {
+  label: string
+  /** AAAA-MM-DD */
+  date: string
+  amount: number
+  /** Nota escrita por você; vazia sem nota. */
+  note: string
+}
+
 export interface SheetItem {
   label: string
   amount: number
   count: number
   /** Tem lançamento pendente. */
   pending: boolean
+  /** Os lançamentos que a linha soma. */
+  lines: SheetLine[]
 }
 
 export interface SheetCard {

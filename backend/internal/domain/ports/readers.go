@@ -24,6 +24,8 @@ type TransactionReader interface {
 	Transactions(ctx context.Context, f domain.TransactionFilter) ([]domain.Transaction, int, error)
 	// TransactionGroups agrupa as transações que casam com o filtro (Limit e Offset são ignorados).
 	TransactionGroups(ctx context.Context, f domain.TransactionFilter, by domain.GroupBy) ([]domain.TransactionGroup, error)
+	// SetTransactionNote grava a nota da transação (vazia apaga); found falso se a transação não existe.
+	SetTransactionNote(ctx context.Context, id uuid.UUID, note string) (found bool, err error)
 }
 
 // AccountReader lê contas, cartões e as instituições (bancos) a que pertencem.

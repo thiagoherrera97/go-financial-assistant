@@ -10,20 +10,61 @@ import { cardNotes, leftoverLabel } from './lib/month'
 import { useMonthSheet } from './api'
 import type { SheetItem } from './api'
 
+function Head({ it }: { it: SheetItem }) {
+  return (
+    <>
+      <span className="sheet-label">
+        {it.label}
+        {it.count > 1 && <span className="sheet-meta"> · {it.count}×</span>}
+        {it.pending && <span className="sheet-meta"> · pendente</span>}
+      </span>
+      <span className="sheet-amount">{formatBRL(it.amount)}</span>
+    </>
+  )
+}
+
+/** Linhas da planilha. Com mais de um lançamento (ou nota), a linha abre e mostra cada um, com a nota. */
 function Rows({ items, empty }: { items: SheetItem[]; empty: string }) {
   if (items.length === 0) return <p className="sheet-empty">{empty}</p>
   return (
     <ul className="sheet-rows">
-      {items.map((it) => (
-        <li key={it.label}>
-          <span className="sheet-label">
-            {it.label}
-            {it.count > 1 && <span className="sheet-meta"> · {it.count}×</span>}
-            {it.pending && <span className="sheet-meta"> · pendente</span>}
-          </span>
-          <span className="sheet-amount">{formatBRL(it.amount)}</span>
-        </li>
-      ))}
+      {items.map((it) => {
+        const single = it.lines.length === 1 ? it.lines[0] : null
+        if (single || it.lines.length === 0) {
+          return (
+            <li key={it.label}>
+              <div className="sheet-line">
+                <Head it={it} />
+              </div>
+              {single?.note && <p className="sheet-note">{single.note}</p>}
+            </li>
+          )
+        }
+        const notes = it.lines.filter((l) => l.note).length
+        return (
+          <li key={it.label}>
+            <details>
+              <summary className="sheet-line">
+                <Head it={it} />
+              </summary>
+              {notes > 0 && <span className="sheet-meta">{notes === 1 ? '1 nota' : `${notes} notas`}</span>}
+              <ul className="sheet-detail">
+                {it.lines.map((l, i) => (
+                  <li key={`${l.date}-${l.label}-${i}`}>
+                    <div className="sheet-line">
+                      <span className="sheet-label">
+                        <span className="sheet-meta">{l.date.slice(8, 10)}/{l.date.slice(5, 7)}</span> {l.label}
+                      </span>
+                      <span className="sheet-amount">{formatBRL(l.amount)}</span>
+                    </div>
+                    {l.note && <p className="sheet-note">{l.note}</p>}
+                  </li>
+                ))}
+              </ul>
+            </details>
+          </li>
+        )
+      })}
     </ul>
   )
 }
