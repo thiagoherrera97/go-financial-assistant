@@ -67,6 +67,9 @@ func formatReply(output *ledger.ExpenseOutput) string {
 }
 
 func formatQueryReply(output *ledger.ExpenseOutput) string {
+	if output.QueryCategory != "" {
+		return formatCategoryQueryReply(output)
+	}
 	if output.QueryEmpty {
 		return fmt.Sprintf("📊 Sem lançamentos registrados em %s.", output.QueryMonth)
 	}
@@ -91,6 +94,33 @@ func formatQueryReply(output *ledger.ExpenseOutput) string {
 		fmt.Fprintf(&sb, "  ↓ Aplicado: R$ %.2f\n", output.QueryApplied)
 		fmt.Fprintf(&sb, "  ↑ Resgatado: R$ %.2f\n", output.QueryRedeemed)
 		fmt.Fprintf(&sb, "💵 Em conta: R$ %.2f\n", output.QueryInAccount)
+	}
+
+	return sb.String()
+}
+
+func formatCategoryQueryReply(output *ledger.ExpenseOutput) string {
+	if output.QueryEmpty {
+		return fmt.Sprintf("📊 Sem gastos com %s em %s.", output.QueryCategory, output.QueryMonth)
+	}
+
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "📊 %s em %s\n\n", output.QueryCategory, output.QueryMonth)
+	lancamentos := "lançamentos"
+	if output.QueryCount == 1 {
+		lancamentos = "lançamento"
+	}
+	fmt.Fprintf(&sb, "💸 Total: R$ %.2f (%d %s)\n", output.QueryTotal, output.QueryCount, lancamentos)
+
+	if len(output.QueryItems) > 0 {
+		sb.WriteString("\nOnde mais gastou:\n")
+		for _, it := range output.QueryItems {
+			if it.Count > 1 {
+				fmt.Fprintf(&sb, "  • %s: R$ %.2f (%dx)\n", it.Description, it.Total, it.Count)
+			} else {
+				fmt.Fprintf(&sb, "  • %s: R$ %.2f\n", it.Description, it.Total)
+			}
+		}
 	}
 
 	return sb.String()

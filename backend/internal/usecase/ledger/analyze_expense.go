@@ -79,6 +79,13 @@ type CategorySummary struct {
 	Total    float64 `json:"total"`
 }
 
+// CategoryItem é um estabelecimento dentro da consulta por categoria, com o total e quantos lançamentos somou.
+type CategoryItem struct {
+	Description string  `json:"description"`
+	Total       float64 `json:"total"`
+	Count       int     `json:"count"`
+}
+
 type ExpenseOutput struct {
 	ID          string  `json:"id"`
 	Amount      float64 `json:"amount"`
@@ -100,6 +107,12 @@ type ExpenseOutput struct {
 	QueryTotal      float64           `json:"query_total,omitempty"`
 	QueryCategories []CategorySummary `json:"query_categories,omitempty"`
 	QueryEmpty      bool              `json:"query_empty,omitempty"`
+
+	// Consulta por categoria ("quanto gastei com comida"): QueryCategory é o rótulo da categoria; QueryTotal é o
+	// total só dela; QueryItems, os estabelecimentos que mais pesaram; QueryCount, quantos lançamentos.
+	QueryCategory string         `json:"query_category,omitempty"`
+	QueryItems    []CategoryItem `json:"query_items,omitempty"`
+	QueryCount    int            `json:"query_count,omitempty"`
 
 	ExportMonthTime time.Time `json:"-"`
 

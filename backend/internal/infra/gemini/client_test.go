@@ -227,3 +227,33 @@ func TestToExpenseType(t *testing.T) {
 		}
 	}
 }
+
+func TestToAnalysis_QueryCategory(t *testing.T) {
+	cases := []struct {
+		name string
+		raw  *string
+		want string
+	}{
+		{"categoria válida", strp("FOOD"), "FOOD"},
+		{"minúscula e espaço", strp(" market "), "MARKET"},
+		{"desconhecida é ignorada", strp("COMIDA"), ""},
+		{"null", nil, ""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			g := &geminiResponse{Type: "QUERY", Query: &geminiQuery{Category: tc.raw}}
+			a := g.toAnalysis("{}")
+			if a.QueryInfo == nil || a.QueryInfo.Category != tc.want {
+				t.Errorf("categoria esperada %q, got %+v", tc.want, a.QueryInfo)
+			}
+		})
+	}
+}
+
+func TestToAnalysis_ExportIgnoresCategory(t *testing.T) {
+	g := &geminiResponse{Type: "EXPORT_CSV", Export: &geminiQuery{Category: strp("FOOD")}}
+	if a := g.toAnalysis("{}"); a.ExportInfo == nil || a.ExportInfo.Category != "" {
+		t.Errorf("export não deveria levar categoria, got %+v", a.ExportInfo)
+	}
+}
+func strp(s string) *string { return &s }

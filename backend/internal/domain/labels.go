@@ -1,5 +1,15 @@
 package domain
 
+// IsKnown diz se c é uma das categorias do app (as constantes Category*).
+func (c Category) IsKnown() bool {
+	switch c {
+	case CategoryFood, CategoryTransport, CategoryHealth, CategoryEntertainment, CategoryShopping, CategoryMarket,
+		CategoryInvestment, CategorySalary, CategoryHousing, CategoryBills, CategoryEducation, CategoryPeople, CategoryOther:
+		return true
+	}
+	return false
+}
+
 func (c Category) Label() string {
 	switch c {
 	case CategoryFood:
