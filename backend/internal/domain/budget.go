@@ -49,3 +49,18 @@ type ExpensePayment struct {
 	Date          time.Time
 	Amount        float64
 }
+
+// MonthLine é um lançamento do mês para a tela do mês (estilo planilha), já com a chave da conta e de onde veio.
+type MonthLine struct {
+	Key         string // descrição normalizada (a mesma chave do orçamento)
+	Label       string
+	Category    string
+	Kind        string // EXPENSE, INCOME ou TRANSFER
+	Direction   string // IN ou OUT, só em transferências
+	Amount      float64
+	Pending     bool
+	AccountID   string // vazio em lançamento manual sem conta
+	AccountName string
+	Card        bool   // no cartão de crédito
+	Synthetic   string // "" (real), "forecast" (parcela prevista) ou "bill" (ajuste pelo total da fatura)
+}

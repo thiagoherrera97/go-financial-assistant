@@ -21,6 +21,7 @@ const testPassword = "senha-de-teste-123"
 
 type fakeReader struct {
 	salaryCredits  []domain.SalaryCredit
+	monthLines     []domain.MonthLine
 	monthly        []domain.MonthTotals
 	accounts       []domain.Account
 	institutions   []domain.Institution
@@ -102,6 +103,9 @@ func (f *fakeReader) ExpenseKeyMonths(_ context.Context, from, to time.Time) ([]
 }
 func (f *fakeReader) IncomePayments(_ context.Context, from, to time.Time) ([]domain.IncomePayment, error) {
 	return []domain.IncomePayment{{Key: "salario", Label: "Salário", Month: to, Amount: 5000}}, f.err
+}
+func (f *fakeReader) MonthLines(_ context.Context, month time.Time) ([]domain.MonthLine, error) {
+	return f.monthLines, f.err
 }
 func (f *fakeReader) SalaryCredits(_ context.Context, from, to time.Time) ([]domain.SalaryCredit, error) {
 	return f.salaryCredits, f.err

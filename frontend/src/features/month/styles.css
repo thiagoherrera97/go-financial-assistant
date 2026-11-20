@@ -1,0 +1,16 @@
+.sheet-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; align-items: start; }
+.sheet-col { display: grid; gap: 16px; min-width: 0; }
+.sheet-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 8px; }
+.sheet-head h2 { font-size: 1rem; font-weight: 700; margin: 0; overflow-wrap: anywhere; }
+.sheet-head strong { font-size: 1.0625rem; white-space: nowrap; }
+.sheet-sub { font-size: 0.8125rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.06em; margin: 14px 0 4px; }
+.sheet-rows { list-style: none; margin: 0; padding: 0; }
+.sheet-rows li { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-top: 1px solid var(--border); font-size: 0.9375rem; }
+.sheet-rows li:first-child { border-top: 0; }
+.sheet-rows li.is-pending { color: var(--text-secondary); }
+.sheet-notes { margin-top: 4px; border-top: 1px dashed var(--border); color: var(--text-secondary); }
+.sheet-label { min-width: 0; overflow-wrap: anywhere; }
+.sheet-meta { color: var(--text-muted); font-size: 0.8125rem; }
+.sheet-amount { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.sheet-empty, .sheet-aside { color: var(--text-muted); font-size: 0.875rem; margin: 6px 0 0; }
+.sheet-aside { display: flex; align-items: center; gap: 6px; }

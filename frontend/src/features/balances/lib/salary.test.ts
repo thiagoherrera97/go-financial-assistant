@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { salaryBonus, salaryPartText, shortDay } from './salary'
+import { salaryBonus, salaryPartText } from './salary'
+import { shortDay } from '../../../shared/lib/format'
 
 describe('salário', () => {
   it('mostra o dia com a semana', () => {

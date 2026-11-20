@@ -241,3 +241,50 @@ func (r *LedgerRepo) SaveInvestments(ctx context.Context, itemID string, positio
 	}
 	return tx.Commit(ctx)
 }
+
+// ownCardPaymentReason marca o pagamento da fatura de um cartão seu feito por outra conta, ignorado pelo app.
+const ownCardPaymentReason = "pagamento da fatura de um cartão seu (as compras do cartão já contam)"
+
+// ReclassifyOwnMoves corrige o que o banco manda como gasto ou renda mas é dinheiro seu mudando de lugar. Roda ao fim de
+// cada sincronização (idempotente) e vale também para o que já estava gravado:
+//   - caixinha do Mercado Pago ("Dinheiro reservado ..." / "Dinheiro retirado ..."): vira aplicação e resgate (TRANSFER);
+//   - pagamento, por uma conta, da fatura de um cartão seu (a descrição traz o nome do cartão, ex.: "Pagamento de conta
+//     SANTANDER UNIQUE VISA INFINITE"): é cancelado com o motivo, porque as compras do cartão já contam. Só vale para nome
+//     de cartão com 10+ letras que não seja também o nome de uma conta corrente (evita "Mercado Pago" casar com tudo).
+func (r *LedgerRepo) ReclassifyOwnMoves(ctx context.Context) (savings, cardPayments int64, err error) {
+	tag, err := r.db.Pool.Exec(ctx, `
+		UPDATE purchases p SET
+			kind = 'TRANSFER', category = 'INVESTMENT',
+			transfer_direction = CASE WHEN p.kind = 'INCOME' THEN 'IN' ELSE 'OUT' END
+		WHERE p.kind IN ('EXPENSE', 'INCOME') AND p.type = 'SINGLE'
+		  AND p.description ~* '^dinheiro (reservado|retirado)\M'
+		  AND EXISTS (SELECT 1 FROM payments pay WHERE pay.purchase_id = p.id AND pay.external_id IS NOT NULL
+		              AND pay.external_id NOT LIKE '`+syntheticPrefix+`%')
+	`)
+	if err != nil {
+		return 0, 0, fmt.Errorf("erro ao reclassificar a caixinha: %w", err)
+	}
+	savings = tag.RowsAffected()
+
+	tag, err = r.db.Pool.Exec(ctx, `
+		WITH cards AS (
+			SELECT DISTINCT c.name FROM accounts c
+			WHERE c.type = 'CREDIT' AND LENGTH(BTRIM(c.name)) >= 10
+			  AND NOT EXISTS (SELECT 1 FROM accounts b WHERE b.type = 'BANK' AND LOWER(b.name) = LOWER(c.name))
+		), hit AS (
+			SELECT pay.id, pay.purchase_id FROM payments pay
+			JOIN purchases p ON p.id = pay.purchase_id
+			JOIN accounts a ON a.id = pay.account_id
+			WHERE a.type = 'BANK' AND p.kind = 'EXPENSE' AND pay.status != 'CANCELLED'
+			  AND EXISTS (SELECT 1 FROM cards WHERE POSITION(LOWER(cards.name) IN LOWER(p.description)) > 0)
+		), cancelled AS (
+			UPDATE purchases p SET cancelled_at = COALESCE(p.cancelled_at, NOW()), cancellation_reason = $1
+			WHERE p.id IN (SELECT purchase_id FROM hit)
+		)
+		UPDATE payments SET status = 'CANCELLED' WHERE id IN (SELECT id FROM hit)
+	`, ownCardPaymentReason)
+	if err != nil {
+		return savings, 0, fmt.Errorf("erro ao ignorar pagamento de fatura de cartão próprio: %w", err)
+	}
+	return savings, tag.RowsAffected(), nil
+}

@@ -1,6 +1,7 @@
 import { CircleCheck, Clock, Sparkles } from 'lucide-react'
 import { formatMonthLong } from '../../../shared/lib/format'
-import { salaryBonus, salaryPartText, shortDay } from '../lib/salary'
+import { salaryBonus, salaryPartText } from '../lib/salary'
+import { shortDay } from '../../../shared/lib/format'
 import { StaticMoney } from './Money'
 import type { Salary } from '../api'
 
