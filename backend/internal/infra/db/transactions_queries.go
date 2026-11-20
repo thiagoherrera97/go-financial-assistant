@@ -137,3 +137,16 @@ func (r *TransactionsRepo) SetTransactionNote(ctx context.Context, id uuid.UUID,
 	}
 	return tag.RowsAffected() > 0, nil
 }
+
+func (r *TransactionsRepo) DeleteManualTransaction(ctx context.Context, id uuid.UUID) (bool, error) {
+	tag, err := r.db.Pool.Exec(ctx, `
+		DELETE FROM purchases p
+		USING payments pay
+		WHERE pay.id = $1 AND pay.purchase_id = p.id AND p.type = 'SINGLE'
+		  AND NOT EXISTS (SELECT 1 FROM payments q WHERE q.purchase_id = p.id AND q.external_id IS NOT NULL)
+	`, id)
+	if err != nil {
+		return false, fmt.Errorf("erro ao apagar o lançamento: %w", err)
+	}
+	return tag.RowsAffected() > 0, nil
+}

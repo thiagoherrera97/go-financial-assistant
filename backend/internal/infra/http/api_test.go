@@ -23,6 +23,7 @@ type fakeReader struct {
 	salaryCredits  []domain.SalaryCredit
 	monthLines     []domain.MonthLine
 	notes          map[uuid.UUID]string
+	deletedTx      []uuid.UUID
 	monthly        []domain.MonthTotals
 	accounts       []domain.Account
 	institutions   []domain.Institution
@@ -104,6 +105,13 @@ func (f *fakeReader) ExpenseKeyMonths(_ context.Context, from, to time.Time) ([]
 }
 func (f *fakeReader) IncomePayments(_ context.Context, from, to time.Time) ([]domain.IncomePayment, error) {
 	return []domain.IncomePayment{{Key: "salario", Label: "Salário", Month: to, Amount: 5000}}, f.err
+}
+func (f *fakeReader) DeleteManualTransaction(_ context.Context, id uuid.UUID) (bool, error) {
+	if id == uuid.Nil {
+		return false, f.err
+	}
+	f.deletedTx = append(f.deletedTx, id)
+	return true, f.err
 }
 func (f *fakeReader) SetTransactionNote(_ context.Context, id uuid.UUID, note string) (bool, error) {
 	if f.notes == nil {

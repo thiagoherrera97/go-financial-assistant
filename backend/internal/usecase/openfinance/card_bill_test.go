@@ -161,7 +161,7 @@ func TestSync_CardRefundIsNegativeExpenseAndNeverReconciled(t *testing.T) {
 
 func TestSync_ReclassifiesOwnMovesEverySync(t *testing.T) {
 	calls := 0
-	repo := &mockStore{reclassifyFn: func(context.Context) (int64, int64, error) { calls++; return 2, 1, nil }}
+	repo := &mockStore{reclassifyFn: func(context.Context) (int64, int64, int64, error) { calls++; return 2, 1, 1, nil }}
 	prov := &mockProvider{byItem: map[string][]ports.ExternalTransaction{"item": {extTx("t1", domain.KindExpense)}}}
 	if _, err := newSync(repo, prov, "item").Sync(context.Background()); err != nil {
 		t.Fatal(err)
@@ -170,7 +170,7 @@ func TestSync_ReclassifiesOwnMovesEverySync(t *testing.T) {
 		t.Errorf("deveria reclassificar uma vez por sincronização, got %d", calls)
 	}
 
-	repo.reclassifyFn = func(context.Context) (int64, int64, error) { return 0, 0, errors.New("falhou") }
+	repo.reclassifyFn = func(context.Context) (int64, int64, int64, error) { return 0, 0, 0, errors.New("falhou") }
 	if _, err := newSync(repo, prov, "item").Sync(context.Background()); err == nil {
 		t.Error("falha na reclassificação deveria voltar como erro")
 	}

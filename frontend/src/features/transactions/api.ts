@@ -67,3 +67,6 @@ export const setTransactionNote = (id: string, note: string) =>
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ note }),
   })
+
+/** Apaga um lançamento manual avulso (os do banco não podem ser apagados: voltariam na sincronização). */
+export const deleteTransaction = (id: string) => request<void>(`/api/transactions/${id}`, { method: 'DELETE' })

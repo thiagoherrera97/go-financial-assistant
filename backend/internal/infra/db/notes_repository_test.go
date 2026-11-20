@@ -7,6 +7,7 @@ import (
 
 	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/domain"
 	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/domain/ports"
+	"github.com/google/uuid"
 )
 
 func TestNotes(t *testing.T) {
@@ -54,5 +55,37 @@ func TestNotes(t *testing.T) {
 	pg.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM pending_notes`).Scan(&left) //nolint:errcheck
 	if note != "jantar pizza" || left != 0 {
 		t.Errorf("nota = %q, pendentes = %d", note, left)
+	}
+}
+
+func TestDeleteManualTransaction(t *testing.T) {
+	repo, pg := newTestRepo(t)
+	ctx := context.Background()
+	desc := "dm-teste almoço"
+	manual, _ := domain.NewPurchase(30, &desc, domain.CategoryFood, domain.PaymentMethodPix, domain.PurchaseTypeSingle, "raw")
+	pay := domain.NewPayment(manual.ID, 30, domain.PaymentStatusPaid)
+	if err := repo.Save(ctx, manual, []domain.Payment{*pay}); err != nil {
+		t.Fatal(err)
+	}
+	cleanup(t, pg, manual)
+	bank, err := repo.UpsertAccount(ctx, ports.ExternalAccount{ID: "dm-bank", ItemID: "dm", Type: "BANK", Name: "Banco DM"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { pg.Pool.Exec(context.Background(), `DELETE FROM accounts WHERE id = $1`, bank) })
+	ext := cardExpense(t, repo, pg, bank, "dm-1", "dm-teste do banco", 30, time.Date(2026, 11, 20, 0, 0, 0, 0, time.UTC))
+
+	var extPay uuid.UUID
+	pg.Pool.QueryRow(ctx, `SELECT id FROM payments WHERE purchase_id = $1`, ext.ID).Scan(&extPay) //nolint:errcheck
+	if ok, err := repo.DashboardRepo.DeleteManualTransaction(ctx, extPay); err != nil || ok {
+		t.Errorf("lançamento do banco não pode ser apagado: %v %v", ok, err)
+	}
+	if ok, err := repo.DashboardRepo.DeleteManualTransaction(ctx, pay.ID); err != nil || !ok {
+		t.Fatalf("manual deveria ser apagado: %v %v", ok, err)
+	}
+	var n int
+	pg.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM purchases WHERE id = $1`, manual.ID).Scan(&n) //nolint:errcheck
+	if n != 0 {
+		t.Error("a compra manual continuou no banco")
 	}
 }

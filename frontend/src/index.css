@@ -233,6 +233,9 @@ table.tx td { vertical-align: top; }
 .tx-note-form { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 4px; }
 .tx-note-input { flex: 1 1 220px; min-width: 0; padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--page); color: inherit; font: inherit; font-size: 0.875rem; }
 .tx-note-error { font-size: 0.75rem; color: var(--bad); }
+.tx-actions { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 0 4px; }
+.tx-delete { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 0.8125rem; margin-top: 4px; }
+.tx-delete .btn-small { margin-left: 0; }
 @media (max-width: 720px) {
   .col-wide { display: none; }
   .tx-meta { display: block; }

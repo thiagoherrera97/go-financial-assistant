@@ -1,5 +1,6 @@
 import { describeAmount, formatDay } from '../lib/transactions'
 import { CategoryChip } from '../../../shared/components/CategoryChip'
+import { DeleteManual } from './DeleteManual'
 import { NoteEditor } from './NoteEditor'
 import type { Transaction } from '../api'
 
@@ -37,7 +38,10 @@ export function TransactionTable({ items, hideCategory = false }: { items: Trans
                   {t.status === 'PENDING' && <span className="badge">Pendente</span>}
                   {t.source === 'MANUAL' && <span className="badge">Manual</span>}
                   <span className="tx-meta">{[hideCategory ? '' : t.categoryLabel, t.accountName].filter(Boolean).join(' · ')}</span>
-                  <NoteEditor key={`${t.id}:${t.note}`} id={t.id} note={t.note} />
+                  <span className="tx-actions">
+                    <NoteEditor key={`${t.id}:${t.note}`} id={t.id} note={t.note} />
+                    {t.source === 'MANUAL' && t.type === 'SINGLE' && <DeleteManual id={t.id} />}
+                  </span>
                 </td>
                 {!hideCategory && (
                   <td className="left col-wide">

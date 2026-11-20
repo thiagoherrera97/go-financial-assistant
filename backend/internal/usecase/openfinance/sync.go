@@ -171,11 +171,11 @@ func (s *SyncOpenFinance) Sync(ctx context.Context) (SyncResult, error) {
 	} else if n > 0 {
 		s.logger.Info("notas pendentes aplicadas", "count", n)
 	}
-	if savings, cardPayments, err := s.repo.ReclassifyOwnMoves(ctx); err != nil {
+	if savings, cardPayments, fundPayments, err := s.repo.ReclassifyOwnMoves(ctx); err != nil {
 		s.logger.Error("erro ao reclassificar movimentações entre contas suas", "error", err)
 		errs = append(errs, err)
-	} else if savings+cardPayments > 0 {
-		s.logger.Info("movimentações entre contas suas reclassificadas", "savings_box", savings, "own_card_payments", cardPayments)
+	} else if savings+cardPayments+fundPayments > 0 {
+		s.logger.Info("movimentações reclassificadas", "savings_box", savings, "own_card_payments", cardPayments, "payments_as_expense", fundPayments)
 	}
 	if err := s.RecomputeCardBills(ctx); err != nil {
 		s.logger.Error("erro ao calcular a fatura das compras no cartão", "error", err)

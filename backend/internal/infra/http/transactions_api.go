@@ -183,7 +183,28 @@ func (a *api) setTransactionNote(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"note": note})
 }
 
+// deleteTransaction apaga um lançamento manual avulso. Lançamento do banco não pode ser apagado (voltaria na
+// sincronização); parcelado e recorrente se cancelam pelo chat.
+func (a *api) deleteTransaction(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(r.PathValue("id"))
+	if err != nil {
+		writeError(w, http.StatusNotFound, "lançamento não encontrado")
+		return
+	}
+	deleted, err := a.reader.DeleteManualTransaction(r.Context(), id)
+	if err != nil {
+		a.fail(w, "apagar lançamento", err)
+		return
+	}
+	if !deleted {
+		writeError(w, http.StatusNotFound, "só dá para apagar lançamento manual avulso")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (a *api) registerTransactions(rt routes) {
+	rt.mux.Handle("DELETE /api/transactions/{id}", rt.protected(sameOriginOnly(a.deleteTransaction)))
 	rt.mux.Handle("PUT /api/transactions/{id}/note", rt.protected(jsonOnly(a.setTransactionNote)))
 	rt.mux.Handle("GET /api/transactions", rt.protected(a.transactions))
 	rt.mux.Handle("GET /api/transactions/groups", rt.protected(a.transactionGroups))

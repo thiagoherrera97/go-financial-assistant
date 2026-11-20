@@ -62,3 +62,19 @@ func TestAPI_SetTransactionNote(t *testing.T) {
 		t.Errorf("outra origem: %d", rec.Code)
 	}
 }
+
+func TestAPI_DeleteManualTransaction(t *testing.T) {
+	r := &fakeReader{}
+	s := newTestAPI(t, r)
+	c := login(t, s)
+	id := uuid.New()
+	if rec := do(s, "DELETE", "/api/transactions/"+id.String(), "", nil, c); rec.Code != 204 || len(r.deletedTx) != 1 || r.deletedTx[0] != id {
+		t.Fatalf("%d %v", rec.Code, r.deletedTx)
+	}
+	if rec := do(s, "DELETE", "/api/transactions/"+uuid.Nil.String(), "", nil, c); rec.Code != 404 {
+		t.Errorf("não apagável: %d", rec.Code)
+	}
+	if rec := do(s, "DELETE", "/api/transactions/"+id.String(), "", map[string]string{"Origin": "https://evil.example"}, c); rec.Code != 403 {
+		t.Errorf("outra origem: %d", rec.Code)
+	}
+}

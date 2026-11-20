@@ -26,6 +26,9 @@ type TransactionReader interface {
 	TransactionGroups(ctx context.Context, f domain.TransactionFilter, by domain.GroupBy) ([]domain.TransactionGroup, error)
 	// SetTransactionNote grava a nota da transação (vazia apaga); found falso se a transação não existe.
 	SetTransactionNote(ctx context.Context, id uuid.UUID, note string) (found bool, err error)
+	// DeleteManualTransaction apaga um lançamento manual avulso (nunca um do banco, que voltaria na sincronização, nem
+	// parcelado ou recorrente); deleted falso se não existe ou não pode ser apagado.
+	DeleteManualTransaction(ctx context.Context, id uuid.UUID) (deleted bool, err error)
 }
 
 // AccountReader lê contas, cartões e as instituições (bancos) a que pertencem.

@@ -45,12 +45,26 @@ func TestReclassifyOwnMoves(t *testing.T) {
 	fatura := save("om-3", "Pagamento de conta SANTANDER OM UNIQUE VISA", domain.KindExpense, 8583.09)
 	parcela := save("om-4", "Pagamento de parcela Empréstimos Mercado Pago OM", domain.KindExpense, 91.36)
 
-	savings, cards, err := repo.ReclassifyOwnMoves(ctx)
+	fidcDesc, aplicDesc := "Pagamento com Pix AIBR FIDC RESP LTDA", "Aplicação CDB"
+	transfer := func(ext string, desc *string) uuid.UUID {
+		p, _ := domain.NewTransfer(48.54, desc, domain.PaymentMethodPix, domain.PurchaseTypeSingle, "raw", domain.TransferDirectionOut)
+		pay := domain.NewPayment(p.ID, 48.54, domain.PaymentStatusPaid)
+		pay.DueDate, pay.ExternalID, pay.AccountID = &day, &ext, &bank
+		if err := repo.SaveExternal(ctx, p, pay); err != nil {
+			t.Fatal(err)
+		}
+		cleanup(t, pg, p)
+		return p.ID
+	}
+	fidc := transfer("om-5", &fidcDesc)
+	aplic := transfer("om-6", &aplicDesc)
+
+	savings, cards, funds, err := repo.ReclassifyOwnMoves(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if savings != 2 || cards != 1 {
-		t.Errorf("esperava 2 da caixinha e 1 fatura, got %d e %d", savings, cards)
+	if savings != 2 || cards != 1 || funds != 1 {
+		t.Errorf("esperava 2 da caixinha, 1 fatura e 1 pagamento, got %d, %d e %d", savings, cards, funds)
 	}
 	read := func(id uuid.UUID) (kind, dir, status string) {
 		var d *string
@@ -72,7 +86,13 @@ func TestReclassifyOwnMoves(t *testing.T) {
 	if k, _, s := read(parcela); k != "EXPENSE" || s != "PAID" {
 		t.Errorf("parcela de empréstimo não é fatura: %s %s", k, s)
 	}
-	if s, c, err := repo.ReclassifyOwnMoves(ctx); err != nil || s != 0 || c != 0 {
-		t.Errorf("segunda passada não muda nada: %d %d %v", s, c, err)
+	if k, d, _ := read(fidc); k != "EXPENSE" || d != "" {
+		t.Errorf("pagamento com Pix para FIDC = %s %s", k, d)
+	}
+	if k, _, _ := read(aplic); k != "TRANSFER" {
+		t.Errorf("aplicação de verdade continua aplicação: %s", k)
+	}
+	if s, c, f, err := repo.ReclassifyOwnMoves(ctx); err != nil || s != 0 || c != 0 || f != 0 {
+		t.Errorf("segunda passada não muda nada: %d %d %d %v", s, c, f, err)
 	}
 }

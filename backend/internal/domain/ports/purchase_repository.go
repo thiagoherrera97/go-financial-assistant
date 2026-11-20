@@ -80,8 +80,9 @@ type ExternalStore interface {
 	// faturas fechadas. Devolve quantas previstas e quantos ajustes criou.
 	RebuildCardForecasts(ctx context.Context, closeDaysBefore int, today time.Time) (forecasts, adjustments int, err error)
 	// ReclassifyOwnMoves trata como dinheiro seu mudando de lugar a caixinha (vira aplicação e resgate) e o pagamento, por
-	// uma conta, da fatura de um cartão seu (cancelado). Devolve quantos de cada.
-	ReclassifyOwnMoves(ctx context.Context) (savings, cardPayments int64, err error)
+	// uma conta, da fatura de um cartão seu (cancelado); e devolve ao gasto o pagamento que o banco classificou como
+	// aplicação ("Pagamento com Pix ... FIDC"). Devolve quantos de cada.
+	ReclassifyOwnMoves(ctx context.Context) (savings, cardPayments, fundPayments int64, err error)
 	// ApplyPendingNotes coloca as notas mandadas pelo chat antes da transação chegar nas transações que chegaram.
 	ApplyPendingNotes(ctx context.Context) (int, error)
 }
