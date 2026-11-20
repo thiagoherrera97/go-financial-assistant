@@ -25,6 +25,8 @@ func TestRebuildCardForecasts(t *testing.T) {
 	// Parcela 3/10 na fatura de outubro (a sincronização data a parcela no mês da fatura) e uma compra à vista em novembro.
 	cardExpense(t, repo, pg, card, "fc-t1", "fc-teste VIVARA (3/10)", 669, day("2026-10-15"))
 	cardExpense(t, repo, pg, card, "fc-t2", "fc-teste mercado", 100, day("2026-10-20"))
+	// Compra de 18/11 já na fatura aberta (10/12): o cartão está em uso até ela, então a previsão vai até dezembro.
+	cardExpense(t, repo, pg, card, "fc-t0", "fc-teste padaria", 12, day("2026-11-18"))
 	if _, err := repo.RecomputeCardBills(ctx, 6); err != nil {
 		t.Fatal(err)
 	}
@@ -111,5 +113,35 @@ func TestRebuildCardForecasts(t *testing.T) {
 	}
 	if nov != 1000 {
 		t.Errorf("novembro deveria bater com a fatura do banco (1000), got %.2f", nov)
+	}
+}
+
+func TestRebuildCardForecasts_IdleCardGetsNoForecast(t *testing.T) {
+	repo, pg := newTestRepo(t)
+	ctx := context.Background()
+	day := func(s string) time.Time { v, _ := time.Parse("2006-01-02", s); return v }
+	due := day("2026-11-17")
+	card, err := repo.UpsertAccount(ctx, ports.ExternalAccount{ID: "fc-idle-card", ItemID: "fc-idle", Type: "CREDIT", Name: "PARADO", Last4: "1473", DueDate: &due})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		pg.Pool.Exec(context.Background(), `DELETE FROM purchases WHERE id IN (SELECT purchase_id FROM payments WHERE account_id = $1)`, card)
+		pg.Pool.Exec(context.Background(), `DELETE FROM accounts WHERE id = $1`, card)
+	})
+	// Última compra em agosto: o cartão parou; a 3/12 não vira previsão de setembro a dezembro.
+	cardExpense(t, repo, pg, card, "fc-idle-1", "fc-teste ML (3/12)", 32.24, day("2026-08-05"))
+	if _, err := repo.RecomputeCardBills(ctx, 6); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := repo.RebuildCardForecasts(ctx, 6, day("2026-11-20")); err != nil {
+		t.Fatal(err)
+	}
+	var n int
+	if err := pg.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM payments WHERE account_id = $1 AND external_id LIKE 'finassist:%'`, card).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	if n != 0 {
+		t.Errorf("cartão parado não deveria ganhar previsões, got %d", n)
 	}
 }

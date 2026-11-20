@@ -22,6 +22,8 @@ func TestForecastCardInstallments(t *testing.T) {
 		{AccountID: acc, Base: "VIVARA", Number: 1, Total: 10, Amount: 669, BillDue: d("2026-10-10")},
 		// Última parcela: 5/6 em out, só falta 6/6 em nov.
 		{AccountID: acc, Base: "AMAZON", Number: 5, Total: 6, Amount: 65.95, BillDue: d("2026-10-10")},
+		// Parou em agosto (terminou ou mudou de nome no banco): não se prevê, porque outubro já tem parcelas.
+		{AccountID: acc, Base: "PAROU", Number: 2, Total: 10, Amount: 50, BillDue: d("2026-08-10")},
 		// Cartão sem horizonte: ignorado.
 		{AccountID: other, Base: "X", Number: 1, Total: 3, Amount: 10, BillDue: d("2026-10-17")},
 	}
@@ -33,6 +35,9 @@ func TestForecastCardInstallments(t *testing.T) {
 		count[f.Description()+"@"+f.BillDue.Format("2006-01-02")]++
 		if f.BillDue.Equal(d("2026-11-10")) {
 			nov += f.Amount
+		}
+		if f.Base == "PAROU" {
+			t.Errorf("compra que parou antes da última fatura com parcelas não deveria ser prevista: %+v", f)
 		}
 		if f.AccountID == other {
 			t.Errorf("cartão sem horizonte não deveria ter previsão: %+v", f)
@@ -98,5 +103,18 @@ func TestCardBillGap(t *testing.T) {
 		if got := CardBillGap(c.total, c.known); got != c.want {
 			t.Errorf("CardBillGap(%.2f, %.2f) = %.2f, esperado %.2f", c.total, c.known, got, c.want)
 		}
+	}
+}
+
+func TestForecastCardInstallments_OnlyAfterLastDeliveredBill(t *testing.T) {
+	acc := uuid.New()
+	// O banco já entregou a 4/6 em novembro: nada se prevê para novembro, só dezembro (5/6).
+	known := []CardInstallment{
+		{AccountID: acc, Base: "A", Number: 3, Total: 6, Amount: 10, BillDue: d("2026-10-10")},
+		{AccountID: acc, Base: "A", Number: 4, Total: 6, Amount: 10, BillDue: d("2026-11-10")},
+	}
+	got := ForecastCardInstallments(known, map[uuid.UUID]int{acc: 10}, map[uuid.UUID]time.Time{acc: d("2026-12-10")})
+	if len(got) != 1 || got[0].Number != 5 || !got[0].BillDue.Equal(d("2026-12-10")) {
+		t.Errorf("esperava só a 5/6 em dezembro, got %+v", got)
 	}
 }

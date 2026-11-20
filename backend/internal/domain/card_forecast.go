@@ -45,8 +45,10 @@ func monthIndex(t time.Time) int { return t.Year()*12 + int(t.Month()) - 1 }
 
 // ForecastCardInstallments prevê as parcelas que faltam chegar do banco. Cada compra parcelada é reconhecida pela conta,
 // descrição, número de parcelas, valor e mês em que começou (fatura menos a parcela, que é constante na mesma compra);
-// compras iguais no mesmo mês contam como cópias. A partir da maior parcela conhecida, prevê as seguintes, uma por
-// fatura, até a fatura horizon[conta] (inclusive). dueDay é o dia do vencimento de cada cartão.
+// compras iguais no mesmo mês contam como cópias. O banco entrega as parcelas com atraso, então só se prevê depois da
+// última fatura em que chegou alguma parcela daquele cartão, e só para as compras que tinham parcela nela (as que pararam
+// antes terminaram ou mudaram de nome no banco). A partir da maior parcela conhecida, prevê as seguintes, uma por fatura,
+// até a fatura horizon[conta] (inclusive). dueDay é o dia do vencimento de cada cartão.
 func ForecastCardInstallments(known []CardInstallment, dueDay map[uuid.UUID]int, horizon map[uuid.UUID]time.Time) []ForecastInstallment {
 	type chainKey struct {
 		account uuid.UUID
@@ -80,9 +82,19 @@ func ForecastCardInstallments(known []CardInstallment, dueDay map[uuid.UUID]int,
 		}
 	}
 
+	lastKnown := map[uuid.UUID]time.Time{}
+	for _, k := range known {
+		if k.BillDue.After(lastKnown[k.AccountID]) {
+			lastKnown[k.AccountID] = k.BillDue
+		}
+	}
+
 	var out []ForecastInstallment
 	for _, key := range order {
 		c := chains[key]
+		if monthIndex(c.bill) != monthIndex(lastKnown[key.account]) {
+			continue
+		}
 		day, ok := dueDay[key.account]
 		limit, hasLimit := horizon[key.account]
 		if !ok || !hasLimit {

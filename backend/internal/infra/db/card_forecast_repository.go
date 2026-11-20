@@ -87,12 +87,14 @@ func (r *LedgerRepo) RebuildCardForecasts(ctx context.Context, closeDaysBefore i
 	return forecasts, adjustments, nil
 }
 
-// cardHorizons dá, por cartão com vencimento conhecido, o dia do vencimento e a fatura aberta de hoje (até onde prever).
+// cardHorizons dá, por cartão com vencimento conhecido, o dia do vencimento e até onde prever: a fatura aberta de hoje,
+// mas nunca além da última fatura com algum lançamento real do cartão (cartão parado não ganha parcela prevista).
 func cardHorizons(ctx context.Context, tx pgx.Tx, closeDaysBefore int, today time.Time) (map[uuid.UUID]int, map[uuid.UUID]time.Time, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT id, EXTRACT(DAY FROM due_date)::int,
-		       CASE WHEN close_date IS NOT NULL AND close_date < due_date THEN (due_date - close_date) END
-		FROM accounts WHERE type = 'CREDIT' AND due_date IS NOT NULL
+		SELECT a.id, EXTRACT(DAY FROM a.due_date)::int,
+		       CASE WHEN a.close_date IS NOT NULL AND a.close_date < a.due_date THEN (a.due_date - a.close_date) END,
+		       (SELECT MAX(pay.bill_due_date) FROM payments pay WHERE pay.account_id = a.id AND `+notSynthetic+`)
+		FROM accounts a WHERE a.type = 'CREDIT' AND a.due_date IS NOT NULL
 	`)
 	if err != nil {
 		return nil, nil, fmt.Errorf("erro ao ler cartões: %w", err)
@@ -103,14 +105,22 @@ func cardHorizons(ctx context.Context, tx pgx.Tx, closeDaysBefore int, today tim
 		var id uuid.UUID
 		var day int
 		var bankClose *int
-		if err := rows.Scan(&id, &day, &bankClose); err != nil {
+		var lastReal *time.Time
+		if err := rows.Scan(&id, &day, &bankClose, &lastReal); err != nil {
 			return nil, nil, fmt.Errorf("erro ao ler cartão: %w", err)
 		}
 		days := closeDaysBefore
 		if bankClose != nil && *bankClose > 0 && *bankClose < 28 {
 			days = *bankClose
 		}
-		dueDay[id], horizon[id] = day, domain.CardBillDue(today, day, days)
+		if lastReal == nil {
+			continue
+		}
+		limit := domain.CardBillDue(today, day, days)
+		if lastReal.Before(limit) {
+			limit = *lastReal
+		}
+		dueDay[id], horizon[id] = day, limit
 	}
 	return dueDay, horizon, rows.Err()
 }
