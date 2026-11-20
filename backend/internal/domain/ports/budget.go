@@ -15,6 +15,8 @@ type BudgetReader interface {
 	ExpenseRules(ctx context.Context) (map[string]domain.ExpenseClass, error)
 	// IncomePayments devolve cada entrada de renda de from a to (primeiros dias dos meses).
 	IncomePayments(ctx context.Context, from, to time.Time) ([]domain.IncomePayment, error)
+	// SalaryCredits devolve os créditos de salário (entradas na categoria Salário) com data de from a to (dias, inclusive).
+	SalaryCredits(ctx context.Context, from, to time.Time) ([]domain.SalaryCredit, error)
 	// KnownInstallments soma, por mês (de from a to), as parcelas já cadastradas de compras parceladas.
 	KnownInstallments(ctx context.Context, from, to time.Time) (map[time.Time]float64, error)
 	// SetExpenseRule grava a correção manual; class vazio apaga e volta à detecção automática.

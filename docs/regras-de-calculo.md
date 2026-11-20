@@ -55,7 +55,7 @@ Cada conta (chave) é classificada como **fixa**, **parcelada** ou **variável**
 Projeta N meses (6, 12 ou 24) a partir do mês atual:
 
 - **Fixas e variáveis**: média dos últimos 3 meses completos com dados (editável na tela).
-- **Renda**: mediana da renda total dos últimos 6 meses (um mês fora do padrão — 13º, adiantamento de férias — não pesa). As fontes recorrentes (`EstimateIncome`) explicam a maior parte; o restante aparece como "outras entradas". **Todo lançamento da categoria Salário é uma fonte só**, mesmo que a descrição mude.
+- **Renda**: mediana da renda total dos últimos 6 meses (um mês fora do padrão — 13º, adiantamento de férias — não pesa). As fontes recorrentes (`EstimateIncome`) explicam a maior parte; o restante aparece como "outras entradas". **Todo lançamento da categoria Salário é uma fonte só**, mesmo que a descrição mude. Com o **salário configurado** (`SALARY_SCHEDULE`), ele entra pelo valor combinado de cada parte ("Salário do dia 15", "Salário do dia 30") no lugar da estimativa, e a mediana e as fontes recorrentes passam a olhar só as outras entradas.
 - **Parcelas**: as que faltam das compras parceladas (inferidas do `n/m` da descrição e das já cadastradas).
 - **Saldo projetado** = renda − fixas − variáveis − parcelas, acumulado.
 
@@ -95,6 +95,14 @@ O progresso é calculado na hora. Patrimônio = saldo das contas correntes + inv
 - **Desatualizado**: mais de 36 h desde a última atualização *do Pluggy* (`lastUpdatedAt` do item), não desde a última cópia do app. O Meu Pluggy não permite forçar a atualização pela API; ela acontece sozinha (cerca de 1x/dia) ou a pedido em meu.pluggy.ai.
 - O "aplicado automaticamente" do banco só aparece se for diferente do saldo.
 - O nome e a cor do banco vêm do conector; no Meu Pluggy o conector é sempre o agregador, então vêm do nome das contas (tabela de bancos conhecidos).
+
+## Salário e dias úteis (`domain/salary.go`, `domain/business_day.go`)
+
+- **Partes** em Configurações → Renda (`SALARY_SCHEDULE`), como `15=5200; 30=4366,62`. Vazio desliga.
+- **Data de cada parte:** o dia combinado; se passar do fim do mês, o último dia (30 em fevereiro = 28 ou 29); se não for dia útil, o **dia útil anterior**.
+- **Dia útil:** segunda a sexta, menos os feriados nacionais (1/1, 21/4, 1/5, 7/9, 12/10, 2/11, 15/11, 20/11, 25/12), os bancários móveis (Carnaval segunda e terça, Sexta-feira Santa, Corpus Christi, pela Páscoa) e os de São Paulo (25/1 e 9/7).
+- **Conferência com o banco:** cada parte fica com o crédito da categoria Salário mais perto da data prevista, até 5 dias de distância; um crédito serve a uma parte só, e créditos extras (férias, 13º) ficam de fora. Parte sem crédito = **a receber**. Nada é lançado: o salário real continua vindo só do Open Finance, então não duplica.
+- **Painel:** mostra as partes do mês, quando caem ou caíram e quanto falta receber.
 
 ## Mês em andamento
 

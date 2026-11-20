@@ -61,3 +61,26 @@ export interface Balances {
 
 export const useBalances = () => useQuery({ queryKey: ['balances'], queryFn: () => request<Balances>('/api/balances') })
 
+
+export interface SalaryPart {
+  /** Dia combinado (15, 30...). */
+  day: number
+  /** Quando deve cair (AAAA-MM-DD): o dia útil anterior se o dia combinado não for útil. */
+  expectedDate: string
+  amount: number
+  received: boolean
+  receivedDate: string | null
+  receivedAmount: number | null
+}
+
+export interface Salary {
+  configured: boolean
+  /** AAAA-MM */
+  month: string
+  parts: SalaryPart[]
+  expected: number
+  received: number
+  pending: number
+}
+
+export const useSalary = () => useQuery({ queryKey: ['salary'], queryFn: () => request<Salary>('/api/salary') })

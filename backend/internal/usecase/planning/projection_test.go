@@ -1,6 +1,7 @@
 package planning
 
 import (
+	"math"
 	"testing"
 	"time"
 
@@ -48,7 +49,7 @@ func TestBuildProjection_AveragesAndKnownInstallments(t *testing.T) {
 	}
 	known := map[time.Time]float64{month(2026, time.December): 300} // parcela cadastrada à mão
 
-	p := BuildProjection(rows, nil, income, known, start, 4)
+	p := BuildProjection(rows, nil, income, nil, known, start, 4)
 
 	a := p.Assumptions
 	if a.BasedOn != 2 || a.Income != 6000 || len(a.IncomeSources) != 1 || a.Fixed != 100 || a.Variable != 500 {
@@ -66,7 +67,7 @@ func TestBuildProjection_AveragesAndKnownInstallments(t *testing.T) {
 }
 
 func TestBuildProjection_NoHistory(t *testing.T) {
-	p := BuildProjection(nil, nil, nil, nil, month(2026, time.October), 3)
+	p := BuildProjection(nil, nil, nil, nil, nil, month(2026, time.October), 3)
 	if p.Assumptions.BasedOn != 0 || len(p.Months) != 3 || p.Months[0].Fixed != 0 {
 		t.Errorf("sem histórico tudo é zero: %+v", p)
 	}
@@ -78,7 +79,7 @@ func TestBuildProjection_FinishedInstallmentsAndGaps(t *testing.T) {
 		{Key: "seguro", Label: "SEGURO Parc 012/012", Month: month(2026, time.September), Total: 12, Count: 1, Installment: true}, // última
 		{Key: "geladeira", Label: "Geladeira (2/6)", Month: month(2026, time.July), Total: 200, Count: 1, Installment: true},      // sumiu em ago e set
 	}
-	p := BuildProjection(rows, nil, nil, nil, start, 6)
+	p := BuildProjection(rows, nil, nil, nil, nil, start, 6)
 	// Seguro acabou. Geladeira estava na 2/6 em jul: restam 4 parcelas a partir de ago (ago, set, out, nov)
 	// e só out e nov caem na janela da projeção.
 	got := []float64{p.Months[0].Installment, p.Months[1].Installment, p.Months[2].Installment}
@@ -185,7 +186,7 @@ func TestBuildProjection_VariedIncomeSourcesAreNotLost(t *testing.T) {
 			domain.IncomePayment{Key: "aluguel recebido", Label: "Aluguel recebido", Month: month(2026, m), Amount: 1000},                    // única fonte fixa
 			domain.IncomePayment{Key: "pix recebido " + m.String(), Label: "Pix recebido", Month: month(2026, m), Amount: amounts[m] - 1000}) // origem diferente a cada mês
 	}
-	a := BuildProjection(rows, nil, income, nil, start, 3).Assumptions
+	a := BuildProjection(rows, nil, income, nil, nil, start, 3).Assumptions
 
 	// Mediana de 5000, 5100, 5000, 6500, 5100 e 12000 = 5100; as fontes recorrentes explicam só 1000.
 	if a.Income != 5100 {
@@ -211,8 +212,38 @@ func TestBuildProjection_RecurringSourcesAreTheFloor(t *testing.T) {
 		income = append(income, domain.IncomePayment{Key: "salario", Label: "Salário", Month: month(2026, m), Amount: 5000})
 	}
 	// Mediana dos 6 meses = (0 + 5000) / 2 = 2500, abaixo dos 5000 recorrentes: vale a fonte recorrente.
-	a := BuildProjection(rows, nil, income, nil, start, 3).Assumptions
+	a := BuildProjection(rows, nil, income, nil, nil, start, 3).Assumptions
 	if a.Income != 5000 || len(a.IncomeSources) != 1 {
 		t.Errorf("piso = fontes recorrentes: %+v", a)
+	}
+}
+
+// Com o salário configurado, ele entra pelo valor combinado; os créditos de salário do histórico (com mês atípico de
+// férias) saem da conta, e o resto da renda segue a estimativa de sempre.
+func TestBuildProjection_ConfiguredSalaryReplacesEstimate(t *testing.T) {
+	start := month(2026, time.October)
+	var rows []domain.ExpenseKeyMonth
+	var income []domain.IncomePayment
+	for m := time.April; m <= time.September; m++ {
+		rows = append(rows, domain.ExpenseKeyMonth{Key: "mercado", Label: "Mercado", Month: month(2026, m), Total: 1000, Count: 9})
+		income = append(income,
+			domain.IncomePayment{Key: "salario", Label: "Salário", Month: month(2026, m), Amount: 5200},
+			domain.IncomePayment{Key: "salario", Label: "Salário", Month: month(2026, m), Amount: 4366.62},
+			domain.IncomePayment{Key: "aluguel recebido", Label: "Aluguel recebido", Month: month(2026, m), Amount: 1000})
+	}
+	income = append(income, domain.IncomePayment{Key: "salario", Label: "Salário", Month: month(2026, time.August), Amount: 10797.79})
+	salary := []domain.SalaryPart{{Day: 15, Amount: 5200}, {Day: 30, Amount: 4366.62}}
+
+	a := BuildProjection(rows, nil, income, salary, nil, start, 3).Assumptions
+	if math.Abs(a.Income-10566.62) > 0.001 {
+		t.Fatalf("renda = 5200 + 4366,62 + aluguel 1000: %v (%+v)", a.Income, a.IncomeSources)
+	}
+	if len(a.IncomeSources) != 3 || a.IncomeSources[0].Label != "Salário do dia 15" || a.IncomeSources[1].Monthly != 4366.62 || a.IncomeSources[2].Monthly != 1000 {
+		t.Errorf("fontes: %+v", a.IncomeSources)
+	}
+
+	// Sem histórico, a projeção ainda conta com o salário.
+	if a := BuildProjection(nil, nil, nil, salary, nil, start, 3).Assumptions; math.Abs(a.Income-9566.62) > 0.001 || a.BasedOn != 0 {
+		t.Errorf("sem histórico: %+v", a)
 	}
 }

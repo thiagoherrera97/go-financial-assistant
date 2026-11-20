@@ -11,6 +11,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/domain"
 	"github.com/google/uuid"
 )
 
@@ -27,6 +28,7 @@ const (
 
 // Grupos da página, na ordem em que aparecem.
 const (
+	GroupIncome   = "income"
 	GroupDigest   = "digest"
 	GroupSync     = "sync"
 	GroupPluggy   = "pluggy"
@@ -36,6 +38,7 @@ const (
 )
 
 var Groups = []struct{ ID, Title, Help string }{
+	{GroupIncome, "Renda", "Quando e quanto cai o seu salário. Usado no \"a receber\" do Painel e na projeção."},
 	{GroupDigest, "Resumo semanal", "Mensagem de resumo no seu chat, calculada por código (sem IA)."},
 	{GroupSync, "Sincronização", "Com que frequência o app busca as transações no banco."},
 	{GroupPluggy, "Open Finance (Meu Pluggy)", "Credenciais da aplicação Pluggy e os bancos conectados."},
@@ -69,6 +72,8 @@ var weekdays = []string{"monday", "tuesday", "wednesday", "thursday", "friday", 
 // Defs é o catálogo. Fora dele (porta, banco, senha do dashboard, backup) só o ambiente manda.
 var Defs = []Def{
 	{Key: "CHANNEL", Label: "Canal de conversa", Kind: KindEnum, Options: []string{"whatsapp", "telegram"}, Default: "whatsapp", Internal: true},
+
+	{Key: "SALARY_SCHEDULE", Group: GroupIncome, Label: "Partes do salário (dia=valor)", Help: "Separe as partes por ponto e vírgula, ex.: 15=5200; 30=4366,62. Se o dia cair em fim de semana ou feriado (nacional, bancário ou de SP), conta o dia útil anterior; 30 em fevereiro vira o último dia útil do mês. O crédito real do banco (categoria Salário) confirma cada parte. Vazio desliga.", Kind: KindText, Live: true, Validate: validSalarySchedule},
 
 	{Key: "DIGEST_ENABLED", Group: GroupDigest, Label: "Enviar o resumo semanal", Kind: KindBool, Default: "true", Live: true},
 	{Key: "DIGEST_WEEKDAY", Group: GroupDigest, Label: "Dia da semana", Kind: KindEnum, Options: weekdays, Default: "monday", Live: true},
@@ -170,6 +175,11 @@ func SplitList(raw string) []string {
 		}
 	}
 	return out
+}
+
+func validSalarySchedule(v string) error {
+	_, err := domain.ParseSalarySchedule(v)
+	return err
 }
 
 func validTimezone(v string) error {

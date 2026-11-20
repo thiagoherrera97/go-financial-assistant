@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/domain"
 	"log/slog"
 	"os"
 	"strconv"
@@ -324,4 +325,13 @@ func (s *Service) Sync() SyncSettings {
 		ClientSecret:  strings.TrimSpace(s.Get("PLUGGY_CLIENT_SECRET")),
 		CardCloseDays: s.Int("CARD_CLOSE_DAYS_BEFORE_DUE"),
 	}
+}
+
+// SalaryParts são as partes do salário configuradas (SALARY_SCHEDULE); vazio se não configurado ou inválido.
+func (s *Service) SalaryParts() []domain.SalaryPart {
+	parts, err := domain.ParseSalarySchedule(s.Get("SALARY_SCHEDULE"))
+	if err != nil {
+		return nil
+	}
+	return parts
 }

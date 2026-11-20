@@ -13,6 +13,20 @@
 .bal-share span { display: block; height: 100%; min-width: 6px; border-radius: 4px; }
 .bal-legend { display: flex; flex-wrap: wrap; gap: 8px 22px; margin: 0; padding: 0; list-style: none; }
 .bal-legend li { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 0.9375rem; }
+.bal-salary { margin-top: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 16px 18px; }
+.bal-salary-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 16px; }
+.bal-salary-head h2 { font-size: 1.0625rem; font-weight: 700; margin: 0; }
+.bal-salary-head p { margin: 0; color: var(--text-secondary); }
+.bal-salary ul { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
+.bal-salary li { display: grid; grid-template-columns: auto auto 1fr auto; align-items: center; gap: 4px 10px; font-size: 0.9375rem; color: var(--text-secondary); }
+.bal-salary li.is-received { color: var(--text-muted); }
+.bal-salary li.is-received svg { color: var(--good); }
+.bal-salary-day { font-weight: 600; color: var(--text-primary); }
+.bal-salary-amount { font-weight: 600; color: var(--text-primary); text-align: right; }
+@media (max-width: 520px) {
+  .bal-salary li { grid-template-columns: auto 1fr auto; }
+  .bal-salary-when { grid-column: 2 / -1; grid-row: 2; font-size: 0.8125rem; }
+}
 .bal-aside { margin-top: 12px; font-size: 0.8125rem; color: var(--text-secondary); }
 .bal-flag { display: inline-flex; align-items: center; gap: 4px; font-size: 0.8125rem; font-weight: 600; }
 .bal-flag-critical { color: var(--bad); }

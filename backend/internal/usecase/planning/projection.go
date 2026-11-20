@@ -72,8 +72,9 @@ func parseInstallment(label string) (current, total int, ok bool) {
 // BuildProjection projeta `months` meses a partir de start (primeiro dia do mês, em geral o mês atual): médias de fixas e
 // variáveis, mediana da renda e parcelas já conhecidas. As regras estão em docs/regras-de-calculo.md (Projeção).
 // rows são as despesas por conta dos 12 meses completos antes de start; incomes, as entradas de renda no mesmo período.
+// salary, quando configurado, são as partes do salário: entram pelo valor combinado no lugar da estimativa do salário.
 func BuildProjection(rows []domain.ExpenseKeyMonth, rules map[string]domain.ExpenseClass, incomes []domain.IncomePayment,
-	knownInstallments map[time.Time]float64, start time.Time, months int) Projection {
+	salary []domain.SalaryPart, knownInstallments map[time.Time]float64, start time.Time, months int) Projection {
 
 	b := BuildBudget(rows, rules, start.AddDate(0, -12, 0), start.AddDate(0, -1, 0))
 
@@ -97,6 +98,9 @@ func BuildProjection(rows []domain.ExpenseKeyMonth, rules map[string]domain.Expe
 		n := float64(a.BasedOn)
 		a.Fixed, a.Variable = a.Fixed/n, a.Variable/n
 		a.IncomeSources, a.Income = estimateIncomeTotal(incomes, used, window)
+	}
+	if len(salary) > 0 {
+		a.IncomeSources, a.Income = withSalary(salary, incomes, used, window)
 	}
 
 	// Parcelas que faltam: a última aparição de cada conta parcelada diz em que parcela está.
@@ -140,6 +144,30 @@ func estimateIncomeTotal(payments []domain.IncomePayment, used, window []time.Ti
 		return sources, recurring
 	}
 	return append(sources, IncomeSource{Label: otherIncomeLabel, Monthly: typical - recurring}), typical
+}
+
+// salaryKey é a chave que a consulta de renda dá a toda entrada na categoria Salário.
+const salaryKey = "salario"
+
+// withSalary troca a estimativa do salário pelas partes configuradas. O resto da renda segue a mesma leitura de
+// estimateIncomeTotal, só que sem os créditos de salário (que já estão nas partes). Sem histórico, vale só o salário.
+func withSalary(parts []domain.SalaryPart, incomes []domain.IncomePayment, used, window []time.Time) ([]IncomeSource, float64) {
+	sources := make([]IncomeSource, 0, len(parts))
+	for _, p := range parts {
+		sources = append(sources, IncomeSource{Label: "Salário do dia " + strconv.Itoa(p.Day), Monthly: p.Amount})
+	}
+	total := domain.SalaryTotal(parts)
+	if len(used) == 0 {
+		return sources, total
+	}
+	var others []domain.IncomePayment
+	for _, p := range incomes {
+		if p.Key != salaryKey {
+			others = append(others, p)
+		}
+	}
+	rest, restTotal := estimateIncomeTotal(others, used, window)
+	return append(sources, rest...), total + restTotal
 }
 
 // MedianMonthlyIncome é a mediana da renda total mensal nos meses dados; mês sem entrada conta como zero.

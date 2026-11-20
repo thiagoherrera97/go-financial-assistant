@@ -114,6 +114,7 @@ func (a *app) buildServices() error {
 	a.exportCSV = ledger.NewExportCSV(a.ledger)
 	a.insights = insights.NewInsights(db.NewDashboardReader(a.db))
 	a.insights.SetCardCloseDays(func() int { return a.settings.Int("CARD_CLOSE_DAYS_BEFORE_DUE") })
+	a.insights.SetSalarySchedule(a.settings.SalaryParts)
 
 	if err := a.analyzeExpense.GenerateRecurringExpenses(a.ctx); err != nil {
 		a.logger.Error("erro ao gerar despesas recorrentes no startup", "error", err)
