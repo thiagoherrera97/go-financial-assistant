@@ -306,6 +306,8 @@ type SyncSettings struct {
 	ItemIDs      []string
 	ClientID     string
 	ClientSecret string
+	// CardCloseDays é quantos dias antes do vencimento a fatura do cartão fecha (quando o banco não informa).
+	CardCloseDays int
 }
 
 // Configured diz se há credenciais e ao menos um banco.
@@ -315,10 +317,11 @@ func (c SyncSettings) Configured() bool {
 
 func (s *Service) Sync() SyncSettings {
 	return SyncSettings{
-		Interval:     time.Duration(max(1, s.Int("SYNC_INTERVAL_HOURS"))) * time.Hour,
-		LookbackDays: max(1, s.Int("SYNC_LOOKBACK_DAYS")),
-		ItemIDs:      s.List("PLUGGY_ITEM_IDS"),
-		ClientID:     strings.TrimSpace(s.Get("PLUGGY_CLIENT_ID")),
-		ClientSecret: strings.TrimSpace(s.Get("PLUGGY_CLIENT_SECRET")),
+		Interval:      time.Duration(max(1, s.Int("SYNC_INTERVAL_HOURS"))) * time.Hour,
+		LookbackDays:  max(1, s.Int("SYNC_LOOKBACK_DAYS")),
+		ItemIDs:       s.List("PLUGGY_ITEM_IDS"),
+		ClientID:      strings.TrimSpace(s.Get("PLUGGY_CLIENT_ID")),
+		ClientSecret:  strings.TrimSpace(s.Get("PLUGGY_CLIENT_SECRET")),
+		CardCloseDays: s.Int("CARD_CLOSE_DAYS_BEFORE_DUE"),
 	}
 }

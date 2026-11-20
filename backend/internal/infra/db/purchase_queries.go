@@ -168,7 +168,7 @@ func (r *LedgerRepo) FindPaymentsByMonth(ctx context.Context, month time.Time) (
 		SELECT p.category, SUM(pay.amount) AS total
 		FROM payments pay
 		JOIN purchases p ON p.id = pay.purchase_id
-		WHERE DATE_TRUNC('month', COALESCE(pay.due_date, pay.reference_month, pay.created_at)) = DATE_TRUNC('month', $1::date)
+		WHERE ` + paymentMonth + ` = DATE_TRUNC('month', $1::date)::date
 		  AND pay.status != 'CANCELLED'
 		  AND p.kind = 'EXPENSE'
 		GROUP BY p.category
@@ -208,7 +208,7 @@ func (r *LedgerRepo) FindPaymentDetailsByMonth(ctx context.Context, month time.T
 		    pay.created_at
 		FROM payments pay
 		JOIN purchases p ON p.id = pay.purchase_id
-		WHERE DATE_TRUNC('month', COALESCE(pay.due_date, pay.reference_month, pay.created_at)) = DATE_TRUNC('month', $1::date)
+		WHERE ` + paymentMonth + ` = DATE_TRUNC('month', $1::date)::date
 		  AND pay.status != 'CANCELLED'
 		ORDER BY COALESCE(pay.due_date, pay.reference_month, pay.created_at)
 	`

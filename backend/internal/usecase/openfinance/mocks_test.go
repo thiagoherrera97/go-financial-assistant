@@ -19,6 +19,9 @@ type mockStore struct {
 	reconcileExternalFn func(ctx context.Context, tx ports.ExternalTransaction, accountID uuid.UUID) (bool, error)
 	recategorizeFn      func(ctx context.Context, mapping map[string]domain.Category) (int64, error)
 	saveExternalFn      func(ctx context.Context, purchase *domain.Purchase, payment *domain.Payment) error
+	recomputeBillsFn    func(ctx context.Context, closeDaysBefore int) (int64, error)
+	saveBillsFn         func(ctx context.Context, accountID uuid.UUID, bills []ports.ExternalBill) error
+	rebuildFn           func(ctx context.Context, closeDaysBefore int, today time.Time) (int, int, error)
 }
 
 func (m *mockStore) SaveInvestments(ctx context.Context, itemID string, positions []ports.ExternalInvestment, day time.Time) error {
@@ -68,6 +71,27 @@ func (m *mockStore) SaveExternal(ctx context.Context, purchase *domain.Purchase,
 		return m.saveExternalFn(ctx, purchase, payment)
 	}
 	return nil
+}
+
+func (m *mockStore) RecomputeCardBills(ctx context.Context, closeDaysBefore int) (int64, error) {
+	if m.recomputeBillsFn != nil {
+		return m.recomputeBillsFn(ctx, closeDaysBefore)
+	}
+	return 0, nil
+}
+
+func (m *mockStore) SaveCardBills(ctx context.Context, accountID uuid.UUID, bills []ports.ExternalBill) error {
+	if m.saveBillsFn != nil {
+		return m.saveBillsFn(ctx, accountID, bills)
+	}
+	return nil
+}
+
+func (m *mockStore) RebuildCardForecasts(ctx context.Context, closeDaysBefore int, today time.Time) (int, int, error) {
+	if m.rebuildFn != nil {
+		return m.rebuildFn(ctx, closeDaysBefore, today)
+	}
+	return 0, 0, nil
 }
 
 func (m *mockStore) RecategorizeExternalOther(ctx context.Context, mapping map[string]domain.Category) (int64, error) {

@@ -29,6 +29,11 @@ export interface BalanceCard {
   daysToDue: number | null
   dueLevel: Level
   minimumPayment: number | null
+  /** Vencimento da fatura em que entram as compras feitas hoje (AAAA-MM-DD), ou null sem vencimento conhecido. */
+  nextBillDue: string | null
+  /** Fechamento dessa fatura; o banco raramente informa, então costuma ser estimado (closeEstimated). */
+  nextClose: string | null
+  closeEstimated: boolean
 }
 
 export interface BalanceInstitution {

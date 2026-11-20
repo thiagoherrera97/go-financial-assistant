@@ -70,6 +70,15 @@ type ExternalStore interface {
 	// ReconcileExternal liga a transação a um lançamento manual equivalente ainda não conciliado.
 	ReconcileExternal(ctx context.Context, tx ExternalTransaction, accountID uuid.UUID) (bool, error)
 	SaveExternal(ctx context.Context, purchase *domain.Purchase, payment *domain.Payment) error
+	// RecomputeCardBills calcula o vencimento da fatura (o mês em que a compra conta) das despesas nos cartões com
+	// vencimento conhecido; o fechamento é o do banco ou closeDaysBefore dias antes do vencimento. Idempotente; devolve
+	// quantas linhas mudaram.
+	RecomputeCardBills(ctx context.Context, closeDaysBefore int) (int64, error)
+	// SaveCardBills grava as faturas fechadas do cartão (accountID interno) informadas pelo banco.
+	SaveCardBills(ctx context.Context, accountID uuid.UUID, bills []ExternalBill) error
+	// RebuildCardForecasts refaz as parcelas previstas (até a fatura aberta em today) e o ajuste "não detalhado" das
+	// faturas fechadas. Devolve quantas previstas e quantos ajustes criou.
+	RebuildCardForecasts(ctx context.Context, closeDaysBefore int, today time.Time) (forecasts, adjustments int, err error)
 }
 
 // PurchaseRepository é o armazenamento completo dos lançamentos; quem usa só uma parte deve pedir LedgerStore ou ExternalStore.
