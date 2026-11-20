@@ -107,6 +107,30 @@ func (i *Insights) Projection(ctx context.Context, start time.Time, months int) 
 	return planning.BuildProjection(rows, rules, incomes, i.salaryParts(), known, start, months), nil
 }
 
+// MonthSheet monta a tela do mês (primeiro dia do mês): os lançamentos, a classe de cada conta como no orçamento (12
+// meses até o mês) e o salário do mês conferido com o banco.
+func (i *Insights) MonthSheet(ctx context.Context, month time.Time) (planning.MonthSheet, error) {
+	lines, err := i.reader.MonthLines(ctx, month)
+	if err != nil {
+		return planning.MonthSheet{}, err
+	}
+	from := month.AddDate(0, -(review.BudgetMonths - 1), 0)
+	rows, err := i.reader.ExpenseKeyMonths(ctx, from, month)
+	if err != nil {
+		return planning.MonthSheet{}, err
+	}
+	rules, err := i.reader.ExpenseRules(ctx)
+	if err != nil {
+		return planning.MonthSheet{}, err
+	}
+	salary, err := i.Salary(ctx, month)
+	if err != nil {
+		return planning.MonthSheet{}, err
+	}
+	classes := planning.BuildBudget(rows, rules, from, month).Classes
+	return planning.BuildMonthSheet(month, lines, classes, salary.Parts), nil
+}
+
 // Review roda os detectores da revisão sobre o mês to (primeiro dia).
 func (i *Insights) Review(ctx context.Context, to time.Time) (review.Review, error) {
 	cats, err := i.reader.CategoryMonths(ctx, to.AddDate(0, -(review.ReviewMatrixMonths-1), 0), to)

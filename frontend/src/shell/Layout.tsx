@@ -1,5 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query'
 import {
+  FileSpreadsheet,
   ArrowLeftRight,
   Bot,
   Calculator,
@@ -37,6 +38,7 @@ const SECTIONS: { title?: string; items: Item[] }[] = [
   {
     items: [
       { to: '/', label: 'Painel', Icon: Landmark },
+      { to: '/mes', label: 'Mês', Icon: FileSpreadsheet },
       { to: '/visao-geral', label: 'Visão geral', Icon: LayoutDashboard },
     ],
   },

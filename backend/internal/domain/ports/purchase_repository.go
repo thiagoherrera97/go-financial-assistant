@@ -79,6 +79,9 @@ type ExternalStore interface {
 	// RebuildCardForecasts refaz as parcelas previstas (até a fatura aberta em today) e o ajuste "não detalhado" das
 	// faturas fechadas. Devolve quantas previstas e quantos ajustes criou.
 	RebuildCardForecasts(ctx context.Context, closeDaysBefore int, today time.Time) (forecasts, adjustments int, err error)
+	// ReclassifyOwnMoves trata como dinheiro seu mudando de lugar a caixinha (vira aplicação e resgate) e o pagamento, por
+	// uma conta, da fatura de um cartão seu (cancelado). Devolve quantos de cada.
+	ReclassifyOwnMoves(ctx context.Context) (savings, cardPayments int64, err error)
 }
 
 // PurchaseRepository é o armazenamento completo dos lançamentos; quem usa só uma parte deve pedir LedgerStore ou ExternalStore.

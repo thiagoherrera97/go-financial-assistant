@@ -35,6 +35,13 @@ Como na planilha, **toda despesa no cartão conta no mês em que a fatura vence*
 - **Parcela:** a fatura do mês em que a sincronização já a datou (o do banco).
 - **Quando é calculado:** ao fim de cada sincronização, para todas as despesas dos cartões com vencimento conhecido (inclusive as antigas), e na hora em que o fechamento muda nas configurações. Só grava o que mudou. Lançamentos manuais no cartão (pelo chat) não têm cartão e ficam no mês do dia anotado.
 
+### Dinheiro seu mudando de lugar
+
+Ao fim de cada sincronização (`ReclassifyOwnMoves`, idempotente, vale também para o que já estava gravado):
+
+- **Caixinha do Mercado Pago** ("Dinheiro reservado …" / "Dinheiro retirado …"): vira aplicação e resgate (transferência de investimento), não gasto nem renda.
+- **Pagamento da fatura de um cartão seu por uma conta** (a descrição traz o nome do cartão, ex.: "Pagamento de conta SANTANDER UNIQUE VISA INFINITE"): fica cancelado, com o motivo registrado, porque as compras do cartão já contam no mês da fatura. Só casa nome de cartão com 10 letras ou mais que não seja também nome de conta corrente.
+
 ### Estornos no cartão
 
 Crédito no cartão que não é o pagamento da fatura (categoria "Credit card payment" do Pluggy ou "pagamento" na descrição) é **estorno**: entra como **despesa com valor negativo**, na categoria e na fatura do crédito, e abate o mês como no extrato do banco ("Total de créditos"). Só a sincronização grava valor negativo; lançamentos manuais continuam positivos, e o estorno nunca é conciliado com um deles.
@@ -109,6 +116,16 @@ O progresso é calculado na hora. Patrimônio = saldo das contas correntes + inv
 - **Dia útil:** segunda a sexta, menos os feriados nacionais (1/1, 21/4, 1/5, 7/9, 12/10, 2/11, 15/11, 20/11, 25/12), os bancários móveis (Carnaval segunda e terça, Sexta-feira Santa, Corpus Christi, pela Páscoa) e os de São Paulo (25/1 e 9/7).
 - **Conferência com o banco:** cada parte fica com o crédito da categoria Salário mais perto da data prevista, até 5 dias de distância; um crédito serve a uma parte só, e créditos extras (férias, 13º) ficam de fora. Parte sem crédito = **a receber**. Nada é lançado: o salário real continua vindo só do Open Finance, então não duplica.
 - **Painel:** mostra as partes do mês, quando caem ou caíram e quanto falta receber. Parte que veio acima do combinado (hora extra no mesmo crédito) mostra a diferença. Créditos de salário do mês que não ficaram com nenhuma parte (13º, PLR, férias, hora extra à parte) aparecem como **extras**; eles contam nas entradas do mês, mas não no "a receber" nem na projeção, que usa só o combinado.
+
+## Tela do mês (`planning/month_sheet.go`)
+
+O mês como na planilha (`GET /api/month`, página **Mês**), pelo mesmo critério de mês das outras telas (compra no cartão no mês da fatura):
+
+- **Entradas:** o que entrou no mês, somado pelo nome; todo crédito da categoria Salário vira uma linha "Salário". **A receber:** as partes do salário configurado que ainda não caíram, com a data no dia útil.
+- **Despesas fixas:** fora do cartão, as contas que o orçamento classifica como fixas ou parceladas (a mesma classe da tela Orçamento, inclusive as correções "é fixa / não é fixa").
+- **Fatura de cada cartão:** o total do mês da fatura, por categoria (compras menos estornos), mais as parcelas previstas e o ajuste pelo total do banco em linhas separadas. Lançamento manual no cartão (sem conta) entra como "Cartão (lançado à mão)".
+- **Outras despesas:** o resto fora do cartão, por categoria; o que está em Outros aparece pelo nome (Pix para uma pessoa, um boleto).
+- **Sobra** = entradas − (fixas + faturas + outras). Com salário a receber, mostra também a sobra contando com ele. Aplicações e resgates ficam fora da sobra e aparecem à parte.
 
 ## Mês em andamento
 

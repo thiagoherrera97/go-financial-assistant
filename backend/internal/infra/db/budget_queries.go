@@ -159,3 +159,34 @@ func (r *BudgetRepo) SalaryCredits(ctx context.Context, from, to time.Time) ([]d
 	}
 	return result, rows.Err()
 }
+
+func (r *BudgetRepo) MonthLines(ctx context.Context, month time.Time) ([]domain.MonthLine, error) {
+	query := `
+		SELECT ` + expenseKey + `, COALESCE(` + cleanDescription + `, ''), p.category, p.kind, COALESCE(p.transfer_direction, ''),
+		       pay.amount, pay.status = 'PENDING', COALESCE(a.id::text, ''), COALESCE(a.name, ''),
+		       COALESCE(a.type = 'CREDIT', p.payment_method = 'CREDIT_CARD'),
+		       CASE WHEN pay.external_id LIKE '` + forecastPrefix + `%' THEN 'forecast'
+		            WHEN pay.external_id LIKE '` + billGapPrefix + `%' THEN 'bill' ELSE '' END
+		FROM payments pay
+		JOIN purchases p ON p.id = pay.purchase_id
+		LEFT JOIN accounts a ON a.id = pay.account_id
+		WHERE pay.status != 'CANCELLED' AND ` + paymentMonth + ` = DATE_TRUNC('month', $1::date)::date
+		ORDER BY pay.amount DESC
+	`
+	rows, err := r.db.Pool.Query(ctx, query, month)
+	if err != nil {
+		return nil, fmt.Errorf("erro ao consultar lançamentos do mês: %w", err)
+	}
+	defer rows.Close()
+
+	var result []domain.MonthLine
+	for rows.Next() {
+		var l domain.MonthLine
+		if err := rows.Scan(&l.Key, &l.Label, &l.Category, &l.Kind, &l.Direction, &l.Amount, &l.Pending, &l.AccountID,
+			&l.AccountName, &l.Card, &l.Synthetic); err != nil {
+			return nil, fmt.Errorf("erro ao escanear lançamento do mês: %w", err)
+		}
+		result = append(result, l)
+	}
+	return result, rows.Err()
+}

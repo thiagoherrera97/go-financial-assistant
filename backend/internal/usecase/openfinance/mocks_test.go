@@ -22,6 +22,14 @@ type mockStore struct {
 	recomputeBillsFn    func(ctx context.Context, closeDaysBefore int) (int64, error)
 	saveBillsFn         func(ctx context.Context, accountID uuid.UUID, bills []ports.ExternalBill) error
 	rebuildFn           func(ctx context.Context, closeDaysBefore int, today time.Time) (int, int, error)
+	reclassifyFn        func(ctx context.Context) (int64, int64, error)
+}
+
+func (m *mockStore) ReclassifyOwnMoves(ctx context.Context) (int64, int64, error) {
+	if m.reclassifyFn != nil {
+		return m.reclassifyFn(ctx)
+	}
+	return 0, 0, nil
 }
 
 func (m *mockStore) SaveInvestments(ctx context.Context, itemID string, positions []ports.ExternalInvestment, day time.Time) error {

@@ -7,6 +7,7 @@ import Categorize from './features/categorize/Categorize'
 import Compare from './features/compare/Compare'
 import Goals from './features/goals/Goals'
 import Investments from './features/investments/Investments'
+import MonthSheet from './features/month/MonthSheet'
 import Overview from './features/overview/Overview'
 import Panel from './features/balances/Panel'
 import Projection from './features/projection/Projection'
@@ -23,6 +24,7 @@ export default function App() {
       <Route path="/setup" element={<Setup />} />
       <Route element={<RequireAuth />}>
         <Route path="/" element={<Panel />} />
+        <Route path="/mes" element={<MonthSheet />} />
         <Route path="/visao-geral" element={<Overview />} />
         <Route path="/investimentos" element={<Investments />} />
         <Route path="/comparacoes" element={<Compare />} />
