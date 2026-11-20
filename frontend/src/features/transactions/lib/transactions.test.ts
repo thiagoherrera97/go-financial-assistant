@@ -39,6 +39,8 @@ describe('describeAmount', () => {
     expect(plain(describeAmount({ kind: 'EXPENSE', amount: 45 }).text)).toBe('-R$ 45,00')
     expect(plain(describeAmount({ kind: 'INCOME', amount: 10 }).text)).toBe('+R$ 10,00')
     expect(describeAmount({ kind: 'TRANSFER', transferDirection: 'IN', amount: 1 })).toMatchObject({ tone: 'neutral', caption: 'Resgate' })
+    expect(plain(describeAmount({ kind: 'TRANSFER', transferDirection: 'IN', amount: 1 }).text)).toBe('-R$ 1,00')
+    expect(plain(describeAmount({ kind: 'TRANSFER', transferDirection: 'OUT', amount: 1, category: 'RESERVE' }).text)).toBe('+R$ 1,00')
     expect(describeAmount({ kind: 'TRANSFER', transferDirection: 'OUT', amount: 1 }).caption).toBe('Aplicação')
     expect(describeAmount({ kind: 'TRANSFER', transferDirection: 'OUT', amount: 1, category: 'RESERVE' }).caption).toBe('Foi para a caixinha')
     expect(describeAmount({ kind: 'TRANSFER', transferDirection: 'IN', amount: 1, category: 'RESERVE' }).caption).toBe('Saiu da caixinha')
@@ -72,6 +74,8 @@ describe('investSummary', () => {
   it('mostra o líquido: o mesmo dinheiro indo e voltando não se soma', () => {
     expect(investSummary(1171.33, 5627.18)).toMatchObject({ net: -4455.85, headline: 'Tirou da reserva R$\u00a04.455,85' })
     expect(investSummary(800, 800).headline).toBe('Guardou R$\u00a00,00')
+    expect(investSummary(1171.33, 5627.18).signed).toBe('-R$\u00a04.455,85')
+    expect(investSummary(2171.33, 6178.11, true)).toMatchObject({ headline: 'Tirou R$\u00a04.006,78 da caixinha', detail: 'foi para a caixinha R$\u00a02.171,33 · saiu R$\u00a06.178,11' })
     expect(investSummary(1000, 200).detail).toBe('aplicado R$\u00a01.000,00 · resgatado R$\u00a0200,00')
   })
 })

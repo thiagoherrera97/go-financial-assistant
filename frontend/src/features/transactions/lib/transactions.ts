@@ -27,17 +27,20 @@ export function toApiQuery(params: URLSearchParams, now = currentMonth()): strin
   return out.toString()
 }
 
-/** Valor com sinal e o que ele significa. Investimento não é gasto nem ganho: fica neutro. */
+/**
+ * Valor com sinal e o que ele significa. Investimento e caixinha não são gasto nem ganho: ficam neutros, mas com o sinal do
+ * ponto de vista da reserva — o que foi para ela é "+", o que saiu dela (resgate) é "-".
+ */
 export function describeAmount(t: Pick<Transaction, 'kind' | 'transferDirection' | 'amount'> & { category?: string }) {
   const value = formatBRL(t.amount)
   switch (t.kind) {
     case 'INCOME':
       return { text: `+${value}`, tone: 'in' as const, caption: 'Receita' }
-    case 'TRANSFER':
-      if (t.category === 'RESERVE') {
-        return { text: value, tone: 'neutral' as const, caption: t.transferDirection === 'IN' ? 'Saiu da caixinha' : 'Foi para a caixinha' }
-      }
-      return { text: value, tone: 'neutral' as const, caption: t.transferDirection === 'IN' ? 'Resgate' : 'Aplicação' }
+    case 'TRANSFER': {
+      const out = t.transferDirection === 'IN'
+      const caption = t.category === 'RESERVE' ? (out ? 'Saiu da caixinha' : 'Foi para a caixinha') : out ? 'Resgate' : 'Aplicação'
+      return { text: `${out ? '-' : '+'}${value}`, tone: 'neutral' as const, caption }
+    }
     default:
       return { text: `-${value}`, tone: 'out' as const, caption: 'Despesa' }
   }
@@ -68,12 +71,23 @@ export function formatDay(iso: string): string {
 
 /**
  * Aplicação e resgate são o mesmo dinheiro indo e voltando (ex.: caixinha): somar os dois não diz nada. O que importa é o
- * líquido, aplicado − resgatado: quanto ficou guardado (ou saiu da reserva) no período.
+ * líquido, aplicado − resgatado: quanto ficou guardado (ou saiu da reserva) no período. Com reserve, os textos falam da
+ * caixinha.
  */
-export function investSummary(applied: number, redeemed: number) {
+export function investSummary(applied: number, redeemed: number, reserve = false) {
   const net = Math.round((applied - redeemed) * 100) / 100
+  const signed = `${net < 0 ? '-' : '+'}${formatBRL(Math.abs(net))}`
+  if (reserve) {
+    return {
+      net,
+      signed,
+      headline: net >= 0 ? `Guardou ${formatBRL(net)} na caixinha` : `Tirou ${formatBRL(-net)} da caixinha`,
+      detail: `foi para a caixinha ${formatBRL(applied)} · saiu ${formatBRL(redeemed)}`,
+    }
+  }
   return {
     net,
+    signed,
     headline: net >= 0 ? `Guardou ${formatBRL(net)}` : `Tirou da reserva ${formatBRL(-net)}`,
     detail: `aplicado ${formatBRL(applied)} · resgatado ${formatBRL(redeemed)}`,
   }

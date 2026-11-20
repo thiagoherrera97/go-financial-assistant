@@ -113,7 +113,7 @@ function Summary({ groups }: { groups: TransactionGroup[] | undefined }) {
     <div className="tiles section-gap">
       <StatTile label="Despesas" value={formatBRL(total.expense)} />
       <StatTile label="Receitas" value={formatBRL(total.income)} />
-      <StatTile label="Investimentos e caixinhas" value={invest.headline} note={invest.detail} />
+      <StatTile label="Investimentos e caixinhas" value={invest.signed} note={`${invest.headline} · ${invest.detail}`} />
       <StatTile label="Lançamentos" value={String(total.count)} />
     </div>
   )
@@ -178,11 +178,11 @@ function DayCards({ query }: { query: string }) {
  * investimento, e o valor vem com uma legenda curta embaixo (nunca texto longo no lugar do valor).
  */
 function amounts(g: TransactionGroup) {
-  const invest = g.transfer > 0 ? investSummary(g.applied, g.redeemed) : null
+  const invest = g.transfer > 0 ? investSummary(g.applied, g.redeemed, g.key === 'RESERVE') : null
   const extras = [g.income > 0 && `Receitas ${formatBRL(g.income)}`, invest && invest.headline].filter((e): e is string => !!e)
   if (g.expense > 0) return { amount: `-${formatBRL(g.expense)}`, extras }
   if (g.income > 0) return { amount: `+${formatBRL(g.income)}`, extras: ['Receitas', ...(invest ? [invest.headline] : [])] }
-  if (invest) return { amount: invest.headline, extras: [invest.detail] }
+  if (invest) return { amount: invest.signed, extras: [invest.headline, invest.detail] }
   return { amount: formatBRL(0), extras: [] }
 }
 
