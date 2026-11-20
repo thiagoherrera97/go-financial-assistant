@@ -2,6 +2,7 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: finassist-postgres
+    restart: unless-stopped
     environment:
       POSTGRES_USER: finassist
       POSTGRES_PASSWORD: finassist
