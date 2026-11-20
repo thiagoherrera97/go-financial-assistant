@@ -69,6 +69,12 @@ func (s *SyncOpenFinance) RecomputeCardBills(ctx context.Context) error {
 		// Só a contagem vai para o log.
 		s.logger.Info("fatura das compras no cartão recalculada", "count", n, "close_days_before_due", days)
 	}
+	today := s.today()
+	forecasts, adjustments, err := s.repo.RebuildCardForecasts(ctx, days, time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, time.UTC))
+	if err != nil {
+		return err
+	}
+	s.logger.Info("parcelas previstas e ajustes de fatura refeitos", "forecasts", forecasts, "bill_adjustments", adjustments)
 	return nil
 }
 
@@ -145,6 +151,7 @@ func (s *SyncOpenFinance) Sync(ctx context.Context) (SyncResult, error) {
 			}
 			accountIDs[acc.ID] = id
 		}
+		s.saveBills(ctx, data, accountIDs)
 
 		for _, tx := range data.Transactions {
 			accountID, ok := accountIDs[tx.AccountID]
@@ -173,6 +180,29 @@ func (s *SyncOpenFinance) Sync(ctx context.Context) (SyncResult, error) {
 		}
 	}
 	return result, errors.Join(errs...)
+}
+
+// saveBills grava as faturas fechadas dos cartões. Nem todo conector oferece faturas: sem elas, só não há ajuste de
+// fatura, e isso não conta como falha da sincronização.
+func (s *SyncOpenFinance) saveBills(ctx context.Context, data ports.ItemData, accountIDs map[string]uuid.UUID) {
+	if data.BillsErr != nil {
+		s.logger.Warn("faturas do cartão não lidas", "error", data.BillsErr)
+	}
+	byAccount := map[string][]ports.ExternalBill{}
+	for _, b := range data.Bills {
+		byAccount[b.AccountID] = append(byAccount[b.AccountID], b)
+	}
+	for ext, bills := range byAccount {
+		id, ok := accountIDs[ext]
+		if !ok {
+			continue
+		}
+		if err := s.repo.SaveCardBills(ctx, id, bills); err != nil {
+			s.logger.Error("erro ao salvar faturas do cartão", "error", err)
+			continue
+		}
+		s.logger.Info("faturas do cartão lidas", "count", len(bills))
+	}
 }
 
 // syncInstitution grava o banco do item e, quando preciso, busca o logo. É só enfeite: qualquer

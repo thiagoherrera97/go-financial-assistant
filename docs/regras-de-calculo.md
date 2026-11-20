@@ -33,6 +33,13 @@ Como na planilha, **toda despesa no cartão conta no mês em que a fatura vence*
 - **Parcela:** a fatura do mês em que a sincronização já a datou (o do banco).
 - **Quando é calculado:** ao fim de cada sincronização, para todas as despesas dos cartões com vencimento conhecido (inclusive as antigas), e na hora em que o fechamento muda nas configurações. Só grava o que mudou. Lançamentos manuais no cartão (pelo chat) não têm cartão e ficam no mês do dia anotado.
 
+### Parcelas previstas e ajuste da fatura
+
+O Open Finance entrega as parcelas com atraso (a fatura já fechada pode não ter nenhuma) e nem sempre todos os lançamentos da fatura. Ao fim de cada sincronização o app refaz, numa transação, dois tipos de lançamento próprios nos cartões (`external_id` começando com `finassist:`; nunca editados, sempre apagados e recriados; ver `domain/card_forecast.go` e `infra/db/card_forecast_repository.go`):
+
+- **Parcela prevista** (`PENDING`, mesma descrição "BASE (n/m)", mesma categoria e valor): cada compra parcelada é reconhecida por cartão, descrição, número de parcelas, valor e mês de início (fatura menos a parcela); a partir da maior parcela que chegou, as seguintes, uma por fatura, **até a fatura aberta hoje**. Compras iguais no mesmo mês contam como cópias. Quando a parcela real chega, a prevista some na sincronização seguinte. A projeção continua prevendo as faturas mais distantes pela parcela mais recente (inclusive prevista), sem contar duas vezes.
+- **Ajuste da fatura** (`PAID`, categoria Outros, "Fatura <cartão> dd/mm · não detalhado no Open Finance"): para cada fatura fechada que o banco informa (`card_bills`, `GET /bills` do Pluggy) a partir do começo do histórico do cartão, total da fatura − (lançamentos reais + previstos do cartão naquela fatura). Só quando a diferença é de R$ 0,50 ou mais; se o app conhece mais do que o banco cobrou (ex.: estornos, que não viram lançamento), não há ajuste. Assim o mês da fatura fechada bate com o banco.
+
 ### Chave de conta (`expenseKey`)
 
 Para reconhecer a mesma conta em meses diferentes, a descrição é normalizada: minúsculas, só letras (some número, data, parcela, pontuação), espaços compactados. Compras no débito do Itaú ("DEBITO VISA ELECTRON BRASIL dd/mm COMERCIO") usam o prefixo mais a primeira palavra do comércio, porque o nome muda de grafia a cada mês. Regras salvas (fixa/variável, categoria, dispensas, decisões) usam essa chave.

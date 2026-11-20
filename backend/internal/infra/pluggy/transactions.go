@@ -118,6 +118,14 @@ func (c *Client) FetchItem(ctx context.Context, itemID string, from time.Time) (
 	data.Institution = c.institution(ctx, itemID)
 	for _, acc := range accounts {
 		data.Accounts = append(data.Accounts, acc.toExternal(itemID))
+		if acc.Type == domain.AccountCredit {
+			bills, err := c.bills(ctx, acc.ID)
+			if err != nil {
+				data.BillsErr = errors.Join(data.BillsErr, err)
+			} else {
+				data.Bills = append(data.Bills, bills...)
+			}
+		}
 		txs, err := c.transactions(ctx, acc.ID, from)
 		if err != nil {
 			return ports.ItemData{}, err

@@ -67,6 +67,19 @@ type ItemData struct {
 	Institution  *ExternalInstitution // nil quando o conector não pôde ser lido
 	Accounts     []ExternalAccount
 	Transactions []ExternalTransaction
+	// Bills são as faturas fechadas dos cartões; BillsErr diz por que não vieram (nem todo conector oferece). A falha
+	// das faturas não impede o resto da sincronização.
+	Bills    []ExternalBill
+	BillsErr error
+}
+
+// ExternalBill é uma fatura fechada de cartão: vencimento e total cobrado pelo banco. AccountID é o ID do cartão no
+// provedor.
+type ExternalBill struct {
+	ID        string
+	AccountID string
+	DueDate   time.Time
+	Total     float64
 }
 
 type OpenFinanceProvider interface {

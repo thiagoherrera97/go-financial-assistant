@@ -25,7 +25,7 @@ func (r *LedgerRepo) RecomputeCardBills(ctx context.Context, closeDaysBefore int
 		FROM payments pay
 		JOIN purchases p ON p.id = pay.purchase_id
 		JOIN accounts a ON a.id = pay.account_id
-		WHERE a.type = 'CREDIT' AND a.due_date IS NOT NULL AND p.kind = 'EXPENSE'
+		WHERE a.type = 'CREDIT' AND a.due_date IS NOT NULL AND p.kind = 'EXPENSE' AND ` + notSynthetic + `
 	`
 	rows, err := r.db.Pool.Query(ctx, query)
 	if err != nil {

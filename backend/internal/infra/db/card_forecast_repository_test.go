@@ -1,0 +1,115 @@
+package db
+
+import (
+	"context"
+	"testing"
+	"time"
+
+	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/domain/ports"
+)
+
+func TestRebuildCardForecasts(t *testing.T) {
+	repo, pg := newTestRepo(t)
+	ctx := context.Background()
+	day := func(s string) time.Time { v, _ := time.Parse("2006-01-02", s); return v }
+	due := day("2026-11-10")
+	card, err := repo.UpsertAccount(ctx, ports.ExternalAccount{ID: "fc-test-card", ItemID: "fc-test", Type: "CREDIT", Name: "SANTANDER TESTE", Last4: "8550", DueDate: &due})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		pg.Pool.Exec(context.Background(), `DELETE FROM purchases WHERE id IN (SELECT purchase_id FROM payments WHERE account_id = $1)`, card)
+		pg.Pool.Exec(context.Background(), `DELETE FROM accounts WHERE id = $1`, card)
+	})
+
+	// Parcela 3/10 na fatura de outubro (a sincronização data a parcela no mês da fatura) e uma compra à vista em novembro.
+	cardExpense(t, repo, pg, card, "fc-t1", "fc-teste VIVARA (3/10)", 669, day("2026-10-15"))
+	cardExpense(t, repo, pg, card, "fc-t2", "fc-teste mercado", 100, day("2026-10-20"))
+	if _, err := repo.RecomputeCardBills(ctx, 6); err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.SaveCardBills(ctx, card, []ports.ExternalBill{
+		{ID: "fc-bill-nov", DueDate: day("2026-11-10"), Total: 1000},
+		{ID: "fc-bill-out", DueDate: day("2026-10-10"), Total: 669}, // já coberta: sem ajuste
+		{ID: "fc-bill-old", DueDate: day("2025-01-10"), Total: 500}, // antes do histórico: ignorada
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Hoje 20/11: a fatura aberta é a de 10/12, então prevê 4/10 (nov) e 5/10 (dez).
+	f, adj, err := repo.RebuildCardForecasts(ctx, 6, day("2026-11-20"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if f != 2 || adj != 1 {
+		t.Fatalf("esperava 2 previstas e 1 ajuste, got %d e %d", f, adj)
+	}
+
+	type row struct {
+		desc   string
+		amount float64
+		status string
+		bill   time.Time
+	}
+	read := func() []row {
+		rows, err := pg.Pool.Query(ctx, `SELECT p.description, pay.amount, pay.status, pay.bill_due_date FROM payments pay
+			JOIN purchases p ON p.id = pay.purchase_id WHERE pay.account_id = $1 AND pay.external_id LIKE 'finassist:%'
+			ORDER BY pay.bill_due_date, p.description`, card)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer rows.Close()
+		var out []row
+		for rows.Next() {
+			var r row
+			if err := rows.Scan(&r.desc, &r.amount, &r.status, &r.bill); err != nil {
+				t.Fatal(err)
+			}
+			out = append(out, r)
+		}
+		return out
+	}
+	got := read()
+	if len(got) != 3 {
+		t.Fatalf("esperava 3 lançamentos do app, got %+v", got)
+	}
+	// Novembro: mercado 100 + VIVARA 4/10 prevista 669 = 769; o banco cobrou 1000 → ajuste de 231.
+	if got[0].desc != "Fatura SANTANDER TESTE 10/11 · não detalhado no Open Finance" || got[0].amount != 231 || got[0].status != "PAID" {
+		t.Errorf("ajuste inesperado: %+v", got[0])
+	}
+	if got[1].desc != "fc-teste VIVARA (4/10)" || got[1].status != "PENDING" || !got[1].bill.Equal(day("2026-11-10")) {
+		t.Errorf("prevista de novembro inesperada: %+v", got[1])
+	}
+	if got[2].desc != "fc-teste VIVARA (5/10)" || !got[2].bill.Equal(day("2026-12-10")) {
+		t.Errorf("prevista de dezembro inesperada: %+v", got[2])
+	}
+
+	// Refazer não duplica; quando a parcela real chega, a prevista some e o ajuste diminui.
+	if _, _, err := repo.RebuildCardForecasts(ctx, 6, day("2026-11-20")); err != nil {
+		t.Fatal(err)
+	}
+	if n := len(read()); n != 3 {
+		t.Errorf("refazer deveria manter 3, got %d", n)
+	}
+	cardExpense(t, repo, pg, card, "fc-t3", "fc-teste VIVARA (4/10)", 669, day("2026-11-15"))
+	cardExpense(t, repo, pg, card, "fc-t4", "fc-teste farmácia", 31, day("2026-10-25"))
+	if _, err := repo.RecomputeCardBills(ctx, 6); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := repo.RebuildCardForecasts(ctx, 6, day("2026-11-20")); err != nil {
+		t.Fatal(err)
+	}
+	got = read()
+	if len(got) != 2 || got[0].amount != 200 || got[1].desc != "fc-teste VIVARA (5/10)" {
+		t.Errorf("com a 4/10 real, sobra só a 5/10 prevista e o ajuste cai para 200: %+v", got)
+	}
+
+	// O mês de novembro soma exatamente o total do banco.
+	var nov float64
+	if err := pg.Pool.QueryRow(ctx, `SELECT SUM(pay.amount) FROM payments pay WHERE pay.account_id = $1 AND `+paymentMonth+` = '2026-11-01'`, card).Scan(&nov); err != nil {
+		t.Fatal(err)
+	}
+	if nov != 1000 {
+		t.Errorf("novembro deveria bater com a fatura do banco (1000), got %.2f", nov)
+	}
+}
