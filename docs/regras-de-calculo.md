@@ -23,6 +23,16 @@ Algumas categorias do Pluggy casam pela categoria **inteira**, não por trecho (
 
 Cada parcela é datada no **mês da fatura em que cai** (`creditCardMetadata.billForecastDate`), mantendo o dia da compra. O Pluggy dá a mesma data de compra a todas as parcelas; sem o ajuste, as 12 parcelas caíam no mês da compra. Parcelas ainda não cobradas ficam `PENDING`.
 
+### Mês das compras no cartão (mês da fatura)
+
+Como na planilha, **toda despesa no cartão conta no mês em que a fatura vence** (`payments.bill_due_date`, calculada em `domain/card_bill.go`); o dia mostrado nas listas continua sendo o da compra. O mês de um pagamento é `COALESCE(bill_due_date, due_date, reference_month, created_at)` (`paymentMonth`), em todas as telas, no chat, no CSV, na projeção e no orçamento.
+
+- **Vencimento:** o dia do vencimento do cartão informado pelo banco (`accounts.due_date`); dia 29 a 31 vira o último dia nos meses mais curtos.
+- **Fechamento:** o informado pelo banco, quando houver (vencimento − fechamento); senão, `CARD_CLOSE_DAYS_BEFORE_DUE` dias antes do vencimento (padrão 6; o Open Finance raramente informa).
+- **Compra à vista:** vai para a primeira fatura cujo fechamento é **depois** do dia da compra. Comprou no dia do fechamento ou depois, vai para a seguinte (o "melhor dia de compra" é o próprio fechamento). Ex.: vencimento dia 10, fecha dia 4: compra em 03/11 → fatura de 10/11; em 04/11 ou 20/10 → 10/12 e 10/11.
+- **Parcela:** a fatura do mês em que a sincronização já a datou (o do banco).
+- **Quando é calculado:** ao fim de cada sincronização, para todas as despesas dos cartões com vencimento conhecido (inclusive as antigas), e na hora em que o fechamento muda nas configurações. Só grava o que mudou. Lançamentos manuais no cartão (pelo chat) não têm cartão e ficam no mês do dia anotado.
+
 ### Chave de conta (`expenseKey`)
 
 Para reconhecer a mesma conta em meses diferentes, a descrição é normalizada: minúsculas, só letras (some número, data, parcela, pontuação), espaços compactados. Compras no débito do Itaú ("DEBITO VISA ELECTRON BRASIL dd/mm COMERCIO") usam o prefixo mais a primeira palavra do comércio, porque o nome muda de grafia a cada mês. Regras salvas (fixa/variável, categoria, dispensas, decisões) usam essa chave.
@@ -73,6 +83,7 @@ O progresso é calculado na hora. Patrimônio = saldo das contas correntes + inv
 ## Saldos (`balances/`)
 
 - **Total em conta** = soma do saldo das contas `BANK` (negativo entra com sinal). **Participação** do banco = saldo ÷ soma dos saldos positivos (banco negativo não ganha fatia).
+- **Fatura das compras de hoje:** cada cartão mostra em que fatura entram as compras feitas agora e quando ela fecha, pela mesma regra do mês das compras; com "~" quando o fechamento é estimado.
 - **Cartão** (nunca somado entre cartões): o valor mostrado é o **saldo devedor** informado pelo banco = limite usado (inclui parcelas futuras; não é a fatura aberta, que o Open Finance não expõe). Uso do limite: ≥ 70% atenção, ≥ 90% crítico. Vencimento em até 3 dias: atenção; data já passada não alerta (o banco mantém o vencimento da fatura paga).
 - **Desatualizado**: mais de 36 h desde a última atualização *do Pluggy* (`lastUpdatedAt` do item), não desde a última cópia do app. O Meu Pluggy não permite forçar a atualização pela API; ela acontece sozinha (cerca de 1x/dia) ou a pedido em meu.pluggy.ai.
 - O "aplicado automaticamente" do banco só aparece se for diferente do saldo.

@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react'
 import { CalendarClock, CreditCard, OctagonAlert, TriangleAlert } from 'lucide-react'
-import { contrast, dueText, inkOn, LEVEL_LABEL, money, safeHex } from '../lib/balances'
+import { contrast, dueText, inkOn, LEVEL_LABEL, money, nextBillText, safeHex } from '../lib/balances'
 import { formatPercent } from '../../../shared/lib/format'
 import { StaticMoney } from './Money'
 import type { BalanceCard, Level } from '../api'
@@ -21,6 +21,7 @@ export function CreditCardTile({ card, color, hidden }: { card: BalanceCard; col
   const ink = inkOn(brand)
   const dark = ink !== '#ffffff'
   const due = dueText(card)
+  const nextBill = nextBillText(card)
   const hasLimit = card.limit !== null && card.available !== null && card.usedRatio !== null && card.used !== null
   // Garantia extra: se nem a melhor tinta chega a 4,5:1 sobre a cor de marca, o gradiente vai para o preto.
   const readable = contrast(ink, brand) >= 4.5
@@ -44,6 +45,11 @@ export function CreditCardTile({ card, color, hidden }: { card: BalanceCard; col
           <span className={`bal-pill ${card.dueLevel !== 'ok' ? 'is-alert' : ''}`}>
             {card.dueLevel === 'ok' ? <CalendarClock size={14} aria-hidden="true" /> : <LevelIcon level={card.dueLevel} />} {due}
           </span>
+        )}
+        {nextBill && (
+          <p className="bal-card-sub" title={card.closeEstimated ? 'Fechamento estimado: o banco não informa. Ajuste em Configurações → Sincronização.' : undefined}>
+            {nextBill}
+          </p>
         )}
       </div>
       {hasLimit ? (

@@ -59,6 +59,11 @@ type BalanceCard struct {
 	DaysToDue      *int
 	DueLevel       Level
 	MinimumPayment *float64
+	// Fatura em que entram as compras feitas agora: NextBillDue é o vencimento dela e NextClose, o fechamento (o banco
+	// raramente informa; CloseEstimated diz que é estimado pelos dias da configuração). Nil sem vencimento conhecido.
+	NextBillDue    *time.Time
+	NextClose      *time.Time
+	CloseEstimated bool
 }
 
 // InstitutionBalance reúne o que é de um mesmo banco: contas correntes e cartões.
@@ -86,7 +91,7 @@ type BalancesView struct {
 
 // BuildBalances agrupa as contas por instituição (ou, sem instituição, por conexão), calcula
 // totais, participação, uso do limite e vencimento, e marca o que está desatualizado.
-func BuildBalances(accounts []domain.Account, institutions []domain.Institution, now time.Time) BalancesView {
+func BuildBalances(accounts []domain.Account, institutions []domain.Institution, now time.Time, closeDays int) BalancesView {
 	known := make(map[string]domain.Institution, len(institutions))
 	for _, in := range institutions {
 		known[in.ID.String()] = in
@@ -136,7 +141,7 @@ func BuildBalances(accounts []domain.Account, institutions []domain.Institution,
 			g.Total += a.Balance
 			g.Accounts = append(g.Accounts, BalanceAccount{ID: a.ID.String(), Name: a.Name, Last4: a.Last4, Balance: a.Balance, AutoInvested: autoInvested(a)})
 		} else {
-			g.Cards = append(g.Cards, buildCard(a, now))
+			g.Cards = append(g.Cards, buildCard(a, now, closeDays))
 		}
 	}
 
@@ -223,7 +228,7 @@ func knownBrand(accountName string) (name, color string) {
 	return accountName, ""
 }
 
-func buildCard(a domain.Account, now time.Time) BalanceCard {
+func buildCard(a domain.Account, now time.Time, closeDays int) BalanceCard {
 	c := BalanceCard{
 		ID: a.ID.String(), Name: a.Name, Brand: a.Brand, Last4: a.Last4, Invoice: a.Balance,
 		Limit: a.CreditLimit, Available: a.AvailableCreditLimit, CloseDate: a.CloseDate, DueDate: a.DueDate,
@@ -238,8 +243,26 @@ func buildCard(a domain.Account, now time.Time) BalanceCard {
 		days := DaysUntil(now, *a.DueDate)
 		c.DaysToDue = &days
 		c.DueLevel = DueLevel(c.Invoice, days)
+		c.NextBillDue, c.NextClose, c.CloseEstimated = nextBill(a, now, closeDays)
 	}
 	return c
+}
+
+// nextBill é a fatura em que entram as compras feitas em now: a mesma regra que decide o mês das compras no cartão. O
+// fechamento informado pelo banco vale mais que closeDays (estimativa).
+func nextBill(a domain.Account, now time.Time, closeDays int) (due, closing *time.Time, estimated bool) {
+	if closeDays < 1 || closeDays > 27 {
+		closeDays = domain.DefaultCardCloseDaysBeforeDue
+	}
+	estimated = true
+	if a.CloseDate != nil && a.CloseDate.Before(*a.DueDate) {
+		if days := int(a.DueDate.Sub(*a.CloseDate).Hours() / 24); days > 0 && days < 28 {
+			closeDays, estimated = days, false
+		}
+	}
+	d := domain.CardBillDue(now, a.DueDate.Day(), closeDays)
+	cl := domain.CardCloseEstimate(d, closeDays)
+	return &d, &cl, estimated
 }
 
 // UsageLevel: a partir de 70% do limite é atenção; a partir de 90%, crítico.

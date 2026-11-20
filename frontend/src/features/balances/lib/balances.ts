@@ -128,6 +128,15 @@ export function dueText(card: Pick<BalanceCard, 'invoice' | 'dueDate' | 'daysToD
   return `vence ${date} · em ${days} dias`
 }
 
+/**
+ * Em que fatura entram as compras de hoje: "compras de hoje → fatura de 10/12 · fecha ~04/12". O "~" marca o fechamento
+ * estimado (o banco não informou). Null sem vencimento conhecido.
+ */
+export function nextBillText(card: Pick<BalanceCard, 'nextBillDue' | 'nextClose' | 'closeEstimated'>): string | null {
+  if (card.nextBillDue === null || card.nextClose === null) return null
+  return `compras de hoje → fatura de ${dayMonth(card.nextBillDue)} · fecha ${card.closeEstimated ? '~' : ''}${dayMonth(card.nextClose)}`
+}
+
 export const LEVEL_LABEL: Record<Level, string> = { ok: '', warning: 'atenção', critical: 'crítico' }
 
 /** Resumo de acessibilidade da barra de participação. */

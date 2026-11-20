@@ -29,6 +29,7 @@ func (a *app) runSync(client *pluggy.Client, changed <-chan struct{}) {
 	var (
 		last      time.Time
 		lastCreds string
+		lastClose int
 		announced bool
 	)
 	for {
@@ -39,6 +40,14 @@ func (a *app) runSync(client *pluggy.Client, changed <-chan struct{}) {
 			lastCreds = creds
 		}
 		a.syncer.SetConfig(s.ItemIDs, s.LookbackDays)
+		a.syncer.SetCardCloseDays(s.CardCloseDays)
+		if lastClose != 0 && s.CardCloseDays != lastClose {
+			// Mudou o fechamento: recalcula o mês das compras já sincronizadas sem esperar a próxima sincronização.
+			if err := a.syncer.RecomputeCardBills(a.ctx); err != nil {
+				a.logger.Error("erro ao recalcular a fatura das compras no cartão", "error", err)
+			}
+		}
+		lastClose = s.CardCloseDays
 
 		if s.Configured() {
 			if !announced {

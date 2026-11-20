@@ -4,11 +4,12 @@ import (
 	"strings"
 )
 
-// paymentMonth é o mês a que um pagamento pertence, igual ao usado nas demais consultas.
-// txDate é o dia da transação (vencimento, mês de referência ou criação).
+// txDate é o dia da transação (vencimento, mês de referência ou criação). Numa compra no cartão é o dia da compra.
 const txDate = `COALESCE(pay.due_date, pay.reference_month, pay.created_at::date)`
 
-const paymentMonth = `DATE_TRUNC('month', COALESCE(pay.due_date, pay.reference_month, pay.created_at))::date`
+// paymentMonth é o mês a que um pagamento pertence, o mesmo em todas as consultas. Compra no cartão com fatura calculada
+// (bill_due_date) conta no mês do vencimento da fatura, como na planilha; o resto, no mês do dia da transação.
+const paymentMonth = `DATE_TRUNC('month', COALESCE(pay.bill_due_date, pay.due_date, pay.reference_month, pay.created_at))::date`
 
 // monthlyCTE agrega por mês as entradas, despesas e transferências (pagamentos cancelados ficam de fora).
 const monthlyCTE = `

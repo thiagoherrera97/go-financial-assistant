@@ -56,6 +56,9 @@ type balanceCardJSON struct {
 	DaysToDue      *int           `json:"daysToDue"`
 	DueLevel       balances.Level `json:"dueLevel"`
 	MinimumPayment *float64       `json:"minimumPayment"`
+	NextBillDue    *string        `json:"nextBillDue"`
+	NextClose      *string        `json:"nextClose"`
+	CloseEstimated bool           `json:"closeEstimated"`
 }
 
 type institutionJSON struct {
@@ -112,6 +115,7 @@ func (a *api) balances(w http.ResponseWriter, r *http.Request) {
 				ID: c.ID, Name: c.Name, Brand: c.Brand, Last4: c.Last4, Invoice: c.Invoice, Limit: c.Limit, Available: c.Available,
 				Used: c.Used, UsedRatio: c.UsedRatio, UsageLevel: c.UsageLevel, CloseDate: dayString(c.CloseDate),
 				DueDate: dayString(c.DueDate), DaysToDue: c.DaysToDue, DueLevel: c.DueLevel, MinimumPayment: c.MinimumPayment,
+				NextBillDue: dayString(c.NextBillDue), NextClose: dayString(c.NextClose), CloseEstimated: c.CloseEstimated,
 			}
 		}
 		institutions[i] = j

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { contrast, deltaE, dueText, HIDDEN_MONEY, inkOn, money, monogram, safeHex, shareLabel, sliceColors, sliced, NEUTRAL_COLOR } from './balances'
+import { contrast, deltaE, dueText, HIDDEN_MONEY, inkOn, money, monogram, nextBillText, safeHex, shareLabel, sliceColors, sliced, NEUTRAL_COLOR } from './balances'
 import type { BalanceInstitution } from '../api'
 
 const plain = (s: string) => s.replace(/\u00a0/g, ' ')
@@ -77,6 +77,14 @@ describe('textos', () => {
     expect(dueText({ ...card, invoice: 0 })).toBeNull()
     expect(dueText({ ...card, dueDate: null })).toBeNull()
     expect(dueText({ ...card, daysToDue: null })).toBeNull()
+  })
+
+  it('fatura das compras de hoje', () => {
+    const next = { nextBillDue: '2026-12-10', nextClose: '2026-12-04', closeEstimated: true }
+    expect(nextBillText(next)).toBe('compras de hoje → fatura de 10/12 · fecha ~04/12')
+    expect(nextBillText({ ...next, closeEstimated: false })).toBe('compras de hoje → fatura de 10/12 · fecha 04/12')
+    expect(nextBillText({ ...next, nextBillDue: null })).toBeNull()
+    expect(nextBillText({ ...next, nextClose: null })).toBeNull()
   })
 
   it('oculta valores', () => {

@@ -21,8 +21,12 @@ const goalProjectionMonths = 24
 // Insights reúne as leituras que alimentam a revisão, as metas, a economia realizada, o Coach e o resumo
 // semanal: busca os dados no banco e roda os cálculos. Tanto a API quanto o agendador de resumos usam.
 type Insights struct {
-	reader ports.InsightsReader
+	reader    ports.InsightsReader
+	closeDays func() int // dias entre o fechamento e o vencimento da fatura (configuração); nil = padrão
 }
+
+// SetCardCloseDays liga a configuração de quantos dias antes do vencimento a fatura fecha (lida a cada consulta).
+func (i *Insights) SetCardCloseDays(f func() int) { i.closeDays = f }
 
 func NewInsights(reader ports.InsightsReader) *Insights { return &Insights{reader: reader} }
 
@@ -157,7 +161,11 @@ func (i *Insights) Balances(ctx context.Context, now time.Time) (balances.Balanc
 	if err != nil {
 		return balances.BalancesView{}, err
 	}
-	return balances.BuildBalances(accounts, institutions, now), nil
+	days := domain.DefaultCardCloseDaysBeforeDue
+	if i.closeDays != nil {
+		days = i.closeDays()
+	}
+	return balances.BuildBalances(accounts, institutions, now, days), nil
 }
 
 // BalancesText é o comando /saldos: o mesmo cálculo do painel, em texto.

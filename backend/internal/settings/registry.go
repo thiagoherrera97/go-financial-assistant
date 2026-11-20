@@ -77,6 +77,7 @@ var Defs = []Def{
 
 	{Key: "SYNC_INTERVAL_HOURS", Group: GroupSync, Label: "Sincronizar a cada (horas)", Help: "O Meu Pluggy atualiza os dados cerca de uma vez por dia.", Kind: KindInt, Min: 1, Max: 168, Default: "6", Live: true},
 	{Key: "SYNC_LOOKBACK_DAYS", Group: GroupSync, Label: "Dias para trás a cada sincronização", Help: "Máximo 365. É seguro repetir: nada duplica.", Kind: KindInt, Min: 1, Max: 365, Default: "60", Live: true},
+	{Key: "CARD_CLOSE_DAYS_BEFORE_DUE", Group: GroupSync, Label: "Fatura do cartão fecha quantos dias antes do vencimento", Help: "Usado quando o banco não informa o fechamento (o Open Finance raramente informa). A compra no cartão conta no mês em que a fatura vence: comprou no dia do fechamento ou depois, vai para a fatura seguinte.", Kind: KindInt, Min: 1, Max: 27, Default: "6", Live: true},
 	{Key: "OWN_NAMES", Group: GroupSync, Label: "Seus nomes nos extratos", Help: "Como aparecem nos Pix e transferências (separe por vírgula). Pix, TED e DOC com esse nome são entre contas suas e não contam como gasto nem renda.", Kind: KindList, Live: true, Validate: validNames},
 
 	{Key: "PLUGGY_CLIENT_ID", Group: GroupPluggy, Label: "Client ID", Kind: KindText, Live: true, Validate: validToken},
