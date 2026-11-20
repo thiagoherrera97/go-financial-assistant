@@ -20,6 +20,7 @@ import (
 const testPassword = "senha-de-teste-123"
 
 type fakeReader struct {
+	salaryCredits  []domain.SalaryCredit
 	monthly        []domain.MonthTotals
 	accounts       []domain.Account
 	institutions   []domain.Institution
@@ -101,6 +102,9 @@ func (f *fakeReader) ExpenseKeyMonths(_ context.Context, from, to time.Time) ([]
 }
 func (f *fakeReader) IncomePayments(_ context.Context, from, to time.Time) ([]domain.IncomePayment, error) {
 	return []domain.IncomePayment{{Key: "salario", Label: "Salário", Month: to, Amount: 5000}}, f.err
+}
+func (f *fakeReader) SalaryCredits(_ context.Context, from, to time.Time) ([]domain.SalaryCredit, error) {
+	return f.salaryCredits, f.err
 }
 func (f *fakeReader) KnownInstallments(_ context.Context, from, to time.Time) (map[time.Time]float64, error) {
 	f.known = map[string]time.Time{"from": from, "to": to}

@@ -4,10 +4,12 @@ import { BalanceTable } from './components/BalanceTable'
 import { HideValuesToggle } from './components/HideValuesToggle'
 import { InstitutionCard } from './components/InstitutionCard'
 import { useHideValues } from './lib/useHideValues'
-import { useBalances } from './api'
+import { SalaryCard } from './components/SalaryCard'
+import { useBalances, useSalary } from './api'
 
 export default function Panel() {
   const query = useBalances()
+  const salary = useSalary()
   const { hidden, toggle } = useHideValues()
   const data = query.data
   // "hoje" e "ontem" são relativos ao momento em que os dados chegaram.
@@ -28,6 +30,7 @@ export default function Panel() {
         ) : (
           <div className={`chart-body ${query.isFetching ? 'is-stale' : ''}`}>
             <BalanceHero data={data} hidden={hidden} now={now} />
+            {salary.data && <SalaryCard salary={salary.data} hidden={hidden} />}
             <div className="bal-grid">
               {data.institutions.map((i) => (
                 <InstitutionCard key={i.id} institution={i} hidden={hidden} now={now} />

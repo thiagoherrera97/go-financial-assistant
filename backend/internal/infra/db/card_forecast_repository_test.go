@@ -114,6 +114,29 @@ func TestRebuildCardForecasts(t *testing.T) {
 	if nov != 1000 {
 		t.Errorf("novembro deveria bater com a fatura do banco (1000), got %.2f", nov)
 	}
+
+	// Quando o app passa do banco (crédito que não veio), o ajuste é negativo e o mês bate do mesmo jeito.
+	if err := repo.SaveCardBills(ctx, card, []ports.ExternalBill{{ID: "fc-bill-out", DueDate: day("2026-10-10"), Total: 600}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := repo.RebuildCardForecasts(ctx, 6, day("2026-11-20")); err != nil {
+		t.Fatal(err)
+	}
+	var octDesc string
+	var octAdj, oct float64
+	if err := pg.Pool.QueryRow(ctx, `SELECT p.description, pay.amount FROM payments pay JOIN purchases p ON p.id = pay.purchase_id
+		WHERE pay.external_id = 'finassist:bill:fc-bill-out'`).Scan(&octDesc, &octAdj); err != nil {
+		t.Fatal(err)
+	}
+	if octAdj != -69 || octDesc != "Fatura SANTANDER TESTE 10/10 · créditos não detalhados no Open Finance" {
+		t.Errorf("ajuste negativo inesperado: %q %.2f", octDesc, octAdj)
+	}
+	if err := pg.Pool.QueryRow(ctx, `SELECT SUM(pay.amount) FROM payments pay WHERE pay.account_id = $1 AND `+paymentMonth+` = '2026-10-01'`, card).Scan(&oct); err != nil {
+		t.Fatal(err)
+	}
+	if oct != 600 {
+		t.Errorf("outubro deveria bater com a fatura do banco (600), got %.2f", oct)
+	}
 }
 
 func TestRebuildCardForecasts_IdleCardGetsNoForecast(t *testing.T) {

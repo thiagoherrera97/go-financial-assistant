@@ -126,3 +126,35 @@ func TestSync_BillsErrorDoesNotFailSync(t *testing.T) {
 		t.Errorf("faturas indisponíveis não deveriam falhar a sincronização, got %v", err)
 	}
 }
+
+func TestSync_CardRefundIsNegativeExpenseAndNeverReconciled(t *testing.T) {
+	var saved *domain.Purchase
+	var pay *domain.Payment
+	reconcileCalled := false
+	repo := &mockStore{
+		reconcileExternalFn: func(context.Context, ports.ExternalTransaction, uuid.UUID) (bool, error) {
+			reconcileCalled = true
+			return true, nil
+		},
+		saveExternalFn: func(_ context.Context, p *domain.Purchase, pm *domain.Payment) error {
+			saved, pay = p, pm
+			return nil
+		},
+	}
+	refund := extTx("t1", domain.KindExpense)
+	refund.Refund, refund.Amount, refund.BillID = true, 99.99, "bill-1"
+	prov := &mockProvider{byItem: map[string][]ports.ExternalTransaction{"item": {refund}}}
+
+	if _, err := newSync(repo, prov, "item").Sync(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if reconcileCalled {
+		t.Error("estorno não deve casar com lançamento manual")
+	}
+	if saved == nil || saved.Kind != domain.KindExpense || saved.TotalAmount != -99.99 || pay.Amount != -99.99 {
+		t.Fatalf("estorno salvo = %+v / %+v", saved, pay)
+	}
+	if pay.CardBillID == nil || *pay.CardBillID != "bill-1" {
+		t.Errorf("fatura do banco não gravada: %v", pay.CardBillID)
+	}
+}

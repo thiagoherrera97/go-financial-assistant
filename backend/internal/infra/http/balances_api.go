@@ -3,10 +3,12 @@ package httpserver
 import (
 	"context"
 	"errors"
+	"math"
 	"net/http"
 	"time"
 
 	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/usecase/balances"
+	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/usecase/insights"
 
 	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/usecase/openfinance"
 
@@ -182,8 +184,66 @@ func (a *api) syncNow(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+type salaryPartJSON struct {
+	Day            int      `json:"day"`
+	ExpectedDate   string   `json:"expectedDate"`
+	Amount         float64  `json:"amount"`
+	Received       bool     `json:"received"`
+	ReceivedDate   *string  `json:"receivedDate"`
+	ReceivedAmount *float64 `json:"receivedAmount"`
+}
+
+// salary devolve as partes do salário do mês atual e quais já caíram. configured=false quando não há salário configurado.
+func (a *api) salary(w http.ResponseWriter, r *http.Request) {
+	now := a.now()
+	if a.settings != nil {
+		now = now.In(a.settings.Service.Location())
+	}
+	view, err := a.insights.Salary(r.Context(), now)
+	if err != nil {
+		a.fail(w, "salário", err)
+		return
+	}
+	status := view.Parts
+	parts := make([]salaryPartJSON, len(status))
+	var expected, received, pending float64
+	for i, s := range status {
+		p := salaryPartJSON{Day: s.Day, ExpectedDate: s.Expected.Format("2006-01-02"), Amount: s.Amount}
+		expected += s.Amount
+		if s.Received != nil {
+			p.Received = true
+			p.ReceivedDate = dayString(&s.Received.Date)
+			amount := s.Received.Amount
+			p.ReceivedAmount = &amount
+			received += amount
+		} else {
+			pending += s.Amount
+		}
+		parts[i] = p
+	}
+	type extraJSON struct {
+		Date   string  `json:"date"`
+		Amount float64 `json:"amount"`
+	}
+	extras := make([]extraJSON, len(view.Extras))
+	var extrasTotal float64
+	for i, e := range view.Extras {
+		extras[i] = extraJSON{e.Date.Format("2006-01-02"), e.Amount}
+		extrasTotal += e.Amount
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"extras": extras, "extrasTotal": cents(extrasTotal),
+		"configured": view.Configured, "month": formatMonth(insights.MonthStart(now)), "parts": parts,
+		"expected": cents(expected), "received": cents(received), "pending": cents(pending),
+	})
+}
+
+// cents arredonda somas de valores em reais para centavos (evita 9566.619999 na resposta).
+func cents(v float64) float64 { return math.Round(v*100) / 100 }
+
 func (a *api) registerBalances(rt routes) {
 	rt.mux.Handle("GET /api/balances", rt.protected(a.balances))
+	rt.mux.Handle("GET /api/salary", rt.protected(a.salary))
 	rt.mux.Handle("GET /api/institutions/{id}/logo", rt.protected(a.institutionLogo))
 	// Cada sincronização consulta o Pluggy: limite apertado por IP, além de uma por vez (409).
 	rt.mux.Handle("POST /api/sync", newIPRateLimiter(3, time.Minute).middleware(rt.protected(jsonOnly(a.syncNow))))

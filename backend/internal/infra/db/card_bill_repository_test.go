@@ -106,3 +106,92 @@ func TestRecomputeCardBills(t *testing.T) {
 		t.Errorf("com fechamento do banco em 05/11, a compra de 04/11 deveria ficar em 10/11, got %v", got)
 	}
 }
+
+// A fatura informada pelo banco (billId) vence a estimativa do fechamento; estorno entra negativo e abate o mês.
+func TestRecomputeCardBills_BankBillAndRefund(t *testing.T) {
+	repo, pg := newTestRepo(t)
+	ctx := context.Background()
+	due := time.Date(2026, 11, 10, 0, 0, 0, 0, time.UTC)
+	card, err := repo.UpsertAccount(ctx, ports.ExternalAccount{ID: "billid-test-card", ItemID: "billid-test", Type: "CREDIT", Name: "Cartão billid", Last4: "8888", DueDate: &due})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { pg.Pool.Exec(context.Background(), `DELETE FROM accounts WHERE id = $1`, card) })
+	if err := repo.SaveCardBills(ctx, card, []ports.ExternalBill{{ID: "billid-out", DueDate: time.Date(2026, 10, 10, 0, 0, 0, 0, time.UTC), Total: 50}}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Compra em 05/10: pela estimativa (fecha 04/10) iria para novembro; o banco a pôs na fatura de outubro.
+	day := time.Date(2026, 10, 5, 0, 0, 0, 0, time.UTC)
+	desc := "billid-teste compra"
+	p, _ := domain.NewPurchase(80, &desc, domain.CategoryShopping, domain.PaymentMethodCreditCard, domain.PurchaseTypeSingle, "[open finance: x | x]")
+	pay := domain.NewPayment(p.ID, 80, domain.PaymentStatusPaid)
+	ext, bill := "billid-t1", "billid-out"
+	pay.DueDate, pay.ExternalID, pay.AccountID, pay.CardBillID = &day, &ext, &card, &bill
+	if err := repo.SaveExternal(ctx, p, pay); err != nil {
+		t.Fatal(err)
+	}
+	cleanup(t, pg, p)
+
+	rdesc := "billid-teste compra"
+	r, err := domain.NewCardRefund(30, &rdesc, domain.CategoryShopping, "[open finance: x | x]")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rpay := domain.NewPayment(r.ID, r.TotalAmount, domain.PaymentStatusPaid)
+	rext := "billid-t2"
+	rpay.DueDate, rpay.ExternalID, rpay.AccountID, rpay.CardBillID = &day, &rext, &card, &bill
+	if err := repo.SaveExternal(ctx, r, rpay); err != nil {
+		t.Fatalf("estorno negativo deveria ser aceito: %v", err)
+	}
+	cleanup(t, pg, r)
+
+	if _, err := repo.RecomputeCardBills(ctx, 6); err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range []uuid.UUID{p.ID, r.ID} {
+		if got := billDueOf(t, pg, id); got == nil || got.Format("2006-01-02") != "2026-10-10" {
+			t.Errorf("fatura do banco ignorada: %v", got)
+		}
+	}
+	var oct float64
+	if err := pg.Pool.QueryRow(ctx, `SELECT COALESCE(SUM(pay.amount), 0) FROM payments pay JOIN purchases p ON p.id = pay.purchase_id
+		WHERE p.description LIKE 'billid-teste%' AND `+paymentMonth+` = '2026-10-01'`).Scan(&oct); err != nil {
+		t.Fatal(err)
+	}
+	if oct != 50 {
+		t.Errorf("outubro = 80 − 30 de estorno, got %.2f", oct)
+	}
+
+	// Compra pendente perto do fechamento, sem fatura informada: a estimativa a poria em outubro (fechada), mas o banco já
+	// informa a fatura das transações deste cartão, então ela vai para a seguinte.
+	pend := time.Date(2026, 10, 2, 0, 0, 0, 0, time.UTC)
+	pdesc := "billid-teste pendente"
+	pp, _ := domain.NewPurchase(12, &pdesc, domain.CategoryShopping, domain.PaymentMethodCreditCard, domain.PurchaseTypeSingle, "[open finance: x | x]")
+	ppay := domain.NewPayment(pp.ID, 12, domain.PaymentStatusPending)
+	pext := "billid-t3"
+	ppay.DueDate, ppay.ExternalID, ppay.AccountID = &pend, &pext, &card
+	if err := repo.SaveExternal(ctx, pp, ppay); err != nil {
+		t.Fatal(err)
+	}
+	cleanup(t, pg, pp)
+	if _, err := repo.RecomputeCardBills(ctx, 6); err != nil {
+		t.Fatal(err)
+	}
+	if got := billDueOf(t, pg, pp.ID); got == nil || got.Format("2006-01-02") != "2026-11-10" {
+		t.Errorf("pendente sem fatura do banco deveria ir para 10/11, got %v", got)
+	}
+
+	// O billId chega numa ressincronização de transação já gravada.
+	if _, err := pg.Pool.Exec(ctx, `UPDATE payments SET card_bill_id = NULL WHERE external_id = 'billid-t1'`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := repo.RefreshExternal(ctx, ports.ExternalTransaction{ID: "billid-t1", Category: domain.CategoryShopping, Date: day, BillID: "billid-out"}, card); err != nil {
+		t.Fatal(err)
+	}
+	var got *string
+	pg.Pool.QueryRow(ctx, `SELECT card_bill_id FROM payments WHERE external_id = 'billid-t1'`).Scan(&got) //nolint:errcheck
+	if got == nil || *got != "billid-out" {
+		t.Errorf("RefreshExternal deveria gravar o billId: %v", got)
+	}
+}

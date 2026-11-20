@@ -23,6 +23,41 @@ const goalProjectionMonths = 24
 type Insights struct {
 	reader    ports.InsightsReader
 	closeDays func() int // dias entre o fechamento e o vencimento da fatura (configuração); nil = padrão
+	salary    func() []domain.SalaryPart
+}
+
+// SetSalarySchedule liga a configuração das partes do salário (lida a cada consulta); nil ou vazio = sem salário configurado.
+func (i *Insights) SetSalarySchedule(f func() []domain.SalaryPart) { i.salary = f }
+
+func (i *Insights) salaryParts() []domain.SalaryPart {
+	if i.salary == nil {
+		return nil
+	}
+	return i.salary()
+}
+
+// SalaryView é o salário do mês: as partes conferidas com o banco e os créditos extras (13º, PLR, férias).
+type SalaryView struct {
+	Configured bool
+	Parts      []domain.SalaryStatus
+	Extras     []domain.SalaryCredit
+}
+
+// Salary confere as partes do salário do mês de today contra os créditos que chegaram do banco. Configured=false quando
+// o salário não está configurado.
+func (i *Insights) Salary(ctx context.Context, today time.Time) (SalaryView, error) {
+	parts := i.salaryParts()
+	if len(parts) == 0 {
+		return SalaryView{}, nil
+	}
+	month := MonthStart(today)
+	// Folga nas pontas: a parte de um dia 1 pode cair no fim do mês anterior.
+	credits, err := i.reader.SalaryCredits(ctx, month.AddDate(0, 0, -domain.SalaryMatchDays), month.AddDate(0, 1, domain.SalaryMatchDays))
+	if err != nil {
+		return SalaryView{}, err
+	}
+	status, extras := domain.SalaryMonth(parts, month, credits)
+	return SalaryView{Configured: true, Parts: status, Extras: extras}, nil
 }
 
 // SetCardCloseDays liga a configuração de quantos dias antes do vencimento a fatura fecha (lida a cada consulta).
@@ -69,7 +104,7 @@ func (i *Insights) Projection(ctx context.Context, start time.Time, months int) 
 	if err != nil {
 		return planning.Projection{}, err
 	}
-	return planning.BuildProjection(rows, rules, incomes, known, start, months), nil
+	return planning.BuildProjection(rows, rules, incomes, i.salaryParts(), known, start, months), nil
 }
 
 // Review roda os detectores da revisão sobre o mês to (primeiro dia).

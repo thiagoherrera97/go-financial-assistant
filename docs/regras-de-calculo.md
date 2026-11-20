@@ -27,18 +27,24 @@ Cada parcela é datada no **mês da fatura em que cai** (`creditCardMetadata.bil
 
 Como na planilha, **toda despesa no cartão conta no mês em que a fatura vence** (`payments.bill_due_date`, calculada em `domain/card_bill.go`); o dia mostrado nas listas continua sendo o da compra. O mês de um pagamento é `COALESCE(bill_due_date, due_date, reference_month, created_at)` (`paymentMonth`), em todas as telas, no chat, no CSV, na projeção e no orçamento.
 
+- **Fatura informada pelo banco (vale primeiro):** o Pluggy diz em que fatura cada transação do cartão entrou (`creditCardMetadata.billId`, gravado em `payments.card_bill_id`). Quando essa fatura está entre as faturas fechadas lidas (`card_bills`), vale o vencimento dela, sem estimativa: o fechamento real varia (no Santander, de 5 a 8 dias antes do vencimento, conforme fins de semana). As regras abaixo valem para o que não tem fatura informada (a fatura aberta e conectores sem `billId`).
+- **Pendente perto do fechamento:** num cartão em que o banco informa a fatura das transações, compra à vista sem fatura informada que a estimativa poria na última fatura fechada vai para a seguinte (ela ficou pendente no fechamento e o banco a passou adiante).
 - **Vencimento:** o dia do vencimento do cartão informado pelo banco (`accounts.due_date`); dia 29 a 31 vira o último dia nos meses mais curtos.
 - **Fechamento:** o informado pelo banco, quando houver (vencimento − fechamento); senão, `CARD_CLOSE_DAYS_BEFORE_DUE` dias antes do vencimento (padrão 6; o Open Finance raramente informa).
 - **Compra à vista:** vai para a primeira fatura cujo fechamento é **depois** do dia da compra. Comprou no dia do fechamento ou depois, vai para a seguinte (o "melhor dia de compra" é o próprio fechamento). Ex.: vencimento dia 10, fecha dia 4: compra em 03/11 → fatura de 10/11; em 04/11 ou 20/10 → 10/12 e 10/11.
 - **Parcela:** a fatura do mês em que a sincronização já a datou (o do banco).
 - **Quando é calculado:** ao fim de cada sincronização, para todas as despesas dos cartões com vencimento conhecido (inclusive as antigas), e na hora em que o fechamento muda nas configurações. Só grava o que mudou. Lançamentos manuais no cartão (pelo chat) não têm cartão e ficam no mês do dia anotado.
 
+### Estornos no cartão
+
+Crédito no cartão que não é o pagamento da fatura (categoria "Credit card payment" do Pluggy ou "pagamento" na descrição) é **estorno**: entra como **despesa com valor negativo**, na categoria e na fatura do crédito, e abate o mês como no extrato do banco ("Total de créditos"). Só a sincronização grava valor negativo; lançamentos manuais continuam positivos, e o estorno nunca é conciliado com um deles.
+
 ### Parcelas previstas e ajuste da fatura
 
 O Open Finance entrega as parcelas com atraso (a fatura já fechada pode não ter nenhuma) e nem sempre todos os lançamentos da fatura. Ao fim de cada sincronização o app refaz, numa transação, dois tipos de lançamento próprios nos cartões (`external_id` começando com `finassist:`; nunca editados, sempre apagados e recriados; ver `domain/card_forecast.go` e `infra/db/card_forecast_repository.go`):
 
 - **Parcela prevista** (`PENDING`, mesma descrição "BASE (n/m)", mesma categoria e valor): cada compra parcelada é reconhecida por cartão, descrição, número de parcelas, valor e mês de início (fatura menos a parcela); a partir da maior parcela que chegou, as seguintes, uma por fatura, **até a fatura aberta hoje** (e nunca além da última fatura com algum lançamento real do cartão: cartão parado não ganha previsão). Só se prevê **depois da última fatura em que o banco entregou alguma parcela** daquele cartão, e só para as compras que tinham parcela nela (as que pararam antes terminaram ou mudaram de nome no banco). Compras iguais no mesmo mês contam como cópias. Quando a parcela real chega, a prevista some na sincronização seguinte. A projeção continua prevendo as faturas mais distantes pela parcela mais recente (inclusive prevista), sem contar duas vezes.
-- **Ajuste da fatura** (`PAID`, categoria Outros, "Fatura <cartão> dd/mm · não detalhado no Open Finance"): para cada fatura fechada que o banco informa (`card_bills`, `GET /bills` do Pluggy) a partir do começo do histórico do cartão, total da fatura − (lançamentos reais + previstos do cartão naquela fatura). Só quando a diferença é de R$ 0,50 ou mais; se o app conhece mais do que o banco cobrou (ex.: estornos, que não viram lançamento), não há ajuste. Assim o mês da fatura fechada bate com o banco.
+- **Ajuste da fatura** (`PAID`, categoria Outros, "Fatura <cartão> dd/mm · não detalhado no Open Finance"): para cada fatura fechada que o banco informa (`card_bills`, `GET /bills` do Pluggy) a partir do começo do histórico do cartão, total da fatura − (lançamentos reais + previstos do cartão naquela fatura). Só quando a diferença é de R$ 0,50 ou mais, nos dois sentidos: positiva ("não detalhado": compra de cartão adicional que o Open Finance não manda, saldo que sobrou da fatura anterior) ou negativa ("Fatura <cartão> dd/mm · créditos não detalhados no Open Finance", gravada como estorno). Assim o mês da fatura fechada sempre bate com o banco.
 
 ### Chave de conta (`expenseKey`)
 
@@ -55,7 +61,7 @@ Cada conta (chave) é classificada como **fixa**, **parcelada** ou **variável**
 Projeta N meses (6, 12 ou 24) a partir do mês atual:
 
 - **Fixas e variáveis**: média dos últimos 3 meses completos com dados (editável na tela).
-- **Renda**: mediana da renda total dos últimos 6 meses (um mês fora do padrão — 13º, adiantamento de férias — não pesa). As fontes recorrentes (`EstimateIncome`) explicam a maior parte; o restante aparece como "outras entradas". **Todo lançamento da categoria Salário é uma fonte só**, mesmo que a descrição mude.
+- **Renda**: mediana da renda total dos últimos 6 meses (um mês fora do padrão — 13º, adiantamento de férias — não pesa). As fontes recorrentes (`EstimateIncome`) explicam a maior parte; o restante aparece como "outras entradas". **Todo lançamento da categoria Salário é uma fonte só**, mesmo que a descrição mude. Com o **salário configurado** (`SALARY_SCHEDULE`), ele entra pelo valor combinado de cada parte ("Salário do dia 15", "Salário do dia 30") no lugar da estimativa, e a mediana e as fontes recorrentes passam a olhar só as outras entradas.
 - **Parcelas**: as que faltam das compras parceladas (inferidas do `n/m` da descrição e das já cadastradas).
 - **Saldo projetado** = renda − fixas − variáveis − parcelas, acumulado.
 
@@ -95,6 +101,14 @@ O progresso é calculado na hora. Patrimônio = saldo das contas correntes + inv
 - **Desatualizado**: mais de 36 h desde a última atualização *do Pluggy* (`lastUpdatedAt` do item), não desde a última cópia do app. O Meu Pluggy não permite forçar a atualização pela API; ela acontece sozinha (cerca de 1x/dia) ou a pedido em meu.pluggy.ai.
 - O "aplicado automaticamente" do banco só aparece se for diferente do saldo.
 - O nome e a cor do banco vêm do conector; no Meu Pluggy o conector é sempre o agregador, então vêm do nome das contas (tabela de bancos conhecidos).
+
+## Salário e dias úteis (`domain/salary.go`, `domain/business_day.go`)
+
+- **Partes** em Configurações → Renda (`SALARY_SCHEDULE`), como `15=5200; 30=4366,62`. Vazio desliga.
+- **Data de cada parte:** o dia combinado; se passar do fim do mês, o último dia (30 em fevereiro = 28 ou 29); se não for dia útil, o **dia útil anterior**.
+- **Dia útil:** segunda a sexta, menos os feriados nacionais (1/1, 21/4, 1/5, 7/9, 12/10, 2/11, 15/11, 20/11, 25/12), os bancários móveis (Carnaval segunda e terça, Sexta-feira Santa, Corpus Christi, pela Páscoa) e os de São Paulo (25/1 e 9/7).
+- **Conferência com o banco:** cada parte fica com o crédito da categoria Salário mais perto da data prevista, até 5 dias de distância; um crédito serve a uma parte só, e créditos extras (férias, 13º) ficam de fora. Parte sem crédito = **a receber**. Nada é lançado: o salário real continua vindo só do Open Finance, então não duplica.
+- **Painel:** mostra as partes do mês, quando caem ou caíram e quanto falta receber. Parte que veio acima do combinado (hora extra no mesmo crédito) mostra a diferença. Créditos de salário do mês que não ficaram com nenhuma parte (13º, PLR, férias, hora extra à parte) aparecem como **extras**; eles contam nas entradas do mês, mas não no "a receber" nem na projeção, que usa só o combinado.
 
 ## Mês em andamento
 

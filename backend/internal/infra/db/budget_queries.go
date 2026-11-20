@@ -132,3 +132,30 @@ func (r *BudgetRepo) IncomePayments(ctx context.Context, from, to time.Time) ([]
 	}
 	return result, rows.Err()
 }
+
+func (r *BudgetRepo) SalaryCredits(ctx context.Context, from, to time.Time) ([]domain.SalaryCredit, error) {
+	query := `
+		SELECT ` + txDate + `::date AS day, pay.amount
+		FROM payments pay
+		JOIN purchases p ON p.id = pay.purchase_id
+		WHERE p.kind = 'INCOME' AND p.category = 'SALARY' AND pay.status != 'CANCELLED'
+		  AND ` + txDate + `::date BETWEEN $1::date AND $2::date
+		ORDER BY 1, 2 DESC
+	`
+	rows, err := r.db.Pool.Query(ctx, query, from, to)
+	if err != nil {
+		return nil, fmt.Errorf("erro ao consultar créditos de salário: %w", err)
+	}
+	defer rows.Close()
+
+	var result []domain.SalaryCredit
+	for rows.Next() {
+		var c domain.SalaryCredit
+		if err := rows.Scan(&c.Date, &c.Amount); err != nil {
+			return nil, fmt.Errorf("erro ao escanear crédito de salário: %w", err)
+		}
+		c.Date = c.Date.UTC()
+		result = append(result, c)
+	}
+	return result, rows.Err()
+}

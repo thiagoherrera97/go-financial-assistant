@@ -96,11 +96,15 @@ type transaction struct {
 	PaymentData    *struct {
 		PaymentMethod string `json:"paymentMethod"`
 	} `json:"paymentData"`
-	CreditCardMetadata *struct {
-		InstallmentNumber int    `json:"installmentNumber"`
-		TotalInstallments int    `json:"totalInstallments"`
-		BillForecastDate  string `json:"billForecastDate"` // "AAAA-MM": a fatura em que a parcela cai
-	} `json:"creditCardMetadata"`
+	CreditCardMetadata *cardMetadata `json:"creditCardMetadata"`
+}
+
+// cardMetadata são os dados de cartão de uma transação.
+type cardMetadata struct {
+	InstallmentNumber int    `json:"installmentNumber"`
+	TotalInstallments int    `json:"totalInstallments"`
+	BillForecastDate  string `json:"billForecastDate"` // "AAAA-MM": a fatura em que a parcela cai
+	BillID            string `json:"billId"`           // fatura em que o banco pôs a transação (pode faltar na fatura aberta)
 }
 
 // FetchItem implementa ports.OpenFinanceProvider.

@@ -1,6 +1,7 @@
 package httpserver
 
 import (
+	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/domain"
 	"log/slog"
 	"net/http"
 	"sync"
@@ -47,6 +48,11 @@ func (s *Server) mountAPI(password PasswordCheck, reader ports.DashboardReader, 
 		return err
 	}
 	a := &api{reader: reader, sessions: sess, logger: s.logger, now: now, coach: newCoachService(s.coach, s.coachPaid), insights: insights.NewInsights(reader), syncer: s.syncer, settings: s.settings, factor: s.factor, challenges: auth.NewChallenges(), setup: s.setup}
+	if s.settings != nil {
+		svc := s.settings.Service
+		a.insights.SetCardCloseDays(func() int { return svc.Int("CARD_CLOSE_DAYS_BEFORE_DUE") })
+		a.insights.SetSalarySchedule(func() []domain.SalaryPart { return svc.SalaryParts() })
+	}
 	if a.setupSess, err = newSetupSessions(); err != nil {
 		return err
 	}

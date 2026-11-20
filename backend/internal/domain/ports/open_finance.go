@@ -22,8 +22,10 @@ type ExternalTransaction struct {
 	Direction     domain.TransferDirection // só para KindTransfer
 	Category      domain.Category
 	PaymentMethod domain.PaymentMethod
-	Pending       bool // compra ainda na fatura aberta do cartão
-	Installment   bool // parcela de compra parcelada; a data já é a do mês da fatura
+	Pending       bool   // compra ainda na fatura aberta do cartão
+	Installment   bool   // parcela de compra parcelada; a data já é a do mês da fatura
+	Refund        bool   // estorno no cartão: Amount continua positivo e é gravado como despesa negativa
+	BillID        string // fatura em que o banco pôs a transação do cartão; vazio se não informada
 }
 
 // ExternalAccount é uma conta ou cartão do Open Finance. Só guarda o necessário:

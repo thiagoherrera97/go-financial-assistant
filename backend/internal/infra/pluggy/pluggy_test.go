@@ -26,6 +26,29 @@ func cardInvoice() transaction {
 	return x
 }
 
+func cardCredit(category, description string, amount float64) transaction {
+	x := tx("CREDIT", category, amount)
+	x.Description, x.DescriptionRaw = description, description
+	return x
+}
+
+func TestToExternal_RefundAndBill(t *testing.T) {
+	refund := cardCredit("Telecommunications", "EBN*TIKTOK SH", -279.89)
+	refund.CreditCardMetadata = &cardMetadata{BillID: "41bca19e"}
+	got, ok := toExternal(domain.AccountCredit, refund)
+	if !ok || !got.Refund || got.Amount != 279.89 || got.Kind != domain.KindExpense || got.BillID != "41bca19e" {
+		t.Errorf("estorno = %+v, ok=%v", got, ok)
+	}
+	buy := tx("DEBIT", "Shopping", 120)
+	if got, _ := toExternal(domain.AccountCredit, buy); got.Refund || got.BillID != "" {
+		t.Errorf("compra sem billId = %+v", got)
+	}
+	// Crédito em conta corrente continua sendo renda.
+	if got, _ := toExternal(domain.AccountBank, cardCredit("Transfer - PIX", "Pix recebido", 50)); got.Refund || got.Kind != domain.KindIncome {
+		t.Errorf("crédito em conta = %+v", got)
+	}
+}
+
 func TestToExternal(t *testing.T) {
 	cases := []struct {
 		name     string
@@ -46,7 +69,9 @@ func TestToExternal(t *testing.T) {
 		{"fatura do cartão", "BANK", cardInvoice(), false, "", "", 0},
 		{"entre contas próprias", "BANK", tx("DEBIT", "Same person transfer - PIX", -200), false, "", "", 0},
 		{"compra no cartão (valor positivo)", "CREDIT", tx("DEBIT", "Shopping", 120), true, domain.KindExpense, domain.CategoryShopping, 120},
-		{"pagamento recebido no cartão", "CREDIT", tx("CREDIT", "", -900), false, "", "", 0},
+		{"pagamento recebido no cartão", "CREDIT", cardCredit("", "Pagamento recebido", -900), false, "", "", 0},
+		{"pagamento de fatura no cartão", "CREDIT", cardCredit("Credit card payment", "PAGAMENTO DE FATURA", -8583.09), false, "", "", 0},
+		{"estorno no cartão", "CREDIT", cardCredit("Shopping", "MERCADOLIVRE*MERCADOLIVRE", -99.99), true, domain.KindExpense, domain.CategoryShopping, 99.99},
 		{"valor zero", "BANK", tx("DEBIT", "Groceries", 0), false, "", "", 0},
 	}
 	for _, tc := range cases {
@@ -96,11 +121,7 @@ func TestToExternal_CardPaymentCategoryOnlyIgnoresRealInvoices(t *testing.T) {
 
 func TestToExternal_Details(t *testing.T) {
 	card := tx("DEBIT", "Shopping", 100)
-	card.CreditCardMetadata = &struct {
-		InstallmentNumber int    `json:"installmentNumber"`
-		TotalInstallments int    `json:"totalInstallments"`
-		BillForecastDate  string `json:"billForecastDate"`
-	}{2, 3, ""}
+	card.CreditCardMetadata = &cardMetadata{InstallmentNumber: 2, TotalInstallments: 3}
 	got, _ := toExternal("CREDIT", card)
 	if got.Description != "Loja (2/3)" || got.PaymentMethod != domain.PaymentMethodCreditCard {
 		t.Errorf("parcela/cartão: %q %s", got.Description, got.PaymentMethod)
