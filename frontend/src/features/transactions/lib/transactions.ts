@@ -2,7 +2,7 @@ import { formatBRL } from '../../../shared/lib/format'
 import { currentMonth, isMonth } from '../../../shared/lib/months'
 import type { Transaction } from '../api'
 
-export const FILTER_KEYS = ['tipo', 'categoria', 'forma', 'conta', 'q'] as const
+export const FILTER_KEYS = ['tipo', 'categoria', 'sub', 'essencial', 'forma', 'conta', 'q'] as const
 
 /** "todos" na URL desliga o filtro de mês; ausente ou inválido vale o mês atual. */
 export function monthFilter(params: URLSearchParams, now = currentMonth()): string | null {
@@ -17,7 +17,15 @@ export function toApiQuery(params: URLSearchParams, now = currentMonth()): strin
   const month = monthFilter(params, now)
   if (month) out.set('month', month)
 
-  const map: Record<string, string> = { tipo: 'kind', categoria: 'category', forma: 'payment_method', conta: 'account', q: 'q' }
+  const map: Record<string, string> = {
+    tipo: 'kind',
+    categoria: 'category',
+    sub: 'subcategory',
+    essencial: 'essential',
+    forma: 'payment_method',
+    conta: 'account',
+    q: 'q',
+  }
   for (const key of FILTER_KEYS) {
     const value = params.get(key)?.trim()
     if (value) out.set(map[key], value)

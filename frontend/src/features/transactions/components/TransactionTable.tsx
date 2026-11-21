@@ -2,7 +2,11 @@ import { describeAmount, formatBankTime, formatDay } from '../lib/transactions'
 import { CategoryChip } from '../../../shared/components/CategoryChip'
 import { DeleteManual } from './DeleteManual'
 import { NoteEditor } from './NoteEditor'
+import { ClassificationEditor } from './ClassificationEditor'
+import { EssentialBadge } from './EssentialBadge'
 import type { Transaction } from '../api'
+
+const categoryText = (t: Transaction) => (t.subcategoryLabel ? `${t.categoryLabel} › ${t.subcategoryLabel}` : t.categoryLabel)
 
 /** Tabela de lançamentos. Em telas estreitas categoria e conta descem para baixo da descrição. */
 export function TransactionTable({ items, hideCategory = false }: { items: Transaction[]; hideCategory?: boolean }) {
@@ -45,9 +49,19 @@ export function TransactionTable({ items, hideCategory = false }: { items: Trans
                   {t.description || '—'}
                   {t.status === 'PENDING' && <span className="badge">Pendente</span>}
                   {t.source === 'MANUAL' && <span className="badge">Manual</span>}
-                  <span className="tx-meta">{[hideCategory ? '' : t.categoryLabel, t.accountName].filter(Boolean).join(' · ')}</span>
+                  {hideCategory && t.kind === 'EXPENSE' && (
+                    <span className="tx-meta always">
+                      {t.subcategoryLabel}
+                      <EssentialBadge essential={t.essential} />
+                    </span>
+                  )}
+                  <span className="tx-meta">
+                    {[hideCategory ? '' : categoryText(t), t.accountName].filter(Boolean).join(' · ')}
+                    {!hideCategory && t.kind === 'EXPENSE' && <EssentialBadge essential={t.essential} />}
+                  </span>
                   <span className="tx-actions">
                     <NoteEditor key={`${t.id}:${t.note}`} id={t.id} note={t.note} />
+                    <ClassificationEditor key={`${t.id}:${t.category}:${t.subcategory}`} tx={t} />
                     {t.source === 'MANUAL' && t.type === 'SINGLE' && <DeleteManual id={t.id} />}
                   </span>
                 </td>
@@ -55,8 +69,9 @@ export function TransactionTable({ items, hideCategory = false }: { items: Trans
                   <td className="left col-wide">
                     <span className="cat-cell">
                       <CategoryChip category={t.category} size={14} />
-                      {t.categoryLabel}
+                      {categoryText(t)}
                     </span>
+                    {t.kind === 'EXPENSE' && <EssentialBadge essential={t.essential} />}
                   </td>
                 )}
                 <td className="left col-wide">{t.paymentMethodLabel}</td>

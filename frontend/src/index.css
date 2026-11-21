@@ -362,3 +362,17 @@ table.tx td { vertical-align: top; }
 .sync-spin { animation: sync-spin 1s linear infinite; }
 @keyframes sync-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .sync-spin { animation: none; } }
+
+/* Subcategorias e essencial/supérfluo */
+.badge-essential { color: var(--good); border-color: color-mix(in srgb, var(--good) 40%, transparent); }
+.badge-superfluous { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 40%, transparent); }
+.badge-unknown { color: var(--text-muted); border-style: dashed; }
+.tx-meta .badge { margin-left: 6px; }
+.tx-meta.always .badge:first-child { margin-left: 0; }
+.tx-class-form { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-top: 6px; padding: 8px; border: 1px solid var(--border); border-radius: 8px; }
+.tx-class-form select { max-width: 100%; }
+.tx-class-all { flex-basis: 100%; }
+.tx-class-actions { display: inline-flex; gap: 6px; }
+.segmented { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.segmented .btn-small { margin-left: 0; }
+.segmented [aria-checked='true'] { border-color: var(--accent); color: var(--accent); }

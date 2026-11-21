@@ -1,3 +1,4 @@
+import './styles.css'
 import { MonthFilter } from '../../shared/components/MonthFilter'
 import { QueryState } from '../../shared/components/QueryState'
 import { RankedBars } from '../../shared/components/RankedBars'
@@ -5,6 +6,7 @@ import { formatMonthTitle } from '../../shared/lib/format'
 import { useMonth } from '../../shared/lib/useMonth'
 import { useBreakdown } from '../../shared/api/totals'
 import type { BreakdownBy } from '../../shared/api/totals'
+import { EssentialSplit } from './components/EssentialSplit'
 
 const SECTIONS: { by: BreakdownBy; title: string }[] = [
   { by: 'category', title: 'Por categoria' },
@@ -18,6 +20,7 @@ export default function Spending() {
     <>
       <h1 className="page-title">Gastos de {formatMonthTitle(month)}</h1>
       <MonthFilter month={month} now={now} onChange={setMonth} />
+      <EssentialSplit month={month} />
       <div className="grid-2">
         {SECTIONS.map((s) => (
           <Section key={s.by} month={month} {...s} />

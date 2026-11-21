@@ -15,6 +15,13 @@ import { useTransactionGroups, useTransactions } from './api'
 import { useAccounts } from '../../shared/api/accounts'
 import type { TransactionGroup } from './api'
 import { Pager } from '../../shared/components/Pager'
+import { useSubcategoryCatalog } from '../../shared/api/subcategories'
+
+const ESSENTIAL_FILTERS = [
+  { value: 'false', label: 'Supérfluo' },
+  { value: 'true', label: 'Essencial' },
+  { value: 'unknown', label: 'A revisar' },
+]
 
 export default function Transactions() {
   const { params, now, month, query, view, update } = useTransactionFilters()
@@ -24,10 +31,15 @@ export default function Transactions() {
   // Dá para olhar até FORECAST_MONTHS_AHEAD meses à frente: as parcelas previstas dos cartões vão até lá.
   const maxMonth = shiftMonth(now, FORECAST_MONTHS_AHEAD)
 
-  const select = (key: string, label: string, options: { value: string; label: string }[]) => (
+  const catalog = useSubcategoryCatalog()
+  const subOptions = (catalog.data?.subcategories ?? [])
+    .filter((s) => s.category === params.get('categoria'))
+    .map((s) => ({ value: s.code, label: s.label }))
+
+  const select = (key: string, label: string, options: { value: string; label: string }[], also: Record<string, string> = {}) => (
     <label className="field">
       <span className="sr-only">{label}</span>
-      <select value={params.get(key) ?? ''} onChange={(e) => update({ [key]: e.target.value })}>
+      <select value={params.get(key) ?? ''} onChange={(e) => update({ [key]: e.target.value, ...also })}>
         <option value="">{label}</option>
         {options.map((o) => (
           <option key={o.value} value={o.value}>
@@ -64,7 +76,9 @@ export default function Transactions() {
       </div>
       <div className="filters">
         {select('tipo', 'Tipo', KINDS)}
-        {select('categoria', 'Categoria', CATEGORIES)}
+        {select('categoria', 'Categoria', CATEGORIES, { sub: '' })}
+        {subOptions.length > 0 && select('sub', 'Subcategoria', subOptions)}
+        {select('essencial', 'Essencial ou supérfluo', ESSENTIAL_FILTERS)}
         {select('forma', 'Forma de pagamento', PAYMENT_METHODS)}
         {select('conta', 'Conta ou cartão', (accounts.data ?? []).map((a) => ({ value: a.id, label: `${a.name} ${a.last4}`.trim() })))}
         <SearchBox value={params.get('q') ?? ''} onCommit={(q) => update({ q })} />

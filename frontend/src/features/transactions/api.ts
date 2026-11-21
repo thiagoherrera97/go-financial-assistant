@@ -7,6 +7,11 @@ export interface Transaction {
   description: string
   category: string
   categoryLabel: string
+  /** Código da subcategoria; ausente quando não tem (receitas, Pessoas, Outros). */
+  subcategory?: string
+  subcategoryLabel?: string
+  /** true = essencial, false = supérfluo, null = a revisar (sempre null fora das despesas). */
+  essential: boolean | null
   paymentMethod: string
   paymentMethodLabel: string
   kind: 'EXPENSE' | 'INCOME' | 'TRANSFER'
