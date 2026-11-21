@@ -16,6 +16,8 @@ export const logout = () => postJSON('/api/logout')
 export interface Me {
   ok: boolean
   secondFactor: boolean
+  /** Ciclo do salário de hoje: o "mês atual" das telas. */
+  cycle?: { month: string; startsOn: string; endsOn: string }
 }
 
 // Sem retry em 401/403: repetir não muda o resultado e só atrasa o redirecionamento ao login.

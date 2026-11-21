@@ -73,7 +73,12 @@ func (a *api) logout(w http.ResponseWriter, r *http.Request) {
 
 // me diz se há sessão e se o segundo fator está ativo (a tela de Configurações avisa quando não está).
 func (a *api) me(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]bool{"ok": true, "secondFactor": a.factor.Active()})
+	// cycle é o ciclo do salário de hoje: o "mês atual" das telas (pode ser o mês anterior no calendário).
+	month := a.monthStart()
+	start, end := a.insights.Cycles().Bounds(month)
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "secondFactor": a.factor.Active(), "cycle": map[string]string{
+		"month": formatMonth(month), "startsOn": start.Format("2006-01-02"), "endsOn": end.Format("2006-01-02"),
+	}})
 }
 
 func (a *api) registerAuth(rt routes, loginLimiter *ipRateLimiter) {

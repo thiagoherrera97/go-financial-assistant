@@ -8,7 +8,7 @@ interface Props {
   warnPartial?: boolean;
 }
 
-/** Filtro de período: uma linha acima de tudo o que ele controla. */
+/** Filtro de período (o ciclo do salário, pelo mês em que começa): uma linha acima de tudo o que ele controla. */
 export function MonthFilter({ month, now, onChange, warnPartial }: Props) {
   return (
     <>
@@ -16,14 +16,14 @@ export function MonthFilter({ month, now, onChange, warnPartial }: Props) {
         <button
           type="button"
           className="btn"
-          aria-label="Mês anterior"
+          aria-label="Ciclo anterior"
           onClick={() => onChange(shiftMonth(month, -1))}
         >
           ←
         </button>
         <input
           type="month"
-          aria-label="Mês"
+          aria-label="Ciclo (mês em que começa)"
           value={month}
           max={now}
           onChange={(e) => onChange(e.target.value)}
@@ -31,7 +31,7 @@ export function MonthFilter({ month, now, onChange, warnPartial }: Props) {
         <button
           type="button"
           className="btn"
-          aria-label="Próximo mês"
+          aria-label="Próximo ciclo"
           disabled={month >= now}
           onClick={() => onChange(shiftMonth(month, 1))}
         >
@@ -40,9 +40,9 @@ export function MonthFilter({ month, now, onChange, warnPartial }: Props) {
       </div>
       {warnPartial && month === now && (
         <p className="notice partial-notice" role="note">
-          Mês em andamento: os valores são parciais, só até hoje. Comparar com
-          um mês completo exagera as quedas; os números só valem de verdade
-          quando o mês fechar.
+          Ciclo em andamento: os valores são parciais, só até hoje. Comparar com
+          um ciclo completo exagera as quedas; os números só valem de verdade
+          quando o ciclo fechar.
         </p>
       )}
     </>

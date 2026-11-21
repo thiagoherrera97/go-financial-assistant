@@ -55,7 +55,7 @@ export default function Transactions() {
       <h1 className="page-title">Transações{month ? ` de ${formatMonthTitle(month)}` : ''}</h1>
 
       <div className="filters">
-        <button type="button" className="btn" aria-label="Mês anterior" disabled={!month} onClick={() => month && update({ mes: shiftMonth(month, -1) })}>
+        <button type="button" className="btn" aria-label="Ciclo anterior" disabled={!month} onClick={() => month && update({ mes: shiftMonth(month, -1) })}>
           ←
         </button>
         <input
@@ -66,7 +66,7 @@ export default function Transactions() {
           disabled={!month}
           onChange={(e) => e.target.value && update({ mes: e.target.value })}
         />
-        <button type="button" className="btn" aria-label="Próximo mês" disabled={!month || month >= maxMonth} onClick={() => month && update({ mes: shiftMonth(month, 1) })}>
+        <button type="button" className="btn" aria-label="Próximo ciclo" disabled={!month || month >= maxMonth} onClick={() => month && update({ mes: shiftMonth(month, 1) })}>
           →
         </button>
         <label className="check">

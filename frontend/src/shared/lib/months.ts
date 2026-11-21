@@ -6,7 +6,17 @@ export function isMonth(value: string | null | undefined): value is string {
   return value != null && MONTH_RE.test(value)
 }
 
-export function currentMonth(now = new Date()): string {
+// O "mês atual" é o ciclo do salário de hoje, que a API informa (/api/me): perto do fim do mês do calendário ainda pode ser
+// o ciclo do mês anterior. Até a API responder (ou nos testes), vale o mês do calendário.
+let cycleMonth: string | null = null
+
+export function setCurrentCycle(month: string | null) {
+  cycleMonth = month != null && isMonth(month) ? month : null
+}
+
+export function currentMonth(date?: Date): string {
+  if (date === undefined && cycleMonth) return cycleMonth
+  const now = date ?? new Date()
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
 }
 

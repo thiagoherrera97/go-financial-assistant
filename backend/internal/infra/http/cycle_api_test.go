@@ -56,3 +56,20 @@ func TestMonthAPIPeriod(t *testing.T) {
 		}
 	}
 }
+
+func TestMeReportsCurrentCycle(t *testing.T) {
+	cyc := domain.NewCycles([]domain.CycleStart{
+		{Key: time.Date(2026, 11, 1, 0, 0, 0, 0, time.UTC), Start: time.Date(2026, 11, 13, 0, 0, 0, 0, time.UTC)},
+		{Key: time.Date(2026, 12, 1, 0, 0, 0, 0, time.UTC), Start: time.Date(2026, 12, 15, 0, 0, 0, 0, time.UTC)},
+	})
+	s := NewServer(0, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	s.SetCycles(func() domain.Cycles { return cyc })
+	if err := s.mountAPI(StaticPassword(testPassword), &fakeReader{}, func() time.Time { return time.Date(2026, 12, 14, 12, 0, 0, 0, time.UTC) }); err != nil {
+		t.Fatal(err)
+	}
+	rec := do(s, "GET", "/api/me", "", nil, login(t, s))
+	want := `"cycle":{"endsOn":"2026-12-14","month":"2026-11","startsOn":"2026-11-13"}`
+	if !strings.Contains(rec.Body.String(), want) {
+		t.Errorf("/api/me = %s, want %s", rec.Body.String(), want)
+	}
+}

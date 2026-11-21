@@ -50,6 +50,12 @@ export interface MonthSheet {
   leftoverWithPending: number
   /** Aplicado − resgatado no mês; fora da sobra. */
   invested: number
+  /** Primeiro e último dia do ciclo do salário (AAAA-MM-DD). */
+  startsOn: string
+  endsOn: string
+  /** Sobra do ciclo anterior; null quando ele não tem lançamentos. */
+  carryover: number | null
+  leftoverWithCarryover: number
 }
 
 export const useMonthSheet = (month: string) =>

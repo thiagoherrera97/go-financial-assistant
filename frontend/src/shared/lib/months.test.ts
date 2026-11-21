@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { currentMonth, isMonth, shiftMonth } from './months'
+import { currentMonth, isMonth, setCurrentCycle, shiftMonth } from './months'
 
 describe('months', () => {
   it('valida o formato AAAA-MM', () => {
@@ -20,5 +20,14 @@ describe('months', () => {
     expect(shiftMonth('2026-09', -11)).toBe('2025-10')
     expect(shiftMonth('2026-09', 0)).toBe('2026-09')
     expect(shiftMonth('2026-03', -15)).toBe('2024-12')
+  })
+})
+
+describe('mês atual pelo ciclo do salário', () => {
+  it('usa o ciclo informado pela API quando não se passa uma data', () => {
+    setCurrentCycle('2026-11')
+    expect(currentMonth()).toBe('2026-11')
+    expect(currentMonth(new Date(2026, 11, 14))).toBe('2026-12')
+    setCurrentCycle(null)
   })
 })

@@ -6,7 +6,7 @@ import { QueryState } from '../../shared/components/QueryState'
 import { StatTile } from '../../shared/components/StatTile'
 import { formatBRL, formatMonthTitle, shortDay } from '../../shared/lib/format'
 import { useMonth } from '../../shared/lib/useMonth'
-import { cardNotes, leftoverLabel } from './lib/month'
+import { cardNotes, formatCycle, leftoverLabel, sheetLeftover } from './lib/month'
 import { useMonthSheet } from './api'
 import type { SheetItem } from './api'
 
@@ -81,14 +81,15 @@ function Block({ title, total, children }: { title: string; total: number; child
   )
 }
 
-/** O mês como na planilha: entradas de um lado, despesas (fixas, outras e a fatura de cada cartão por tipo) do outro. */
+/** O ciclo do salário como na planilha: entradas de um lado, despesas (fixas, outras e a fatura de cada cartão por tipo) do outro. */
 export default function MonthSheetPage() {
   const { month, setMonth, now } = useMonth()
   const sheet = useMonthSheet(month)
 
   return (
     <>
-      <h1 className="page-title">{formatMonthTitle(month)}</h1>
+      <h1 className="page-title">Ciclo de {formatMonthTitle(month).toLowerCase()}</h1>
+      {sheet.data?.startsOn && <p className="page-subtitle">{formatCycle(sheet.data.startsOn, sheet.data.endsOn)}</p>}
       <MonthFilter month={month} now={now} onChange={setMonth} warnPartial />
 
       <QueryState query={sheet}>
@@ -97,17 +98,13 @@ export default function MonthSheetPage() {
             <div className="tiles">
               <StatTile label="Entradas" value={formatBRL(s.incomeTotal)} note={s.pendingTotal > 0 ? `+ ${formatBRL(s.pendingTotal)} a receber` : undefined} />
               <StatTile label="Despesas" value={formatBRL(s.expensesTotal)} note={`${formatBRL(s.cardsTotal)} no cartão`} />
-              <StatTile
-                label={leftoverLabel(s.pendingTotal > 0 ? s.leftoverWithPending : s.leftover)}
-                value={formatBRL(Math.abs(s.pendingTotal > 0 ? s.leftoverWithPending : s.leftover))}
-                note={s.pendingTotal > 0 ? `contando o salário a receber · hoje: ${formatBRL(s.leftover)}` : 'entradas − despesas'}
-              />
+              <StatTile label={leftoverLabel(sheetLeftover(s).value)} value={formatBRL(Math.abs(sheetLeftover(s).value))} note={sheetLeftover(s).note} />
             </div>
 
             <div className="sheet-grid section-gap">
               <div className="sheet-col">
                 <Block title="Entradas" total={s.incomeTotal}>
-                  <Rows items={s.income} empty="Nenhuma entrada no mês." />
+                  <Rows items={s.income} empty="Nenhuma entrada no ciclo." />
                   {s.pending.length > 0 && (
                     <>
                       <h3 className="sheet-sub">A receber</h3>
@@ -127,7 +124,7 @@ export default function MonthSheetPage() {
                 </Block>
                 {s.invested !== 0 && (
                   <p className="sheet-aside">
-                    {s.invested > 0 ? 'Aplicado' : 'Resgatado'} no mês (fora da sobra): <strong>{formatBRL(Math.abs(s.invested))}</strong>
+                    {s.invested > 0 ? 'Aplicado' : 'Resgatado'} no ciclo (fora da sobra): <strong>{formatBRL(Math.abs(s.invested))}</strong>
                   </p>
                 )}
               </div>
