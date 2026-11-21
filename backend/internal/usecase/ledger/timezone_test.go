@@ -169,3 +169,16 @@ func TestMonthlyReport_AsksForThePreviousCycle(t *testing.T) {
 		t.Errorf("relatório pediu %v, want o último ciclo fechado (outubro)", asked)
 	}
 }
+
+func TestChatDefaultMonthIsTheCycle(t *testing.T) {
+	uc := NewAnalyzeExpense(nil, nil, nil)
+	uc.SetClock(domain.FixedClock{T: time.Date(2026, 12, 5, 12, 0, 0, 0, time.UTC)})
+	cyc := domain.NewCycles([]domain.CycleStart{
+		{Key: time.Date(2026, 11, 1, 0, 0, 0, 0, time.UTC), Start: time.Date(2026, 11, 13, 0, 0, 0, 0, time.UTC)},
+		{Key: time.Date(2026, 12, 1, 0, 0, 0, 0, time.UTC), Start: time.Date(2026, 12, 15, 0, 0, 0, 0, time.UTC)},
+	})
+	uc.SetCycles(func() domain.Cycles { return cyc })
+	if got := resolveQueryMonth(nil, uc.currentMonth()); !got.Equal(time.Date(2026, 11, 1, 0, 0, 0, 0, time.UTC)) {
+		t.Errorf("\"este mês\" em 5/dez = %v, want o ciclo de novembro", got)
+	}
+}

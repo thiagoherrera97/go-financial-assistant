@@ -302,7 +302,8 @@ func (i *Insights) salaryDue(ctx context.Context, now, until time.Time) ([]debts
 		}
 	}
 	limit := until.AddDate(0, 1, 0)
-	for m := MonthStart(today).AddDate(0, 1, 0); !m.After(limit); m = m.AddDate(0, 1, 0) {
+	// As partes de view são as do ciclo de hoje; daqui em diante, os ciclos seguintes.
+	for m := i.CycleKey(today).AddDate(0, 1, 0); !m.After(limit); m = m.AddDate(0, 1, 0) {
 		for _, p := range parts {
 			e := domain.SalaryPayDate(m.Year(), m.Month(), p.Day)
 			if !e.After(limit) {

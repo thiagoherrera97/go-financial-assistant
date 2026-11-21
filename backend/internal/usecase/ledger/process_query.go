@@ -12,7 +12,7 @@ import (
 )
 
 func (uc *AnalyzeExpense) processQuery(ctx context.Context, analysis *ports.ExpenseAnalysis) (*ExpenseOutput, error) {
-	targetMonth := resolveQueryMonth(analysis.QueryInfo, uc.now())
+	targetMonth := resolveQueryMonth(analysis.QueryInfo, uc.currentMonth())
 
 	if analysis.QueryInfo != nil && analysis.QueryInfo.Category != "" {
 		return uc.processCategoryQuery(ctx, targetMonth, domain.Category(analysis.QueryInfo.Category))

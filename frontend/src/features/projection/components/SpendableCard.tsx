@@ -28,7 +28,7 @@ export function SpendableCard({ averageFixed }: { averageFixed: number }) {
   return (
     <section className="card section-gap" aria-labelledby="spend-title">
       <h2 className="chart-title" id="spend-title">
-        Quanto ainda dá para gastar em {formatMonthLong(month)}
+        Quanto ainda dá para gastar no ciclo de {formatMonthLong(month)}
       </h2>
       <QueryState query={query}>
         {(sheet) => {

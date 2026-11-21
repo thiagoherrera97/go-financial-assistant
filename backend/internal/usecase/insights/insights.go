@@ -59,14 +59,18 @@ type SalaryView struct {
 	Extras     []domain.SalaryCredit
 }
 
-// Salary confere as partes do salário do mês de today contra os créditos que chegaram do banco. Configured=false quando
+// Salary confere as partes do salário do ciclo de today contra os créditos que chegaram do banco. Configured=false quando
 // o salário não está configurado.
 func (i *Insights) Salary(ctx context.Context, today time.Time) (SalaryView, error) {
+	return i.salaryFor(ctx, i.CycleKey(today))
+}
+
+// salaryFor confere as partes do salário do ciclo month (a chave) contra os créditos do banco.
+func (i *Insights) salaryFor(ctx context.Context, month time.Time) (SalaryView, error) {
 	parts := i.salaryParts()
 	if len(parts) == 0 {
 		return SalaryView{}, nil
 	}
-	month := i.CycleKey(today)
 	// Folga nas pontas: uma parte pode cair alguns dias antes ou depois do previsto.
 	start, end := i.Cycles().Bounds(month)
 	credits, err := i.reader.SalaryCredits(ctx, start.AddDate(0, 0, -domain.SalaryMatchDays), end.AddDate(0, 0, domain.SalaryMatchDays))
@@ -146,7 +150,7 @@ func (i *Insights) MonthSheet(ctx context.Context, month time.Time) (planning.Mo
 	if err != nil {
 		return planning.MonthSheet{}, err
 	}
-	salary, err := i.Salary(ctx, month)
+	salary, err := i.salaryFor(ctx, month)
 	if err != nil {
 		return planning.MonthSheet{}, err
 	}

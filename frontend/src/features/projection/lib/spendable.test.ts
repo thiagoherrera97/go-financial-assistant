@@ -60,3 +60,11 @@ describe('debtRemaining', () => {
     expect(debtLabel({ name: 'Carro', creditor: ' ' })).toBe('Carro')
   })
 })
+
+describe('dias que faltam no ciclo do salário', () => {
+  it('conta até o fim do ciclo, não do mês do calendário', () => {
+    expect(daysLeftInMonth(new Date(2026, 10, 21), '2026-12-14')).toBe(24)
+    expect(daysLeftInMonth(new Date(2026, 11, 1), '2026-12-14')).toBe(14)
+    expect(spendable({ leftoverWithPending: 2400, fixedTotal: 0, endsOn: '2026-12-14' }, 0, 0, new Date(2026, 10, 21)).daysLeft).toBe(24)
+  })
+})

@@ -6,6 +6,8 @@ export interface MonthNumbers {
   leftoverWithPending: number
   /** Fixas e parcelas fora do cartão já lançadas no mês. */
   fixedTotal: number
+  /** Último dia do ciclo do salário (AAAA-MM-DD), quando a API informa. */
+  endsOn?: string
 }
 
 export interface Spendable {
@@ -22,8 +24,14 @@ export interface Spendable {
   perDayGoal: number
 }
 
-/** Dias que faltam no mês de `today`, contando hoje. */
-export function daysLeftInMonth(today: Date): number {
+/** Dias que faltam no ciclo do salário (até `endsOn`) ou, sem ele, no mês de `today`; contando hoje. */
+export function daysLeftInMonth(today: Date, endsOn?: string): number {
+  if (endsOn) {
+    const [y, m, d] = endsOn.split('-').map(Number)
+    const end = Date.UTC(y, m - 1, d)
+    const start = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())
+    return Math.max(1, Math.round((end - start) / 86_400_000) + 1)
+  }
   const last = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()
   return last - today.getDate() + 1
 }
@@ -32,7 +40,7 @@ export function spendable(month: MonthNumbers, averageFixed: number, goal: numbe
   const fixedToCome = Math.max(0, averageFixed - month.fixedTotal)
   const toBreakEven = month.leftoverWithPending - fixedToCome
   const toReachGoal = toBreakEven - Math.max(0, goal)
-  const daysLeft = daysLeftInMonth(today)
+  const daysLeft = daysLeftInMonth(today, month.endsOn)
   return {
     fixedToCome,
     toBreakEven,

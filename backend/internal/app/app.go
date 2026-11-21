@@ -121,6 +121,7 @@ func (a *app) buildServices() error {
 	a.insights = insights.NewInsights(reader)
 	a.cycles = cycles.New(db.NewCycleRepo(a.db), reader.SalaryCredits, a.settings.SalaryParts, time.Now)
 	a.insights.SetCycles(a.cycles.Current)
+	a.analyzeExpense.SetCycles(a.cycles.Current)
 	if err := a.cycles.Refresh(a.ctx); err != nil {
 		a.logger.Error("erro ao calcular os ciclos do salário; as telas usam o mês do calendário", "error", err)
 	}

@@ -23,6 +23,18 @@ type AnalyzeExpense struct {
 	logger   *slog.Logger
 	clock    domain.Clock
 	loc      *time.Location // fuso do dono (DIGEST_TIMEZONE): decide o "hoje" e o "este mês"
+	cycles   func() domain.Cycles
+}
+
+// SetCycles liga os ciclos do salário: o "este mês" do chat é o ciclo de hoje. Sem ciclos, o mês do calendário.
+func (uc *AnalyzeExpense) SetCycles(f func() domain.Cycles) { uc.cycles = f }
+
+// currentMonth é a chave do ciclo de hoje (o primeiro dia do mês que dá nome ao ciclo).
+func (uc *AnalyzeExpense) currentMonth() time.Time {
+	if uc.cycles == nil {
+		return domain.Cycles{}.KeyOf(uc.now())
+	}
+	return uc.cycles().KeyOf(uc.now())
 }
 
 func NewAnalyzeExpense(repo ports.LedgerStore, analyzer ports.AIAnalyzer, logger *slog.Logger) *AnalyzeExpense {
@@ -237,7 +249,7 @@ func (uc *AnalyzeExpense) GenerateRecurringExpenses(ctx context.Context) error {
 }
 
 func (uc *AnalyzeExpense) processExportCSV(analysis *ports.ExpenseAnalysis) (*ExpenseOutput, error) {
-	now := uc.now()
+	now := uc.currentMonth()
 	month := now.Month()
 	year := now.Year()
 
