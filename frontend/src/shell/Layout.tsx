@@ -5,6 +5,7 @@ import {
   Bot,
   Calculator,
   ChartPie,
+  Gem,
   GitCompareArrows,
   Landmark,
   LayoutDashboard,
@@ -56,6 +57,7 @@ const SECTIONS: { title?: string; items: Item[] }[] = [
     items: [
       { to: '/revisao', label: 'Revisão', Icon: ScanSearch },
       { to: '/metas', label: 'Metas', Icon: Target },
+      { to: '/fornecedores', label: 'Fornecedores', Icon: Gem },
       { to: '/coach', label: 'Coach', Icon: Bot },
       { to: '/projecao', label: 'Projeção', Icon: Calculator },
       { to: '/comparacoes', label: 'Comparações', Icon: GitCompareArrows },

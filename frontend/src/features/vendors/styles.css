@@ -1,0 +1,36 @@
+/* Fornecedores */
+.vendors-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.vendors-head .page-title { margin-right: auto; }
+.vendors-head .btn-small { margin-left: 0; display: inline-flex; align-items: center; gap: 4px; }
+.vendor-status { display: flex; gap: 6px; align-items: flex-start; margin: 4px 0; font-size: 0.875rem; color: var(--text-primary); }
+.vendor-status svg { flex: none; margin-top: 3px; }
+.vendor-ok svg { color: var(--accent); }
+.vendor-warning svg { color: var(--warning); }
+.vendor-critical svg { color: var(--critical); }
+
+.vendor-payments { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; font-size: 0.8125rem; color: var(--text-secondary); }
+.vendor-payments li { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
+.vendor-payments li > span { min-width: 0; overflow-wrap: anywhere; }
+.vendor-payments .bill-meta { display: inline-flex; align-items: center; gap: 3px; }
+.vendor-payments .icon-btn { width: 28px; height: 28px; flex: none; }
+
+.bill-foot .btn-small { margin-left: 0; display: inline-flex; align-items: center; gap: 4px; }
+
+.vendor-pay { display: grid; gap: 8px; border-top: 1px solid var(--border); padding-top: 8px; }
+.vendor-pay .view-toggle { margin: 0; }
+.vendor-pay .btn-small { margin-left: 0; display: inline-flex; align-items: center; gap: 4px; }
+.vendor-search, .vendor-manual { display: flex; gap: 6px; flex-wrap: wrap; align-items: flex-end; }
+.vendor-search input { flex: 1; min-width: 0; }
+.vendor-pay input { padding: 6px 9px; border: 1px solid var(--border); border-radius: 6px; background: var(--page); min-width: 0; }
+.vendor-manual label { display: grid; gap: 4px; font-size: 0.8125rem; color: var(--text-secondary); flex: 1; min-width: 120px; }
+.vendor-hits { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; max-height: 260px; overflow-y: auto; }
+.vendor-hits li { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 0.8125rem; padding: 4px 0; border-bottom: 1px solid var(--border); }
+.vendor-hit-text { display: flex; flex-direction: column; min-width: 0; overflow-wrap: anywhere; }
+.vendor-close { justify-self: start; }
+/* Valores de cinco dígitos: um pouco menores que o padrão para caber sem quebrar o número. */
+.tiles.vendor-tiles { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+.vendor-tiles .tile-value { font-size: 1.45rem; white-space: nowrap; }
+@media (max-width: 520px) {
+  .tiles.vendor-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .vendor-tiles .tile-value { font-size: 1.1rem; }
+}

@@ -1,6 +1,6 @@
 # API do dashboard
 
-O app expõe uma API JSON sob `/api`, **somente leitura** (as únicas escritas, além do login e do setup, são a correção manual de contas fixas, dispensar sugestões da revisão criar ou apagar metas e o histórico do Coach (análises e respostas)), que alimenta o front-end. A senha é a definida no setup (hash argon2id no banco) ou, sem ela, a `DASHBOARD_PASSWORD` (mínimo de 12 caracteres).
+O app expõe uma API JSON sob `/api`, **somente leitura** (as únicas escritas, além do login e do setup, são a correção manual de contas fixas, dispensar sugestões da revisão, criar ou apagar metas, os fornecedores e seus pagamentos e o histórico do Coach (análises e respostas)), que alimenta o front-end. A senha é a definida no setup (hash argon2id no banco) ou, sem ela, a `DASHBOARD_PASSWORD` (mínimo de 12 caracteres).
 
 - **Setup pendente:** enquanto o app não está configurado (sem senha ou sem canal, ou com `SETUP_REOPEN`), só `/api/setup/*` atende; o resto de `/api`, inclusive o login, responde `409 {"error": "configuração inicial pendente", "setup": "required"}` e o front leva para `/setup`. Rotas na seção *Setup* abaixo.
 
@@ -40,6 +40,10 @@ O app expõe uma API JSON sob `/api`, **somente leitura** (as únicas escritas, 
 | `PUT /api/savings/decisions` | marca (ou desfaz) "cancelei" numa sugestão fixa ou de gasto formiga; só JSON na mesma origem |
 | `GET /api/goals` | metas com o andamento calculado na hora: patrimônio (contas correntes + investimentos), projeção e gastos por categoria |
 | `POST /api/goals`, `DELETE /api/goals/{id}` | cria (juntar valor até uma data, reduzir uma categoria, reserva de N meses; máx. 20) ou apaga uma meta; só JSON na mesma origem |
+| `GET /api/vendors` | plano de fornecedores (ex.: casamento) com os totais calculados na hora: contratado, pago, guardado (caixinha ou valor à mão), falta pagar, próximo aporte, último vencimento e quanto guardar por mês; e as caixinhas das contas correntes |
+| `PUT /api/vendors/plan` | nome do evento, dia do aporte (1 a 28) e onde está o guardado (`savingsBox` ou `savedManual`) |
+| `POST /api/vendors`, `PUT /api/vendors/{id}`, `DELETE /api/vendors/{id}` | cria (com `paid` opcional, que vira um pagamento de hoje; máx. 50), altera ou apaga um fornecedor e os pagamentos dele |
+| `POST /api/vendors/{id}/payments`, `DELETE /api/vendors/{id}/payments/{paymentId}` | lança um pagamento à mão (`amount` + `paidOn`) ou liga uma saída do extrato (`transactionId`: valor e data vêm dela; uma transação paga um fornecedor só, `409` se já ligada); ou remove |
 | `GET /api/coach/preview?month=` | o que o Coach enviaria ao Gemini (mesmo JSON, com hash), sem enviar nada |
 | `POST /api/coach/analyze` | envia o que a prévia mostrou (o hash precisa bater) e devolve a análise da IA validada; só JSON na mesma origem, 3/min por IP, uma por vez |
 | `GET /api/coach/analyses?month=` | análises guardadas do mês, com as respostas que você deu |

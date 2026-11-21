@@ -14,3 +14,10 @@ var (
 	ErrTransferNoDecision      = errors.New("transferência sem decisão para desfazer")
 	ErrTransferPaymentOnIncome = errors.New("\"Pagamento\" vale só para saídas; use \"Para uma pessoa\" ou \"Entre contas minhas\"")
 )
+
+// Fornecedores.
+var (
+	ErrVendorNotFound   = errors.New("fornecedor não encontrado")
+	ErrVendorTxNotFound = errors.New("transação não encontrada ou não é uma saída")
+	ErrVendorTxLinked   = errors.New("essa transação já está ligada a um fornecedor")
+)

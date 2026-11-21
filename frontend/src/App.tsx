@@ -16,6 +16,7 @@ import Settings from './features/settings/Settings'
 import Setup from './features/setup/Setup'
 import Spending from './features/spending/Spending'
 import Transactions from './features/transactions/Transactions'
+import Vendors from './features/vendors/Vendors'
 
 export default function App() {
   return (
@@ -34,6 +35,7 @@ export default function App() {
         <Route path="/orcamento" element={<Budget />} />
         <Route path="/revisao" element={<Review />} />
         <Route path="/metas" element={<Goals />} />
+        <Route path="/fornecedores" element={<Vendors />} />
         <Route path="/coach" element={<Coach />} />
         <Route path="/gastos" element={<Spending />} />
         <Route path="/configuracoes" element={<Settings />} />

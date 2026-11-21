@@ -13,6 +13,7 @@ type DashboardReader interface {
 	CategoryStore
 	CoachStore
 	TransferReviewStore
+	VendorStore
 }
 
 // InsightsReader é o que as leituras da revisão, metas, economia, projeção, saldos e resumo semanal usam: orçamento,

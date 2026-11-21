@@ -105,6 +105,19 @@ O progresso é calculado na hora. Patrimônio = saldo das contas correntes + inv
 - **Reduzir uma categoria em X%**: teto = média dos até 3 meses anteriores à criação (fixada na criação); acompanha cada mês desde então e o ritmo do mês atual (a partir do dia 7).
 - **Reserva de N meses**: alvo = N × despesas fixas da projeção; mostra quantos meses o patrimônio cobre.
 
+## Fornecedores (`planning/vendors.go`)
+
+A conta da aba FORNECEDORES da planilha, calculada na hora (nada é gravado além dos fornecedores e pagamentos):
+
+- **Pago** de um fornecedor é a soma dos pagamentos. Pagamento ligado ao extrato copia valor e data da transação; só vale saída não cancelada (gasto ou transferência de saída), e uma transação paga um fornecedor só. Se a transação for apagada, o pagamento some junto.
+- **Guardado** é o saldo da caixinha escolhida, somado entre as contas correntes com caixinha de mesmo nome. Se a caixinha não aparece mais nas contas, o guardado é 0 (a tela avisa) e não cai no valor à mão. Sem caixinha, vale o valor informado.
+- **Falta pagar** = contratado − pago − guardado (nunca negativo).
+- **Próximo aporte**: o dia do aporte deste mês se hoje é até esse dia; senão, o do mês seguinte (a fórmula da planilha).
+- **Último vencimento** é a maior data fim entre os fornecedores que ainda falta pagar (na planilha era digitado à mão).
+- **Aportes até uma data** = meses completos do próximo aporte até ela + 1 (o `DATEDIF(...;"M")+1` da planilha); 0 se a data vem antes do próximo aporte (fornecedor **atrasado**: precisa ser pago já).
+- **Guardar por mês**: para cada vencimento, o que falta dos fornecedores que vencem até ele, menos o guardado (que paga primeiro quem vence antes), dividido pelos aportes até ele; vale o maior. Quando nenhum prazo aperta, dá o mesmo que a planilha (falta pagar ÷ aportes até o último vencimento). Fornecedor sem data fim entra no total, mas não no cálculo por prazo.
+- **Cabe na sobra** compara com a sobra média da projeção até o último vencimento, como nas metas de juntar.
+
 ## Saldos (`balances/`)
 
 - **Caixinhas** (`accounts.reserved_balances`, ex.: Mercado Pago): dinheiro da conta separado para render; entra no saldo do banco e no total em conta, e aparece à parte ("na conta" e cada caixinha).

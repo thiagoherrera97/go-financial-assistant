@@ -80,6 +80,7 @@ func (s *Server) mountAPI(password PasswordCheck, reader ports.DashboardReader, 
 	a.registerTransfers(rt)
 	a.registerSavings(rt)
 	a.registerBalances(rt)
+	a.registerVendors(rt)
 	if s.settings != nil {
 		a.registerSettings(rt, s.settings)
 	}
