@@ -39,6 +39,16 @@ func (a *api) filterParams(w http.ResponseWriter, r *http.Request) (domain.Trans
 	if f.Category, ok = enumParam(w, q.Get("category"), "category", categories); !ok {
 		return f, false
 	}
+	if raw := q.Get("subcategory"); raw != "" && raw != "none" {
+		if _, known := domain.Subcategory(raw).Info(); !known {
+			writeError(w, http.StatusBadRequest, "subcategory inválido")
+			return f, false
+		}
+	}
+	f.Subcategory = q.Get("subcategory")
+	if f.Essential, ok = enumParam(w, q.Get("essential"), "essential", essentialFilters); !ok {
+		return f, false
+	}
 	if f.PaymentMethod, ok = enumParam(w, q.Get("payment_method"), "payment_method", paymentMethods); !ok {
 		return f, false
 	}
@@ -131,6 +141,9 @@ func (a *api) transactions(w http.ResponseWriter, r *http.Request) {
 		Description       string     `json:"description"`
 		Category          string     `json:"category"`
 		CategoryLabel     string     `json:"categoryLabel"`
+		Subcategory       string     `json:"subcategory,omitempty"`
+		SubcategoryLabel  string     `json:"subcategoryLabel,omitempty"`
+		Essential         *bool      `json:"essential"`
 		PaymentMethod     string     `json:"paymentMethod"`
 		PaymentLabel      string     `json:"paymentMethodLabel"`
 		Kind              string     `json:"kind"`
@@ -152,6 +165,7 @@ func (a *api) transactions(w http.ResponseWriter, r *http.Request) {
 			source = "OPEN_FINANCE"
 		}
 		items[i] = item{t.ID, t.Date.Format(time.DateOnly), t.Description, t.Category, domain.Category(t.Category).Label(),
+			t.Subcategory, domain.Subcategory(t.Subcategory).Label(), t.Essential,
 			t.PaymentMethod, domain.PaymentMethod(t.PaymentMethod).Label(), t.Kind, t.TransferDirection, t.Type, t.Status,
 			t.Amount, t.InstallmentNumber, t.AccountID, t.AccountName, source, t.Note, t.BankTime}
 	}

@@ -135,8 +135,8 @@ func (r *ClassifyRepo) SetClassification(ctx context.Context, id uuid.UUID, c do
 		sub = &v
 	}
 	if _, err := tx.Exec(ctx, `
-		UPDATE purchases SET category = $2, subcategory = $3, subcategory_manual = $3 IS NOT NULL,
-			essential = $4, essential_manual = $4 IS NOT NULL
+		UPDATE purchases SET category = $2, subcategory = $3::text, subcategory_manual = $3::text IS NOT NULL,
+			essential = $4::boolean, essential_manual = $4::boolean IS NOT NULL
 		WHERE id = $1
 	`, purchaseID, string(c.Category), sub, c.Essential); err != nil {
 		return false, 0, fmt.Errorf("erro ao corrigir a classificação: %w", err)

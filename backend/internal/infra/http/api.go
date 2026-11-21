@@ -73,6 +73,7 @@ func (s *Server) mountAPI(password PasswordCheck, reader ports.DashboardReader, 
 	a.registerBudget(rt)
 	a.registerReview(rt)
 	a.registerTransactions(rt)
+	a.registerSubcategories(rt)
 	a.registerAccounts(rt)
 	a.registerGoals(rt)
 	a.registerCoach(rt)

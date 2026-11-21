@@ -5,6 +5,7 @@ import (
 
 	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/usecase/openfinance"
 
+	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/infra/db"
 	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/infra/logo"
 	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/infra/pluggy"
 )
@@ -16,6 +17,7 @@ func (a *app) startSync() error {
 	a.syncer.SetLogoFetcher(logo.New())
 	a.syncer.SetCategoryMapping(pluggy.ExactExpenseCategories())
 	a.syncer.SetLocation(a.cfg.DigestLocation)
+	a.subcategories = db.NewDashboardRepo(a.db)
 	go a.runSync(client, a.onChange())
 	return nil
 }
@@ -65,6 +67,13 @@ func (a *app) runSync(client *pluggy.Client, changed <-chan struct{}) {
 			}
 		} else {
 			announced = false
+		}
+
+		// A cada volta (e logo ao subir) a subcategoria acompanha o que a sincronização, as regras e as correções mudaram.
+		if n, err := a.subcategories.RefreshSubcategories(a.ctx); err != nil {
+			a.logger.Error("erro ao preencher subcategorias", "error", err)
+		} else if n > 0 {
+			a.logger.Info("subcategorias atualizadas", "changed", n)
 		}
 
 		select {

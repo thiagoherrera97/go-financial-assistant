@@ -43,10 +43,13 @@ type app struct {
 	exportCSV      *ledger.ExportCSV
 	insights       *insights.Insights
 	syncer         *openfinance.SyncOpenFinance
-	server         *httpserver.Server
-	settingsDeps   *httpserver.SettingsDeps
-	secondFactor   *httpserver.SecondFactor
-	setup          *setup.Service
+	subcategories  interface {
+		RefreshSubcategories(context.Context) (int64, error)
+	} // preenche subcategoria e essencial/supérfluo das despesas
+	server       *httpserver.Server
+	settingsDeps *httpserver.SettingsDeps
+	secondFactor *httpserver.SecondFactor
+	setup        *setup.Service
 
 	channel           channelSwitch // por onde o app fala com o dono; liga sem reiniciar
 	channelConfigured atomic.Bool   // há canal configurado (ambiente ou setup), no ar ou não

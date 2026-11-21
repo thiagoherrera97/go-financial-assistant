@@ -40,6 +40,8 @@ type fakeReader struct {
 	catMonths      []domain.CategoryMonth
 	uncategorized  []domain.UncategorizedGroup
 	rules2         []domain.CategoryRule
+	classified     []domain.Classification
+	subSpend       []domain.SubcategorySpend
 	decisions      []domain.Decision
 	analyses       []domain.CoachAnalysis
 	goals          []domain.Goal
@@ -220,6 +222,15 @@ func (f *fakeReader) UncategorizedExpenses(_ context.Context, limit int) ([]doma
 func (f *fakeReader) SetCategoryRule(_ context.Context, key, category string) (int64, error) {
 	f.rules2 = append(f.rules2, domain.CategoryRule{Key: key, Category: category})
 	return 3, f.err
+}
+func (f *fakeReader) RefreshSubcategories(context.Context) (int64, error) { return 0, f.err }
+func (f *fakeReader) SetClassification(_ context.Context, id uuid.UUID, c domain.Classification) (bool, int64, error) {
+	f.classified = append(f.classified, c)
+	return id != uuid.Nil, 2, f.err
+}
+func (f *fakeReader) SpendBySubcategory(_ context.Context, month time.Time) ([]domain.SubcategorySpend, error) {
+	f.from = month
+	return f.subSpend, f.err
 }
 func (f *fakeReader) Accounts(context.Context) ([]domain.Account, error) { return f.accounts, f.err }
 func (f *fakeReader) Institutions(context.Context) ([]domain.Institution, error) {
