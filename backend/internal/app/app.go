@@ -10,6 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/usecase/cycles"
 	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/usecase/insights"
 
 	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/usecase/ledger"
@@ -42,6 +43,7 @@ type app struct {
 	analyzeExpense *ledger.AnalyzeExpense
 	exportCSV      *ledger.ExportCSV
 	insights       *insights.Insights
+	cycles         *cycles.Service // ciclos do salário (ver docs/regras-de-calculo.md)
 	syncer         *openfinance.SyncOpenFinance
 	subcategories  interface {
 		RefreshSubcategories(context.Context) (int64, error)
@@ -115,7 +117,12 @@ func (a *app) buildServices() error {
 	a.analyzeExpense = ledger.NewAnalyzeExpense(a.ledger, a.gemini, a.logger)
 	a.analyzeExpense.SetLocation(a.cfg.DigestLocation)
 	a.exportCSV = ledger.NewExportCSV(a.ledger)
-	a.insights = insights.NewInsights(db.NewDashboardReader(a.db))
+	reader := db.NewDashboardReader(a.db)
+	a.insights = insights.NewInsights(reader)
+	a.cycles = cycles.New(db.NewCycleRepo(a.db), reader.SalaryCredits, a.settings.SalaryParts, time.Now)
+	if err := a.cycles.Refresh(a.ctx); err != nil {
+		a.logger.Error("erro ao calcular os ciclos do salário; as telas usam o mês do calendário", "error", err)
+	}
 	a.insights.SetCardCloseDays(func() int { return a.settings.Int("CARD_CLOSE_DAYS_BEFORE_DUE") })
 	a.insights.SetSalarySchedule(a.settings.SalaryParts)
 

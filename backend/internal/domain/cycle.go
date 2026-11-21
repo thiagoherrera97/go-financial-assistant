@@ -76,6 +76,8 @@ func (c Cycles) DayOf(day time.Time) (n, total int) {
 	return int(dayOf(day).Sub(start).Hours()/24) + 1, int(end.Sub(start).Hours()/24) + 1
 }
 
-func dayOf(t time.Time) time.Time { return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC) }
+func dayOf(t time.Time) time.Time {
+	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
+}
 
 func monthKey(t time.Time) time.Time { return time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, time.UTC) }

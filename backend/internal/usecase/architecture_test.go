@@ -21,6 +21,7 @@ var allowed = map[string][]string{
 	"review":      {"planning"},
 	"coach":       {"planning", "review"},
 	"insights":    {"planning", "review", "balances", "debts"},
+	"cycles":      {},
 }
 
 func TestContextDependencies(t *testing.T) {

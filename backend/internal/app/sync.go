@@ -69,6 +69,11 @@ func (a *app) runSync(client *pluggy.Client, changed <-chan struct{}) {
 			announced = false
 		}
 
+		// A cada volta os ciclos acompanham o salário configurado e os créditos que chegaram (regrava só se mudou).
+		if err := a.cycles.Refresh(a.ctx); err != nil {
+			a.logger.Error("erro ao recalcular os ciclos do salário", "error", err)
+		}
+
 		// A cada volta (e logo ao subir) a subcategoria acompanha o que a sincronização, as regras e as correções mudaram.
 		if n, err := a.subcategories.RefreshSubcategories(a.ctx); err != nil {
 			a.logger.Error("erro ao preencher subcategorias", "error", err)
