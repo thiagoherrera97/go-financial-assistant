@@ -9,6 +9,7 @@ import (
 
 func day(y int, m time.Month, d int) time.Time { return time.Date(y, m, d, 0, 0, 0, 0, time.UTC) }
 func ptr(t time.Time) *time.Time               { return &t }
+func timeMonth(m int) time.Month               { return time.Month(m) }
 
 func macMini() domain.Debt {
 	return domain.Debt{Kind: domain.DebtInstallments, Name: "Mac mini", OriginalAmount: 3200, InstallmentAmount: 320,

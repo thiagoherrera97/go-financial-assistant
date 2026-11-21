@@ -95,7 +95,7 @@ func (a *api) debts(w http.ResponseWriter, r *http.Request) {
 	if a.settings != nil {
 		now = now.In(a.settings.Service.Location())
 	}
-	views, err := a.insights.Debts(r.Context(), now)
+	views, flows, err := a.insights.DebtsAndFlows(r.Context(), now)
 	if err != nil {
 		a.fail(w, "dívidas", err)
 		return
@@ -143,7 +143,7 @@ func (a *api) debts(w http.ResponseWriter, r *http.Request) {
 			out[n].Forecast = &debtForecastJSON{f.Date.Format("2006-01-02"), f.Until.Format("2006-01-02"), linesJSON(f.Lines), cents(f.Balance), cents(f.InLimit), cents(f.Committed), cents(f.CommittedInLimit), dayString(f.ExitDate), f.ExitLabel, f.Days, f.WithinFree}
 		}
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"debts": out})
+	writeJSON(w, http.StatusOK, map[string]any{"debts": out, "flows": flowsJSON(flows)})
 }
 
 func debtToJSON(d domain.Debt) debtJSON {
@@ -350,4 +350,7 @@ func (a *api) registerDebts(rt routes) {
 	rt.mux.Handle("POST /api/debts", rt.protected(jsonOnly(a.createDebt)))
 	rt.mux.Handle("PUT /api/debts/{id}", rt.protected(jsonOnly(a.updateDebt)))
 	rt.mux.Handle("DELETE /api/debts/{id}", rt.protected(sameOriginOnly(a.deleteDebt)))
+	rt.mux.Handle("POST /api/recurring", rt.protected(jsonOnly(a.createFlow)))
+	rt.mux.Handle("PUT /api/recurring/{id}", rt.protected(jsonOnly(a.updateFlow)))
+	rt.mux.Handle("DELETE /api/recurring/{id}", rt.protected(sameOriginOnly(a.deleteFlow)))
 }

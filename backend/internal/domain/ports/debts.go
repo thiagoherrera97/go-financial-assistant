@@ -10,6 +10,7 @@ import (
 
 // DebtStore guarda as dívidas pessoais e lê o que o cálculo delas precisa. Datas são dias civis (fuso de São Paulo).
 type DebtStore interface {
+	RecurringFlowStore
 	Debts(ctx context.Context) ([]domain.Debt, error)
 	CreateDebt(ctx context.Context, d domain.Debt) error
 	// UpdateDebt regrava a dívida; false se ela não existe.
@@ -28,4 +29,14 @@ type DebtStore interface {
 	BankMovements(ctx context.Context, from, to time.Time) ([]domain.MoneyMovement, error)
 	// CardSpend soma as compras à vista no cartão (estornos abatem) com data de from a to (inclusive).
 	CardSpend(ctx context.Context, cardID uuid.UUID, from, to time.Time) (float64, error)
+}
+
+// RecurringFlowStore guarda as entradas e saídas que se repetem todo mês.
+type RecurringFlowStore interface {
+	RecurringFlows(ctx context.Context) ([]domain.RecurringFlow, error)
+	CreateRecurringFlow(ctx context.Context, f domain.RecurringFlow) error
+	// UpdateRecurringFlow regrava a recorrência; false se ela não existe.
+	UpdateRecurringFlow(ctx context.Context, f domain.RecurringFlow) (bool, error)
+	// DeleteRecurringFlow apaga a recorrência; false se ela não existe.
+	DeleteRecurringFlow(ctx context.Context, id uuid.UUID) (bool, error)
 }

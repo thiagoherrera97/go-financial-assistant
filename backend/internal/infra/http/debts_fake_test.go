@@ -15,6 +15,7 @@ type debtFake struct {
 	days     []domain.BalanceDay
 	bill     float64
 	outflows []domain.MoneyMovement
+	flows    []domain.RecurringFlow
 }
 
 func (f *fakeReader) Debts(context.Context) ([]domain.Debt, error) { return f.debt.debts, f.err }
@@ -54,4 +55,30 @@ func (f *fakeReader) BankMovements(context.Context, time.Time, time.Time) ([]dom
 }
 func (f *fakeReader) CardSpend(context.Context, uuid.UUID, time.Time, time.Time) (float64, error) {
 	return f.debt.bill, f.err
+}
+
+func (f *fakeReader) RecurringFlows(context.Context) ([]domain.RecurringFlow, error) {
+	return f.debt.flows, f.err
+}
+func (f *fakeReader) CreateRecurringFlow(_ context.Context, e domain.RecurringFlow) error {
+	f.debt.flows = append(f.debt.flows, e)
+	return f.err
+}
+func (f *fakeReader) UpdateRecurringFlow(_ context.Context, e domain.RecurringFlow) (bool, error) {
+	for i := range f.debt.flows {
+		if f.debt.flows[i].ID == e.ID {
+			f.debt.flows[i] = e
+			return true, f.err
+		}
+	}
+	return false, f.err
+}
+func (f *fakeReader) DeleteRecurringFlow(_ context.Context, id uuid.UUID) (bool, error) {
+	for i := range f.debt.flows {
+		if f.debt.flows[i].ID == id {
+			f.debt.flows = append(f.debt.flows[:i], f.debt.flows[i+1:]...)
+			return true, f.err
+		}
+	}
+	return false, f.err
 }

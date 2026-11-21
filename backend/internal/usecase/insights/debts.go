@@ -35,12 +35,56 @@ const transfersDays = 90
 
 func (i *Insights) debtStore() ports.DebtStore { return i.debts }
 
+// FlowItem é uma recorrência com a sua situação.
+type FlowItem struct {
+	Flow domain.RecurringFlow
+	View debts.FlowView
+}
+
 // Debts calcula a situação de cada dívida no instante now (dia civil do fuso de now).
 func (i *Insights) Debts(ctx context.Context, now time.Time) ([]DebtView, error) {
+	views, _, err := i.DebtsAndFlows(ctx, now)
+	return views, err
+}
+
+// RecurringFlows reconhece as transações de cada recorrência cadastrada.
+func (i *Insights) RecurringFlows(ctx context.Context, now time.Time) ([]FlowItem, error) {
 	store := i.debtStore()
 	if store == nil {
 		return nil, nil
 	}
+	flows, err := store.RecurringFlows(ctx)
+	if err != nil {
+		return nil, err
+	}
+	today := civilDay(now)
+	out := make([]FlowItem, len(flows))
+	for n, f := range flows {
+		moves, err := store.MovementsWith(ctx, f.PayeeMatch, f.StartMonth.AddDate(0, 0, -7))
+		if err != nil {
+			return nil, err
+		}
+		out[n] = FlowItem{Flow: f, View: debts.FlowStatus(f, moves, today)}
+	}
+	return out, nil
+}
+
+// DebtsAndFlows calcula as dívidas e as recorrências; a previsão do cheque especial usa as recorrências cadastradas.
+func (i *Insights) DebtsAndFlows(ctx context.Context, now time.Time) ([]DebtView, []FlowItem, error) {
+	store := i.debtStore()
+	if store == nil {
+		return nil, nil, nil
+	}
+	flows, err := i.RecurringFlows(ctx, now)
+	if err != nil {
+		return nil, nil, err
+	}
+	views, err := i.debtViews(ctx, now, flows)
+	return views, flows, err
+}
+
+func (i *Insights) debtViews(ctx context.Context, now time.Time, flows []FlowItem) ([]DebtView, error) {
+	store := i.debtStore()
 	list, err := store.Debts(ctx)
 	if err != nil {
 		return nil, err
@@ -79,7 +123,7 @@ func (i *Insights) Debts(ctx context.Context, now time.Time) ([]DebtView, error)
 		if d.Kind != domain.DebtOverdraft || d.AccountID == nil {
 			continue
 		}
-		if err := i.overdraftView(ctx, &views[n], list, installments, accounts, now); err != nil {
+		if err := i.overdraftView(ctx, &views[n], list, installments, flows, accounts, now); err != nil {
 			return nil, err
 		}
 	}
@@ -87,7 +131,7 @@ func (i *Insights) Debts(ctx context.Context, now time.Time) ([]DebtView, error)
 }
 
 func (i *Insights) overdraftView(ctx context.Context, v *DebtView, all []domain.Debt, inst map[uuid.UUID]*debts.InstallmentView,
-	accounts []domain.Account, now time.Time) error {
+	flows []FlowItem, accounts []domain.Account, now time.Time) error {
 	store, d, today := i.debtStore(), v.Debt, civilDay(now)
 	var acc *domain.Account
 	for n := range accounts {
@@ -194,32 +238,39 @@ func (i *Insights) overdraftView(ctx context.Context, v *DebtView, all []domain.
 			in.Bills = append(in.Bills, debts.Line{Label: "Parcela " + o.Name, Amount: -o.InstallmentAmount, Date: &due})
 		}
 	}
-	// O de costume: o que entrou e saiu das contas no mesmo período do mês passado e também no mês anterior (financiamento,
-	// seguro, Pix recorrentes), menos as parcelas de dívidas, que já entram acima.
-	from, to := today.AddDate(0, -1, 1), until.AddDate(0, -1, 0)
-	last, err := store.BankMovements(ctx, from, to)
-	if err != nil {
-		return err
-	}
-	// Uma semana de folga no mês anterior: a conta de um dia 10 pode ter caído no dia 8.
-	before, err := store.BankMovements(ctx, from.AddDate(0, -1, -7), to.AddDate(0, -1, 7))
-	if err != nil {
-		return err
-	}
-	keep := func(list []domain.MoneyMovement) []domain.MoneyMovement {
-		var out []domain.MoneyMovement
-		for _, o := range list {
-			skip := false
-			for _, p := range payees {
-				skip = skip || !o.In && domain.MatchesPayee(o.Label, p)
-			}
-			if !skip {
-				out = append(out, o)
-			}
+	// Recorrências: as cadastradas valem; sem nenhuma cadastrada, o app adivinha pelo extrato.
+	if len(flows) > 0 {
+		for _, f := range flows {
+			in.Bills = append(in.Bills, debts.FlowLines(f.Flow, f.View, today, until)...)
 		}
-		return out
+	} else {
+		// Sem cadastro, o de costume: o que entrou e saiu das contas no mesmo período do mês passado e também no mês anterior (financiamento,
+		// seguro, Pix recorrentes), menos as parcelas de dívidas, que já entram acima.
+		from, to := today.AddDate(0, -1, 1), until.AddDate(0, -1, 0)
+		last, err := store.BankMovements(ctx, from, to)
+		if err != nil {
+			return err
+		}
+		// Uma semana de folga no mês anterior: a conta de um dia 10 pode ter caído no dia 8.
+		before, err := store.BankMovements(ctx, from.AddDate(0, -1, -7), to.AddDate(0, -1, 7))
+		if err != nil {
+			return err
+		}
+		keep := func(list []domain.MoneyMovement) []domain.MoneyMovement {
+			var out []domain.MoneyMovement
+			for _, o := range list {
+				skip := false
+				for _, p := range payees {
+					skip = skip || !o.In && domain.MatchesPayee(o.Label, p)
+				}
+				if !skip {
+					out = append(out, o)
+				}
+			}
+			return out
+		}
+		in.Bills = append(in.Bills, debts.Recurring(keep(last), keep(before))...)
 	}
-	in.Bills = append(in.Bills, debts.Recurring(keep(last), keep(before))...)
 	in.Until = until
 	f := debts.BuildForecast(in)
 	v.Forecast = &f

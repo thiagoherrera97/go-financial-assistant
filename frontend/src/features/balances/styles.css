@@ -126,3 +126,12 @@
 .bal-debt-scenarios li { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .bal-debt-scenarios strong { color: var(--text-primary); }
 .bal-debt-lines li.is-estimate span { font-style: italic; }
+.bal-flow-groups { display: grid; gap: 16px; margin-top: 10px; }
+@media (min-width: 900px) { .bal-flow-groups { grid-template-columns: 1fr 1fr; } }
+.bal-flow-group h3 { margin: 0 0 6px; font-size: 1rem; }
+.bal-flow-list { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 8px; }
+.bal-flow { display: grid; grid-template-columns: auto 1fr auto auto; gap: 4px 10px; align-items: start; border-top: 1px solid var(--border); padding-top: 8px; }
+.bal-flow > svg { margin-top: 3px; color: var(--text-secondary); }
+.bal-flow p { margin: 2px 0 0; }
+.bal-flow p svg { vertical-align: -2px; }
+.bal-flow-amount { font-weight: 600; color: var(--text-primary); white-space: nowrap; }

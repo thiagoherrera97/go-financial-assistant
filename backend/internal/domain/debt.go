@@ -79,3 +79,21 @@ func MatchesPayee(label, match string) bool {
 
 // DebtDueIn é o vencimento da dívida no mês de month: o dia DueDay, ou o último dia nos meses mais curtos.
 func DebtDueIn(month time.Time, dueDay int) time.Time { return cardDueIn(month, dueDay) }
+
+// RecurringFlow é uma entrada ou saída que se repete todo mês fora o salário: aluguel, seguro, financiamento, a mãe
+// pagando uma dívida antiga, um valor em 10x, uma ajuda que cresce R$ 100 por mês. O valor do mês é Amount + Step ×
+// (meses desde StartMonth), limitado a MaxAmount (0 = sem limite); Installments (0 = sem fim) é quantos meses dura.
+type RecurringFlow struct {
+	ID           uuid.UUID
+	In           bool // entrada; falso = saída
+	Name         string
+	Party        string // com quem (ex.: Mãe, irmão)
+	Amount       float64
+	Step         float64
+	MaxAmount    float64
+	Day          int
+	StartMonth   time.Time // primeiro dia do mês da primeira ocorrência
+	Installments int
+	PayeeMatch   string // nomes no extrato (Pix, boleto) separados por ";": o que casa e tem o valor do mês conta como feito
+	CreatedAt    time.Time
+}
