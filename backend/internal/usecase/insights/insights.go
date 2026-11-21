@@ -151,7 +151,20 @@ func (i *Insights) MonthSheet(ctx context.Context, month time.Time) (planning.Mo
 		return planning.MonthSheet{}, err
 	}
 	classes := planning.BuildBudget(rows, rules, from, month).Classes
-	return planning.BuildMonthSheet(month, lines, classes, salary.Parts), nil
+	sheet := planning.BuildMonthSheet(month, lines, classes, salary.Parts)
+	sheet.StartsOn, sheet.EndsOn = i.Cycles().Bounds(month)
+	// O que sobrou do ciclo anterior (entradas − despesas dele) passa para este.
+	prevLines, err := i.reader.MonthLines(ctx, month.AddDate(0, -1, 0))
+	if err != nil {
+		return planning.MonthSheet{}, err
+	}
+	var carry *float64
+	if len(prevLines) > 0 {
+		v := planning.BuildMonthSheet(month.AddDate(0, -1, 0), prevLines, nil, nil).Leftover
+		carry = &v
+	}
+	sheet.SetCarryover(carry)
+	return sheet, nil
 }
 
 // Review roda os detectores da revisão sobre o mês to (primeiro dia).

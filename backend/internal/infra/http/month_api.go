@@ -74,5 +74,7 @@ func (a *api) monthSheet(w http.ResponseWriter, r *http.Request) {
 		"cards": cards, "cardsTotal": s.CardsTotal,
 		"expensesTotal": s.ExpensesTotal, "leftover": s.Leftover, "leftoverWithPending": s.LeftoverWithPending,
 		"invested": s.Invested,
+		"startsOn": s.StartsOn.Format("2006-01-02"), "endsOn": s.EndsOn.Format("2006-01-02"),
+		"carryover": s.Carryover, "leftoverWithCarryover": s.LeftoverWithCarryover,
 	})
 }

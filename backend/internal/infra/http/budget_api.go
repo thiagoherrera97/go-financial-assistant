@@ -60,7 +60,9 @@ func (a *api) budget(w http.ResponseWriter, r *http.Request) {
 	for i, it := range b.Items {
 		items[i] = item{it.Key, it.Label, it.Category, domain.Category(it.Category).Label(), string(it.Class), it.Manual, it.Total, it.Count, it.Day, it.Paid, it.Months}
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"month": formatMonth(to), "series": series, "items": items})
+	start, end := a.insights.Cycles().Bounds(to)
+	writeJSON(w, http.StatusOK, map[string]any{"month": formatMonth(to), "series": series, "items": items,
+		"startsOn": start.Format("2006-01-02"), "endsOn": end.Format("2006-01-02")})
 }
 
 var projectionRanges = []int{6, 12, 24}

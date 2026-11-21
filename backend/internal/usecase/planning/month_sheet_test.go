@@ -64,3 +64,20 @@ func TestBuildMonthSheet(t *testing.T) {
 		t.Errorf("totais: despesas %v sobra %v com a receber %v investido %v", s.ExpensesTotal, s.Leftover, s.LeftoverWithPending, s.Invested)
 	}
 }
+
+func TestMonthSheetCarryover(t *testing.T) {
+	s := MonthSheet{Leftover: 100, LeftoverWithPending: 400}
+	prev := 731.27
+	s.SetCarryover(&prev)
+	if s.Carryover == nil || *s.Carryover != 731.27 || s.LeftoverWithCarryover != 1131.27 {
+		t.Errorf("carryover: %+v", s)
+	}
+}
+
+func TestMonthSheetNoPrevious(t *testing.T) {
+	s := MonthSheet{Leftover: 100, LeftoverWithPending: 400}
+	s.SetCarryover(nil)
+	if s.Carryover != nil || s.LeftoverWithCarryover != 400 {
+		t.Errorf("sem ciclo anterior: %+v", s)
+	}
+}

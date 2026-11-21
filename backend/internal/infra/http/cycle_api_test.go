@@ -1,6 +1,10 @@
 package httpserver
 
 import (
+	"encoding/json"
+	"io"
+	"log/slog"
+	"strings"
 	"testing"
 	"time"
 
@@ -19,5 +23,36 @@ func TestMonthStartIsCycle(t *testing.T) {
 	a.cycles = nil
 	if got := a.monthStart(); !got.Equal(time.Date(2026, 12, 1, 0, 0, 0, 0, time.UTC)) {
 		t.Errorf("sem ciclos, monthStart = %v, want dezembro", got)
+	}
+}
+
+func TestMonthAPIPeriod(t *testing.T) {
+	cyc := domain.NewCycles([]domain.CycleStart{
+		{Key: time.Date(2026, 11, 1, 0, 0, 0, 0, time.UTC), Start: time.Date(2026, 11, 13, 0, 0, 0, 0, time.UTC)},
+		{Key: time.Date(2026, 12, 1, 0, 0, 0, 0, time.UTC), Start: time.Date(2026, 12, 15, 0, 0, 0, 0, time.UTC)},
+	})
+	r := &fakeReader{monthLines: []domain.MonthLine{{Key: "salario", Label: "LIQUIDO", Category: "SALARY", Kind: "INCOME", Amount: 5200}}}
+	s := NewServer(0, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	s.SetCycles(func() domain.Cycles { return cyc })
+	if err := s.MountAPI(StaticPassword(testPassword), r); err != nil {
+		t.Fatal(err)
+	}
+	rec := do(s, "GET", "/api/month?month=2026-11", "", nil, login(t, s))
+	var got struct {
+		StartsOn  string   `json:"startsOn"`
+		EndsOn    string   `json:"endsOn"`
+		Carryover *float64 `json:"carryover"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.StartsOn != "2026-11-13" || got.EndsOn != "2026-12-14" || got.Carryover == nil || *got.Carryover != 5200 {
+		t.Errorf("%s", rec.Body.String())
+	}
+	for _, path := range []string{"/api/summary?month=2026-11", "/api/budget?month=2026-11"} {
+		rec := do(s, "GET", path, "", nil, login(t, s))
+		if !strings.Contains(rec.Body.String(), `"startsOn":"2026-11-13"`) {
+			t.Errorf("%s sem o período: %d %s", path, rec.Code, rec.Body.String())
+		}
 	}
 }

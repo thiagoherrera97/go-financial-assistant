@@ -61,6 +61,19 @@ type MonthSheet struct {
 	Leftover            float64 // entradas − despesas, com o que já caiu
 	LeftoverWithPending float64 // contando o salário a receber
 	Invested            float64 // aplicado − resgatado no mês (fora da sobra)
+
+	StartsOn, EndsOn      time.Time // primeiro e último dia do ciclo do salário
+	Carryover             *float64  // sobra do ciclo anterior; nil quando ele não tem lançamentos
+	LeftoverWithCarryover float64   // sobra contando o salário a receber e o que veio do ciclo anterior
+}
+
+// SetCarryover soma a sobra do ciclo anterior (nil = não há ciclo anterior com lançamentos).
+func (s *MonthSheet) SetCarryover(prev *float64) {
+	s.Carryover = prev
+	s.LeftoverWithCarryover = s.LeftoverWithPending
+	if prev != nil {
+		s.LeftoverWithCarryover = round2(s.LeftoverWithPending + *prev)
+	}
 }
 
 const salaryLabel = "Salário"

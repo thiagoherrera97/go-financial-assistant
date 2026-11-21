@@ -38,9 +38,11 @@ func (a *api) summary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	bank := insights.BankBalance(accounts)
+	start, end := a.insights.Cycles().Bounds(month)
 	writeJSON(w, http.StatusOK, map[string]any{
 		"month": formatMonth(month), "current": toTotalsJSON(totals[1]), "previous": toTotalsJSON(totals[0]), "bankBalance": bank,
 		"otherShare": totals[1].OtherShare(),
+		"startsOn":   start.Format("2006-01-02"), "endsOn": end.Format("2006-01-02"),
 	})
 }
 
