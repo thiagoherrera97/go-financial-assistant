@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_GOAL, daysLeftInMonth, parseGoal, spendable } from './spendable'
+import { DEFAULT_GOAL, daysLeftInMonth, debtLabel, debtRemaining, parseGoal, spendable } from './spendable'
 
 describe('spendable', () => {
   const today = new Date(2026, 10, 21) // 21/11: faltam 10 dias contando hoje
@@ -40,5 +40,19 @@ describe('parseGoal', () => {
     expect(parseGoal('{"label":1}')).toEqual(DEFAULT_GOAL)
     expect(parseGoal('nada')).toEqual(DEFAULT_GOAL)
     expect(parseGoal(null)).toEqual(DEFAULT_GOAL)
+    expect(parseGoal(JSON.stringify({ label: 'x', amount: 1, debtId: 'abc' }))).toEqual({ label: 'x', amount: 1, debtId: 'abc' })
+  })
+})
+
+describe('debtRemaining', () => {
+  it('usa o que resta das parcelas ou o limite em uso', () => {
+    expect(debtRemaining({ kind: 'INSTALLMENTS', progress: { remaining: 4500 }, limit: null })).toBe(4500)
+    expect(debtRemaining({ kind: 'OVERDRAFT', progress: null, limit: { inLimit: 2300 } })).toBe(2300)
+    expect(debtRemaining({ kind: 'OVERDRAFT', progress: null, limit: null })).toBe(0)
+  })
+
+  it('nomeia pela pessoa quando há credor', () => {
+    expect(debtLabel({ name: 'Carro', creditor: 'Mãe' })).toBe('dívida com Mãe')
+    expect(debtLabel({ name: 'Carro', creditor: ' ' })).toBe('Carro')
   })
 })

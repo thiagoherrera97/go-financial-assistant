@@ -19,3 +19,19 @@ export const useProjection = (months: number) =>
     queryFn: () => request<Projection>(`/api/projection?months=${months}`),
     placeholderData: keepPreviousData,
   })
+
+/** Dívida pessoal (GET /api/debts), só com o que a projeção usa. */
+export interface Debt {
+  id: string
+  kind: 'OVERDRAFT' | 'INSTALLMENTS'
+  name: string
+  creditor: string
+  progress: { remaining: number; done: boolean } | null
+  limit: { inLimit: number } | null
+}
+
+export const useDebts = () =>
+  useQuery({
+    queryKey: ['debts'],
+    queryFn: () => request<{ debts: Debt[] }>('/api/debts').then((r) => r.debts ?? []),
+  })

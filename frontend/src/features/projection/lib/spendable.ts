@@ -49,6 +49,18 @@ export interface DebtGoal {
   /** Para onde vai a sobra (ex.: "dívida com a mãe"). */
   label: string
   amount: number
+  /** Dívida cadastrada escolhida; sem ela, vale o nome digitado. */
+  debtId?: string
+}
+
+/** Quanto falta de uma dívida: o que resta das parcelas, ou o limite em uso agora no cheque especial. */
+export function debtRemaining(d: { kind: string; progress: { remaining: number } | null; limit: { inLimit: number } | null }): number {
+  return d.kind === 'INSTALLMENTS' ? (d.progress?.remaining ?? 0) : (d.limit?.inLimit ?? 0)
+}
+
+/** Nome da dívida para a frase: "dívida com a Mãe" quando há credor, senão o nome dela. */
+export function debtLabel(d: { name: string; creditor: string }): string {
+  return d.creditor.trim() ? `dívida com ${d.creditor.trim()}` : d.name
 }
 
 const GOAL_KEY = 'projection-debt-goal'
@@ -60,7 +72,10 @@ export function parseGoal(raw: string | null): DebtGoal {
     if (typeof d !== 'object' || d === null) return DEFAULT_GOAL
     const g = d as Partial<DebtGoal>
     const ok = typeof g.label === 'string' && g.label.length <= 60 && typeof g.amount === 'number' && Number.isFinite(g.amount) && g.amount >= 0 && g.amount <= 1e9
-    return ok ? { label: g.label as string, amount: g.amount as number } : DEFAULT_GOAL
+    if (!ok) return DEFAULT_GOAL
+    const goal: DebtGoal = { label: g.label as string, amount: g.amount as number }
+    if (typeof g.debtId === 'string' && g.debtId.length <= 64) goal.debtId = g.debtId
+    return goal
   } catch {
     return DEFAULT_GOAL
   }
