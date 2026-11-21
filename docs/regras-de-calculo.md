@@ -23,9 +23,22 @@ Algumas categorias do Pluggy casam pela categoria **inteira**, não por trecho (
 
 Cada parcela é datada no **mês da fatura em que cai** (`creditCardMetadata.billForecastDate`), mantendo o dia da compra. O Pluggy dá a mesma data de compra a todas as parcelas; sem o ajuste, as 12 parcelas caíam no mês da compra. Parcelas ainda não cobradas ficam `PENDING`.
 
+### Ciclo do salário (o "mês" de todas as telas)
+
+O "mês" do app é o **ciclo do salário** (decisão [0009](decisoes/0009-ciclo-do-salario.md)): do dia em que cai a 1ª parte de `SALARY_SCHEDULE` até a véspera da 1ª parte do mês seguinte. Com `15=…; 30=…`, o ciclo de novembro vai de 15/nov a 14/dez.
+
+- **Nome (chave `AAAA-MM`):** o mês do dia **combinado** da 1ª parte. A API e as telas continuam recebendo `AAAA-MM`; ele significa "o ciclo que começa nesse mês".
+- **Início:** o dia útil da 1ª parte (`domain.SalaryPayDate`: fim de semana ou feriado volta para o dia útil anterior; 15/nov/2026 é domingo e feriado, então o ciclo começa sexta, 13/nov). Se o crédito real dessa parte (casado por `SalaryMonth`, até 5 dias de distância) caiu antes, o ciclo começa no dia do crédito. Os gastos desses dias mudam de ciclo quando a sincronização traz o salário.
+- **Fim:** a véspera do início do ciclo seguinte.
+- **Sem salário configurado:** o ciclo é o mês do calendário.
+- **Onde fica:** `domain/cycle.go` calcula; `usecase/cycles` grava na tabela `cycles` (ao subir e a cada volta do laço de sincronização, só quando algo mudou) e guarda em memória; o SQL usa `cycle_of(dia)` e `cycle_next_start(chave)`. Mudar o dia do salário recalcula também os ciclos passados.
+- **Lançamento só com mês de referência** (recorrente lançado à mão, sem vencimento): fica no ciclo com o nome desse mês.
+- **"Mês atual":** o ciclo de hoje (em 14/dez ainda é o de novembro). O front recebe esse valor em `GET /api/me` (`cycle`). Ritmo das metas, Coach e projeção contam os dias do ciclo; o patrimônio do período é o saldo na véspera do ciclo seguinte. O relatório mensal do dia 1 manda o último ciclo já fechado.
+- **Ficam em datas reais:** vencimentos de dívidas e de fornecedores e o dia em que um recorrente é gerado.
+
 ### Mês das compras no cartão (mês da fatura)
 
-Como na planilha, **toda despesa no cartão conta no mês em que a fatura vence** (`payments.bill_due_date`, calculada em `domain/card_bill.go`); o dia mostrado nas listas continua sendo o da compra. O mês de um pagamento é `COALESCE(bill_due_date, due_date, reference_month, created_at)` (`paymentMonth`), em todas as telas, no chat, no CSV, na projeção e no orçamento.
+Como na planilha, **toda despesa no cartão conta no mês em que a fatura vence** (`payments.bill_due_date`, calculada em `domain/card_bill.go`); o dia mostrado nas listas continua sendo o da compra. O ciclo de um pagamento é o do dia `COALESCE(bill_due_date, due_date, paid_at, created_at)` (`paymentMonth`, via `cycle_of`), ou o do `reference_month` quando é a única data, em todas as telas, no chat, no CSV, na projeção e no orçamento. Por isso a fatura que vence em 10/dez fica no ciclo de novembro (o salário que a paga), e uma compra feita depois do fechamento vai, com a fatura seguinte, para o ciclo seguinte.
 
 - **Fatura informada pelo banco (vale primeiro):** o Pluggy diz em que fatura cada transação do cartão entrou (`creditCardMetadata.billId`, gravado em `payments.card_bill_id`). Quando essa fatura está entre as faturas fechadas lidas (`card_bills`), vale o vencimento dela, sem estimativa: o fechamento real varia (no Santander, de 5 a 8 dias antes do vencimento, conforme fins de semana). As regras abaixo valem para o que não tem fatura informada (a fatura aberta e conectores sem `billId`).
 - **Pendente perto do fechamento:** num cartão em que o banco informa a fatura das transações, compra à vista sem fatura informada que a estimativa poria na última fatura fechada vai para a seguinte (ela ficou pendente no fechamento e o banco a passou adiante).
@@ -137,7 +150,7 @@ A conta da aba FORNECEDORES da planilha, calculada na hora (nada é gravado alé
 - **Conferência com o banco:** cada parte fica com o crédito da categoria Salário mais perto da data prevista, até 5 dias de distância; um crédito serve a uma parte só, e créditos extras (férias, 13º) ficam de fora. Parte sem crédito = **a receber**. Nada é lançado: o salário real continua vindo só do Open Finance, então não duplica.
 - **Painel:** mostra as partes do mês, quando caem ou caíram e quanto falta receber. Parte que veio acima do combinado (hora extra no mesmo crédito) mostra a diferença. Créditos de salário do mês que não ficaram com nenhuma parte (13º, PLR, férias, hora extra à parte) aparecem como **extras**; eles contam nas entradas do mês, mas não no "a receber" nem na projeção, que usa só o combinado.
 
-## Tela do mês (`planning/month_sheet.go`)
+## Tela do ciclo (`planning/month_sheet.go`)
 
 O mês como na planilha (`GET /api/month`, página **Mês**), pelo mesmo critério de mês das outras telas (compra no cartão no mês da fatura):
 
@@ -146,6 +159,7 @@ O mês como na planilha (`GET /api/month`, página **Mês**), pelo mesmo critér
 - **Fatura de cada cartão:** o total do mês da fatura, por categoria (compras menos estornos), mais as parcelas previstas e o ajuste pelo total do banco em linhas separadas. Lançamento manual no cartão (sem conta) entra como "Cartão (lançado à mão)".
 - **Outras despesas:** o resto fora do cartão, por categoria; o que está em Outros aparece pelo nome (Pix para uma pessoa, um boleto).
 - **Sobra** = entradas − (fixas + faturas + outras). Com salário a receber, mostra também a sobra contando com ele. Aplicações e resgates ficam fora da sobra e aparecem à parte.
+- **Veio do ciclo anterior:** a sobra do ciclo anterior (só as entradas − despesas dele, sem acumular os anteriores). O card Sobra soma esse valor; sem lançamentos no ciclo anterior, não aparece. A tela mostra o período (ex.: 13/nov – 14/dez).
 
 ## Mês em andamento
 
