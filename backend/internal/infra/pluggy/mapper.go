@@ -118,7 +118,7 @@ func toExternal(accountType domain.AccountType, t transaction) (ports.ExternalTr
 	if err != nil || amount == 0 || t.ID == "" {
 		return ports.ExternalTransaction{}, false
 	}
-	bankTime := bankMoment(date)
+	bankTime := bankMoment(date, accountType == domain.AccountCredit)
 	date = bankDay(date, bankTime)
 
 	category := strings.ToLower(t.Category)
@@ -192,16 +192,20 @@ func toExternal(accountType domain.AccountType, t transaction) (ports.ExternalTr
 }
 
 // bankMoment devolve o instante em que o banco registrou a transação, ou nil quando ele só mandou o dia (meia-noite exata
-// em UTC ou em Brasília).
-func bankMoment(t time.Time) *time.Time {
+// em UTC ou em Brasília). Na conta o Pluggy manda o instante em UTC; no cartão, manda o horário de Brasília marcado como
+// UTC (compra às 00:26 no app do Santander chega como "00:26:33Z"), então o relógio é lido como horário de São Paulo.
+func bankMoment(t time.Time, card bool) *time.Time {
 	u := t.UTC()
 	if u.Minute() == 0 && u.Second() == 0 && u.Nanosecond() == 0 && (u.Hour() == 0 || u.Hour() == 3) {
 		return nil
 	}
+	if card {
+		u = time.Date(u.Year(), u.Month(), u.Day(), u.Hour(), u.Minute(), u.Second(), u.Nanosecond(), saoPaulo).UTC()
+	}
 	return &u
 }
 
-// saoPaulo é o fuso do dia e da hora das transações: o Open Finance é brasileiro e o Pluggy manda o instante em UTC.
+// saoPaulo é o fuso do dia e da hora das transações: o Open Finance é brasileiro.
 var saoPaulo = mustLocation("America/Sao_Paulo")
 
 func mustLocation(name string) *time.Location {

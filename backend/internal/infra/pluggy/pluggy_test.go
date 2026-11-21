@@ -642,8 +642,8 @@ func TestToExternal_BankTime(t *testing.T) {
 		name, date string
 		want       *time.Time
 	}{
-		{"hora do banco", "2026-11-17T21:27:58.000Z", ptrTime(time.Date(2026, 11, 17, 21, 27, 58, 0, time.UTC))},
-		{"com fuso", "2026-11-17T18:27:58-03:00", ptrTime(time.Date(2026, 11, 17, 21, 27, 58, 0, time.UTC))},
+		// Cartão: o relógio enviado já é o de Brasília (o "Z" não vale), então 21:27 "Z" é 21:27 em São Paulo.
+		{"hora do cartão", "2026-11-17T21:27:58.000Z", ptrTime(time.Date(2026, 11, 18, 0, 27, 58, 0, time.UTC))},
 		{"só o dia (meia-noite UTC)", "2026-09-30T00:00:00.000Z", nil},
 		{"só o dia (meia-noite em Brasília)", "2026-09-30T03:00:00.000Z", nil},
 	}
@@ -660,6 +660,20 @@ func TestToExternal_BankTime(t *testing.T) {
 		if !got.Date.Equal(time.Date(2026, got.Date.Month(), got.Date.Day(), 0, 0, 0, 0, time.UTC)) {
 			t.Errorf("%s: a data continua sendo só o dia: %v", tc.name, got.Date)
 		}
+	}
+
+	// Conta: o instante é UTC de verdade.
+	conta := tx("DEBIT", "Shopping", 10)
+	conta.Date = "2026-11-17T21:27:58.061Z"
+	if got, _ := toExternal(domain.AccountBank, conta); got.BankTime == nil || !got.BankTime.Equal(time.Date(2026, 11, 17, 21, 27, 58, 61e6, time.UTC)) {
+		t.Errorf("hora da conta: %v", got.BankTime)
+	}
+	// Cartão logo depois da meia-noite: Conta Vivo às 00:26 de 10/11 no app do Santander fica no dia 10.
+	vivo := tx("DEBIT", "Telecommunications", 124.89)
+	vivo.Date = "2026-11-10T00:26:33.000Z"
+	if got, _ := toExternal(domain.AccountCredit, vivo); !got.Date.Equal(time.Date(2026, 11, 10, 0, 0, 0, 0, time.UTC)) ||
+		got.BankTime == nil || got.BankTime.In(saoPaulo).Format("02/01 15:04") != "10/11 00:26" {
+		t.Errorf("Conta Vivo: dia %v, hora %v", got.Date, got.BankTime)
 	}
 
 	// Dia em São Paulo: 00:54 UTC de 14/11 é 21:54 de 13/11 em Brasília.
@@ -679,9 +693,9 @@ func TestToExternal_BankTime(t *testing.T) {
 	if got, _ := toExternal(domain.AccountCredit, parcela); got.BankTime != nil {
 		t.Errorf("parcela não deveria ter hora: %v", got.BankTime)
 	}
-	// Parcela comprada à noite: o dia na fatura é o da compra em São Paulo (09/08), não o de UTC (10/08).
+	// Parcela comprada logo depois da meia-noite: o dia na fatura é o do relógio do cartão (10/08), não o de UTC − 3h.
 	parcela.Date = "2026-08-10T01:30:00.000Z"
-	if got, _ := toExternal(domain.AccountCredit, parcela); !got.Date.Equal(time.Date(2026, 10, 9, 0, 0, 0, 0, time.UTC)) {
+	if got, _ := toExternal(domain.AccountCredit, parcela); !got.Date.Equal(time.Date(2026, 10, 10, 0, 0, 0, 0, time.UTC)) {
 		t.Errorf("parcela no dia errado: %v", got.Date)
 	}
 }

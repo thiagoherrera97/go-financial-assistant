@@ -36,6 +36,21 @@ func transactionWhere(f domain.TransactionFilter) (string, []any) {
 	if f.Category != "" {
 		add("p.category = ?", f.Category)
 	}
+	switch f.Subcategory {
+	case "":
+	case "none":
+		where = append(where, "p.subcategory IS NULL")
+	default:
+		add("p.subcategory = ?", f.Subcategory)
+	}
+	switch f.Essential {
+	case "true":
+		where = append(where, "p.essential")
+	case "false":
+		where = append(where, "NOT p.essential")
+	case "unknown":
+		where = append(where, "p.kind = 'EXPENSE' AND p.essential IS NULL")
+	}
 	if f.PaymentMethod != "" {
 		add("p.payment_method = ?", f.PaymentMethod)
 	}
@@ -55,7 +70,7 @@ func (r *TransactionsRepo) Transactions(ctx context.Context, f domain.Transactio
 	// COUNT(*) OVER () traz o total sem uma segunda consulta; sem linhas, o total é 0.
 	query := fmt.Sprintf(`
 		SELECT pay.id, `+txDate+` AS date,
-		       COALESCE(p.description, ''), p.category, p.payment_method, p.kind,
+		       COALESCE(p.description, ''), p.category, COALESCE(p.subcategory, ''), p.essential, p.payment_method, p.kind,
 		       COALESCE(p.transfer_direction, ''), p.type, pay.status, pay.amount,
 		       pay.installment_number, a.id, COALESCE(a.name || ' ' || a.last4, ''),
 		       pay.external_id IS NOT NULL, COALESCE(pay.note, ''), pay.bank_time, COUNT(*) OVER ()
@@ -79,7 +94,7 @@ func (r *TransactionsRepo) Transactions(ctx context.Context, f domain.Transactio
 	)
 	for rows.Next() {
 		var t domain.Transaction
-		if err := rows.Scan(&t.ID, &t.Date, &t.Description, &t.Category, &t.PaymentMethod, &t.Kind,
+		if err := rows.Scan(&t.ID, &t.Date, &t.Description, &t.Category, &t.Subcategory, &t.Essential, &t.PaymentMethod, &t.Kind,
 			&t.TransferDirection, &t.Type, &t.Status, &t.Amount, &t.InstallmentNumber,
 			&t.AccountID, &t.AccountName, &t.FromOpenFinance, &t.Note, &t.BankTime, &total); err != nil {
 			return nil, 0, fmt.Errorf("erro ao escanear transação: %w", err)

@@ -11,6 +11,8 @@ type TransactionFilter struct {
 	Kind          string
 	ExcludeKind   string // tira um tipo (ex.: INCOME, para os grupos de categoria só com gastos)
 	Category      string
+	Subcategory   string // código da subcategoria; "none" = sem subcategoria
+	Essential     string // "true", "false" ou "unknown" (a revisar); vazio = todos
 	PaymentMethod string
 	AccountID     *uuid.UUID
 	Day           *time.Time // um dia específico (sobrepõe Month)
@@ -47,6 +49,8 @@ type Transaction struct {
 	Date              time.Time
 	Description       string
 	Category          string
+	Subcategory       string // "" quando não tem (ou ainda não foi classificada)
+	Essential         *bool  // nil = a revisar
 	PaymentMethod     string
 	Kind              string
 	TransferDirection string

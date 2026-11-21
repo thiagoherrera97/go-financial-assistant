@@ -54,7 +54,9 @@ func (r *ClassifyRepo) SetCategoryRule(ctx context.Context, key, category string
 	}
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO category_rules (key, category) VALUES ($1, $2)
-		ON CONFLICT (key) DO UPDATE SET category = EXCLUDED.category, updated_at = NOW()
+		ON CONFLICT (key) DO UPDATE SET category = EXCLUDED.category, updated_at = NOW(),
+			subcategory = CASE WHEN category_rules.category = EXCLUDED.category THEN category_rules.subcategory END,
+			essential = CASE WHEN category_rules.category = EXCLUDED.category THEN category_rules.essential END
 	`, key, category); err != nil {
 		return 0, fmt.Errorf("erro ao gravar regra de categoria: %w", err)
 	}
