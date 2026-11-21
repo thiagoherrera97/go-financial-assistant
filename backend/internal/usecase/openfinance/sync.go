@@ -299,6 +299,7 @@ func (s *SyncOpenFinance) syncOne(ctx context.Context, tx ports.ExternalTransact
 
 	payment := domain.NewPayment(purchase.ID, purchase.TotalAmount, domain.PaymentStatusPaid)
 	payment.DueDate, payment.PaidAt, payment.ExternalID, payment.AccountID = &tx.Date, &tx.Date, &tx.ID, &accountID
+	payment.BankTime = tx.BankTime
 	if tx.BillID != "" {
 		payment.CardBillID = &tx.BillID
 	}

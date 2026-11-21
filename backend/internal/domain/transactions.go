@@ -30,7 +30,6 @@ const (
 // com os gastos de uma categoria (ex.: Outros fica só com gastos sem categoria).
 const IncomeGroupKey = "INCOME"
 
-
 // TransactionGroup soma as transações de um grupo (categoria ou dia) sob os mesmos filtros da lista.
 // Key é o valor do enum (categoria) ou a data AAAA-MM-DD.
 type TransactionGroup struct {
@@ -58,7 +57,8 @@ type Transaction struct {
 	AccountID         *uuid.UUID
 	AccountName       string
 	FromOpenFinance   bool
-	Note              string // escrita pela pessoa; vazia sem nota
+	Note              string     // escrita pela pessoa; vazia sem nota
+	BankTime          *time.Time // instante (com hora) informado pelo banco; nil se não houver
 }
 
 // TransferCandidate é um lançamento do banco que parece Pix, TED ou DOC.

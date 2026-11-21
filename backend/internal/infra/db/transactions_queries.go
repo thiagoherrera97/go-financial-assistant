@@ -58,12 +58,12 @@ func (r *TransactionsRepo) Transactions(ctx context.Context, f domain.Transactio
 		       COALESCE(p.description, ''), p.category, p.payment_method, p.kind,
 		       COALESCE(p.transfer_direction, ''), p.type, pay.status, pay.amount,
 		       pay.installment_number, a.id, COALESCE(a.name || ' ' || a.last4, ''),
-		       pay.external_id IS NOT NULL, COALESCE(pay.note, ''), COUNT(*) OVER ()
+		       pay.external_id IS NOT NULL, COALESCE(pay.note, ''), pay.bank_time, COUNT(*) OVER ()
 		FROM payments pay
 		JOIN purchases p ON p.id = pay.purchase_id
 		LEFT JOIN accounts a ON a.id = pay.account_id
 		WHERE %s
-		ORDER BY date DESC, pay.created_at DESC, pay.id
+		ORDER BY date DESC, pay.bank_time DESC NULLS LAST, pay.created_at DESC, pay.id
 		LIMIT $%d OFFSET $%d
 	`, where, len(args)-1, len(args))
 
@@ -81,7 +81,7 @@ func (r *TransactionsRepo) Transactions(ctx context.Context, f domain.Transactio
 		var t domain.Transaction
 		if err := rows.Scan(&t.ID, &t.Date, &t.Description, &t.Category, &t.PaymentMethod, &t.Kind,
 			&t.TransferDirection, &t.Type, &t.Status, &t.Amount, &t.InstallmentNumber,
-			&t.AccountID, &t.AccountName, &t.FromOpenFinance, &t.Note, &total); err != nil {
+			&t.AccountID, &t.AccountName, &t.FromOpenFinance, &t.Note, &t.BankTime, &total); err != nil {
 			return nil, 0, fmt.Errorf("erro ao escanear transação: %w", err)
 		}
 		result = append(result, t)

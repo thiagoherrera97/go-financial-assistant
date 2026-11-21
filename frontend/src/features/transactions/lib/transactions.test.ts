@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { describeAmount, investSummary, formatDay, formatDayLabel, incomeSources, INCOME_GROUP, monthFilter, toApiQuery, withGroupFilter } from './transactions'
+import { describeAmount, investSummary, formatBankTime, formatDay, formatDayLabel, incomeSources, INCOME_GROUP, monthFilter, toApiQuery, withGroupFilter } from './transactions'
 import type { Transaction } from '../api'
 
 const q = (s: string) => new URLSearchParams(s)
@@ -111,5 +111,15 @@ describe('withGroupFilter em Entradas', () => {
     const other = new URLSearchParams(withGroupFilter('month=2026-11', 'category', 'OTHER'))
     expect(other.get('category')).toBe('OTHER')
     expect(other.get('exclude_kind')).toBe('INCOME')
+  })
+})
+
+describe('formatBankTime', () => {
+  it('mostra a hora e o minuto do banco', () => {
+    expect(formatBankTime('2026-11-17T21:27:58Z')).toMatch(/^\d{2}:\d{2}$/)
+  })
+  it('fica vazio sem hora ou com valor inválido', () => {
+    expect(formatBankTime(undefined)).toBe('')
+    expect(formatBankTime('ontem')).toBe('')
   })
 })

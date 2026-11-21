@@ -20,6 +20,8 @@ export interface Transaction {
   source: 'MANUAL' | 'OPEN_FINANCE'
   /** Nota escrita por você ("o que foi"); vazia sem nota. */
   note: string
+  /** Instante (ISO, com hora) em que o banco registrou; ausente em manuais, parcelas e bancos que só mandam o dia. */
+  bankTime?: string
 }
 
 export interface TransactionGroup {

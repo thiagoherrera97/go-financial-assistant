@@ -119,6 +119,14 @@ export function withGroupFilter(query: string, key: 'category' | 'day', value: s
   return q.toString()
 }
 
+/** Instante ISO do banco → "18:27", no fuso de quem está vendo; vazio se ausente ou inválido. */
+export function formatBankTime(iso?: string): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+}
+
 /** "2026-09-03" → "03/09/2026", sem passar por Date (evita deslocamento de fuso). */
 export function formatDay(iso: string): string {
   const [y, m, d] = iso.split('-')

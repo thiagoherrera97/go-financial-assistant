@@ -15,6 +15,7 @@ type ExternalTransaction struct {
 	ID            string
 	AccountID     string // ID da conta na origem (ExternalAccount.ID)
 	Date          time.Time
+	BankTime      *time.Time // instante (com hora) em que o banco registrou; nil se ele só manda o dia ou em parcelas
 	Description   string
 	RawInput      string
 	Amount        float64 // sempre positivo

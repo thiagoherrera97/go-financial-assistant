@@ -26,6 +26,7 @@ type Payment struct {
 	ExternalID        *string    // ID na origem (Open Finance); nil em lançamentos manuais
 	AccountID         *uuid.UUID // conta de origem (Open Finance); nil em lançamentos manuais
 	CardBillID        *string    // fatura em que o banco pôs a transação do cartão (Open Finance), se informada
+	BankTime          *time.Time // instante (com hora) informado pelo banco; só para exibição
 	CreatedAt         time.Time
 }
 

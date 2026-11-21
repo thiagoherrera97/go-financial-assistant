@@ -1,4 +1,4 @@
-import { describeAmount, formatDay } from '../lib/transactions'
+import { describeAmount, formatBankTime, formatDay } from '../lib/transactions'
 import { CategoryChip } from '../../../shared/components/CategoryChip'
 import { DeleteManual } from './DeleteManual'
 import { NoteEditor } from './NoteEditor'
@@ -30,9 +30,17 @@ export function TransactionTable({ items, hideCategory = false }: { items: Trans
         <tbody>
           {items.map((t) => {
             const a = describeAmount(t)
+            const time = formatBankTime(t.bankTime)
             return (
               <tr key={t.id}>
-                <td>{formatDay(t.date)}</td>
+                <td>
+                  {formatDay(t.date)}
+                  {time && (
+                    <span className="amount-caption" title="Hora informada pelo banco">
+                      {time}
+                    </span>
+                  )}
+                </td>
                 <td className="left">
                   {t.description || '—'}
                   {t.status === 'PENDING' && <span className="badge">Pendente</span>}

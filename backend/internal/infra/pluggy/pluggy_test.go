@@ -636,3 +636,38 @@ func TestAccountReservedBalances(t *testing.T) {
 		t.Errorf("caixinhas = %+v", ext.Reserved)
 	}
 }
+
+func TestToExternal_BankTime(t *testing.T) {
+	cases := []struct {
+		name, date string
+		want       *time.Time
+	}{
+		{"hora do banco", "2026-11-17T21:27:58.000Z", ptrTime(time.Date(2026, 11, 17, 21, 27, 58, 0, time.UTC))},
+		{"com fuso", "2026-11-17T18:27:58-03:00", ptrTime(time.Date(2026, 11, 17, 21, 27, 58, 0, time.UTC))},
+		{"só o dia (meia-noite UTC)", "2026-09-30T00:00:00.000Z", nil},
+		{"só o dia (meia-noite em Brasília)", "2026-09-30T03:00:00.000Z", nil},
+	}
+	for _, tc := range cases {
+		x := tx("DEBIT", "Shopping", 10)
+		x.Date = tc.date
+		got, ok := toExternal(domain.AccountCredit, x)
+		if !ok {
+			t.Fatalf("%s: descartada", tc.name)
+		}
+		if (got.BankTime == nil) != (tc.want == nil) || (tc.want != nil && !got.BankTime.Equal(*tc.want)) {
+			t.Errorf("%s: BankTime = %v, quer %v", tc.name, got.BankTime, tc.want)
+		}
+		if !got.Date.Equal(time.Date(2026, got.Date.Month(), got.Date.Day(), 0, 0, 0, 0, time.UTC)) {
+			t.Errorf("%s: a data continua sendo só o dia: %v", tc.name, got.Date)
+		}
+	}
+
+	parcela := tx("DEBIT", "Shopping", 10)
+	parcela.Date = "2026-08-10T15:04:05.000Z"
+	parcela.CreditCardMetadata = &cardMetadata{InstallmentNumber: 3, TotalInstallments: 5, BillForecastDate: "2026-10"}
+	if got, _ := toExternal(domain.AccountCredit, parcela); got.BankTime != nil {
+		t.Errorf("parcela não deveria ter hora: %v", got.BankTime)
+	}
+}
+
+func ptrTime(t time.Time) *time.Time { return &t }

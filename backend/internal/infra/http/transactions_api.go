@@ -143,6 +143,7 @@ func (a *api) transactions(w http.ResponseWriter, r *http.Request) {
 		AccountName       string     `json:"accountName,omitempty"`
 		Source            string     `json:"source"`
 		Note              string     `json:"note"`
+		BankTime          *time.Time `json:"bankTime,omitempty"`
 	}
 	items := make([]item, len(txs))
 	for i, t := range txs {
@@ -152,7 +153,7 @@ func (a *api) transactions(w http.ResponseWriter, r *http.Request) {
 		}
 		items[i] = item{t.ID, t.Date.Format(time.DateOnly), t.Description, t.Category, domain.Category(t.Category).Label(),
 			t.PaymentMethod, domain.PaymentMethod(t.PaymentMethod).Label(), t.Kind, t.TransferDirection, t.Type, t.Status,
-			t.Amount, t.InstallmentNumber, t.AccountID, t.AccountName, source, t.Note}
+			t.Amount, t.InstallmentNumber, t.AccountID, t.AccountName, source, t.Note, t.BankTime}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"items": items, "total": total, "page": page, "limit": f.Limit})
 }

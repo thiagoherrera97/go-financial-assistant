@@ -80,7 +80,8 @@ func (r *LedgerRepo) RefreshExternal(ctx context.Context, tx ports.ExternalTrans
 			UPDATE payments SET account_id = COALESCE(account_id, $2),
 				due_date = CASE WHEN $4 THEN $5::date ELSE due_date END,
 				paid_at = CASE WHEN $4 AND paid_at IS NOT NULL THEN $5::timestamptz ELSE paid_at END,
-				card_bill_id = COALESCE(NULLIF($6, ''), card_bill_id)
+				card_bill_id = COALESCE(NULLIF($6, ''), card_bill_id),
+				bank_time = $7
 			WHERE external_id = $1 RETURNING purchase_id
 		), recategorized AS (
 			UPDATE purchases p SET category = $3
@@ -90,7 +91,7 @@ func (r *LedgerRepo) RefreshExternal(ctx context.Context, tx ports.ExternalTrans
 		SELECT COUNT(*) FROM linked
 	`
 	var n int
-	if err := r.db.Pool.QueryRow(ctx, query, tx.ID, accountID, tx.Category, tx.Installment, tx.Date, tx.BillID).Scan(&n); err != nil {
+	if err := r.db.Pool.QueryRow(ctx, query, tx.ID, accountID, tx.Category, tx.Installment, tx.Date, tx.BillID, tx.BankTime).Scan(&n); err != nil {
 		return false, fmt.Errorf("erro ao verificar transação externa: %w", err)
 	}
 	return n > 0, nil
@@ -140,12 +141,13 @@ func (r *LedgerRepo) SaveExternal(ctx context.Context, purchase *domain.Purchase
 
 	query := `
 		INSERT INTO payments
-			(id, purchase_id, amount, status, due_date, paid_at, external_id, account_id, created_at, card_bill_id)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+			(id, purchase_id, amount, status, due_date, paid_at, external_id, account_id, created_at, card_bill_id, bank_time)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 	`
 	if _, err := tx.Exec(ctx, query,
 		payment.ID, payment.PurchaseID, payment.Amount, payment.Status,
 		payment.DueDate, payment.PaidAt, payment.ExternalID, payment.AccountID, payment.CreatedAt, payment.CardBillID,
+		payment.BankTime,
 	); err != nil {
 		return fmt.Errorf("erro ao salvar pagamento externo: %w", err)
 	}
@@ -166,7 +168,8 @@ func (r *LedgerRepo) SaveExternal(ctx context.Context, purchase *domain.Purchase
 // de diferença, recorrente no mesmo mês), em vez de criar um segundo lançamento. Parcelados ficam de fora.
 func (r *LedgerRepo) ReconcileExternal(ctx context.Context, tx ports.ExternalTransaction, accountID uuid.UUID) (bool, error) {
 	query := `
-		UPDATE payments SET external_id = $1, account_id = $6, status = 'PAID', paid_at = COALESCE(paid_at, $5::timestamptz)
+		UPDATE payments SET external_id = $1, account_id = $6, status = 'PAID', paid_at = COALESCE(paid_at, $5::timestamptz),
+			bank_time = $7
 		WHERE id = (
 			SELECT pay.id
 			FROM payments pay
@@ -186,7 +189,7 @@ func (r *LedgerRepo) ReconcileExternal(ctx context.Context, tx ports.ExternalTra
 			FOR UPDATE SKIP LOCKED
 		)
 	`
-	tag, err := r.db.Pool.Exec(ctx, query, tx.ID, tx.Kind, tx.Amount, tx.Date, tx.Date, accountID)
+	tag, err := r.db.Pool.Exec(ctx, query, tx.ID, tx.Kind, tx.Amount, tx.Date, tx.Date, accountID, tx.BankTime)
 	if err != nil {
 		return false, fmt.Errorf("erro ao conciliar transação externa: %w", err)
 	}

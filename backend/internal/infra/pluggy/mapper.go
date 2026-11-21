@@ -118,6 +118,7 @@ func toExternal(accountType domain.AccountType, t transaction) (ports.ExternalTr
 	if err != nil || amount == 0 || t.ID == "" {
 		return ports.ExternalTransaction{}, false
 	}
+	bankTime := bankMoment(date)
 	date = date.UTC().Truncate(24 * time.Hour)
 
 	category := strings.ToLower(t.Category)
@@ -144,12 +145,14 @@ func toExternal(accountType domain.AccountType, t transaction) (ports.ExternalTr
 	if m := t.CreditCardMetadata; m != nil && m.TotalInstallments > 1 {
 		description = fmt.Sprintf("%s (%d/%d)", description, m.InstallmentNumber, m.TotalInstallments)
 		installment = true
+		bankTime = nil // a hora é da compra original, meses antes: ao lado do dia da parcela, só confundiria
 		date = installmentDate(date, m.BillForecastDate)
 	}
 
 	ext := ports.ExternalTransaction{
 		ID:            t.ID,
 		Date:          date,
+		BankTime:      bankTime,
 		Description:   description,
 		RawInput:      fmt.Sprintf("[open finance: %s | %s]", t.Category, t.DescriptionRaw),
 		Amount:        amount,
@@ -186,6 +189,16 @@ func toExternal(accountType domain.AccountType, t transaction) (ports.ExternalTr
 		}
 	}
 	return ext, true
+}
+
+// bankMoment devolve o instante em que o banco registrou a transação, ou nil quando ele só mandou o dia (meia-noite exata
+// em UTC ou em Brasília).
+func bankMoment(t time.Time) *time.Time {
+	u := t.UTC()
+	if u.Minute() == 0 && u.Second() == 0 && u.Nanosecond() == 0 && (u.Hour() == 0 || u.Hour() == 3) {
+		return nil
+	}
+	return &u
 }
 
 // installmentDate leva a parcela para o mês da fatura em que ela cai (billForecastDate, "AAAA-MM"), mantendo o dia da
