@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { AlertTriangle, ArrowDownLeft, ArrowUpRight, CalendarClock, CircleCheck, HandCoins, Pencil, Plus, Trash2 } from 'lucide-react'
 import { formatMonthShort, shortDay } from '../../../shared/lib/format'
 import { createDebt, deleteDebt, updateDebt, useDebts, type Debt, type DebtInput } from '../api'
-import { debtOutstanding, debtToForm, emptyDebtForm, nextDueDate } from '../lib/debts'
+import { debtOutstanding, debtToForm, emptyDebtForm, nextDay, nextDueDate, salaryFallsShort } from '../lib/debts'
 import { DebtForm } from './DebtForm'
 import { StaticMoney } from './Money'
 
@@ -192,22 +192,33 @@ function Overdraft({ debt: d, hidden }: { debt: Debt; hidden: boolean }) {
 
       {f && (
         <div className="bal-debt-forecast">
-          {f.inLimit > 0 ? (
-            <p>
-              Previsão para <strong>{shortDay(f.date)}</strong>: cerca de <strong><StaticMoney value={f.inLimit} hidden={hidden} /></strong> no
-              limite
-              {f.exitDate ? (
-                <>
-                  {' '}por {f.days} {f.days === 1 ? 'dia' : 'dias'}, até o {f.exitLabel.toLowerCase()} ({shortDay(f.exitDate)}).{' '}
-                  {f.withinFree ? 'Dentro dos dias sem juros (só IOF).' : <strong>Passa dos {d.freeDays} dias sem juros.</strong>}
-                </>
-              ) : (
-                '. O salário configurado não cobre: confira as partes do salário em Configurações.'
-              )}
-            </p>
-          ) : (
-            <p>Previsão para <strong>{shortDay(f.date)}</strong>: a conta não deve entrar no limite.</p>
-          )}
+          <p>
+            Previsão para <strong>{shortDay(f.date)}</strong> até a véspera do salário ({shortDay(f.until)}):
+          </p>
+          <ul className="bal-debt-scenarios">
+            <li>
+              <span>Sem compras novas no cartão</span>
+              <strong>{f.committedInLimit > 0 ? <><StaticMoney value={f.committedInLimit} hidden={hidden} /> no limite</> : 'fora do limite'}</strong>
+            </li>
+            <li>
+              <span>Gastando no cartão como no mês passado</span>
+              <strong>{f.inLimit > 0 ? <><StaticMoney value={f.inLimit} hidden={hidden} /> no limite</> : 'fora do limite'}</strong>
+            </li>
+          </ul>
+          {f.inLimit > 0 &&
+            (f.exitDate ? (
+              <p className={!f.withinFree || salaryFallsShort(f) ? 'bal-debt-warn' : undefined}>
+                {!f.withinFree || salaryFallsShort(f) ? <AlertTriangle size={16} aria-hidden /> : <CalendarClock size={16} aria-hidden />}{' '}
+                {salaryFallsShort(f) && <>O salário de {shortDay(nextDay(f.until))} não cobre o buraco. </>}
+                Sai do limite com o {f.exitLabel.toLowerCase()} ({shortDay(f.exitDate)}), {f.days} {f.days === 1 ? 'dia' : 'dias'} depois.{' '}
+                {f.withinFree ? 'Dentro dos dias sem juros (só IOF).' : <strong>Passa dos {d.freeDays} dias sem juros.</strong>}
+              </p>
+            ) : (
+              <p className="bal-debt-warn">
+                <AlertTriangle size={16} aria-hidden /> Nenhum salário do mês seguinte tira a conta do limite. Confira as partes do salário em
+                Configurações.
+              </p>
+            ))}
           <details>
             <summary>Como chegamos nesse número</summary>
             <ul className="bal-debt-lines">
@@ -216,7 +227,7 @@ function Overdraft({ debt: d, hidden }: { debt: Debt; hidden: boolean }) {
                 <StaticMoney value={f.balance - f.lines.reduce((s, x) => s + x.amount, 0)} hidden={hidden} />
               </li>
               {f.lines.map((x, n) => (
-                <li key={`${x.label}-${n}`}>
+                <li key={`${x.label}-${n}`} className={x.estimate ? 'is-estimate' : undefined}>
                   <span>
                     {x.label}
                     {x.date && ` · ${shortDay(x.date)}`}
@@ -225,13 +236,14 @@ function Overdraft({ debt: d, hidden }: { debt: Debt; hidden: boolean }) {
                 </li>
               ))}
               <li className="is-total">
-                <span>Saldo previsto em {shortDay(f.date)}</span>
+                <span>Saldo previsto até {shortDay(f.until)}</span>
                 <StaticMoney value={f.balance} hidden={hidden} />
               </li>
             </ul>
             <p className="tile-note">
-              A fatura soma o que já entrou nela até agora (compras novas aumentam). As saídas de costume repetem o que saiu da conta no
-              mesmo período do mês passado.
+              A fatura conta o que já entrou nela; a estimativa (em itálico) repete as compras à vista no cartão do mesmo período do mês
+              passado. Entradas e saídas das contas só entram quando se repetem todo mês (mesmo nome e valor parecido nos dois meses
+              anteriores); Pix avulsos ficam de fora. O guardado em outras contas e caixinhas conta como dinheiro disponível.
             </p>
           </details>
         </div>

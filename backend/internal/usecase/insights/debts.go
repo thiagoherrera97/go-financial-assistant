@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/domain"
@@ -110,14 +111,47 @@ func (i *Insights) overdraftView(ctx context.Context, v *DebtView, all []domain.
 	if in.Salaries, err = i.salaryDue(ctx, now, dip); err != nil {
 		return err
 	}
-	// Faturas dos cartões do mesmo banco: saem desta conta.
+	// O fundo do poço é a véspera do primeiro salário depois do mergulho: o que sai entre o dia do mergulho e o salário
+	// (ex.: uma parcela no dia 13) também conta.
+	until := dip
+	for _, s := range in.Salaries {
+		if s.Date != nil && s.Date.After(dip) {
+			until = s.Date.AddDate(0, 0, -1)
+			break
+		}
+	}
+	closeDays := domain.DefaultCardCloseDaysBeforeDue
+	if i.closeDays != nil {
+		closeDays = i.closeDays()
+	}
+	// Dinheiro guardado nas outras contas e nas caixinhas: pode tapar o buraco.
+	var saved float64
+	var savedWhere []string
+	for _, a := range accounts {
+		if a.Type != domain.AccountBank {
+			continue
+		}
+		amount := a.ReservedTotal()
+		if a.ID != acc.ID {
+			amount += a.Balance
+		}
+		if amount > 0.005 {
+			saved += amount
+			savedWhere = append(savedWhere, a.Name)
+		}
+	}
+	if saved > 0 {
+		in.Bills = append(in.Bills, debts.Line{Label: "Guardado em outras contas e caixinhas (" + strings.Join(savedWhere, ", ") + ")", Amount: saved})
+	}
+	// Faturas dos cartões do mesmo banco: saem desta conta. Até o fechamento ainda entram compras: estimadas pelo que se
+	// gastou à vista no cartão no mesmo período do mês passado.
 	for _, c := range accounts {
 		if c.Type != domain.AccountCredit || c.DueDate == nil || acc.InstitutionID == nil || c.InstitutionID == nil || *c.InstitutionID != *acc.InstitutionID {
 			continue
 		}
-		due := domain.DebtDueIn(dip, c.DueDate.Day())
-		if due.After(dip) {
-			due = domain.DebtDueIn(dip.AddDate(0, -1, 0), c.DueDate.Day())
+		due := domain.DebtDueIn(until, c.DueDate.Day())
+		if due.After(until) {
+			due = domain.DebtDueIn(until.AddDate(0, -1, 0), c.DueDate.Day())
 		}
 		if !due.After(today) {
 			continue
@@ -127,7 +161,23 @@ func (i *Insights) overdraftView(ctx context.Context, v *DebtView, all []domain.
 			return err
 		}
 		if total > 0 {
-			in.Bills = append(in.Bills, debts.Line{Label: "Fatura " + balancesCardName(c), Amount: -total, Date: &due})
+			in.Bills = append(in.Bills, debts.Line{Label: "Fatura " + balancesCardName(c) + " (já lançado)", Amount: -total, Date: &due})
+		}
+		closing := domain.CardCloseEstimate(due, closeDays)
+		if c.CloseDate != nil && c.DueDate != nil {
+			if gap := int(c.DueDate.Sub(*c.CloseDate).Hours() / 24); gap > 0 && gap < 28 {
+				closing = domain.CardCloseEstimate(due, gap)
+			}
+		}
+		if closing.After(today) {
+			more, err := store.CardSpend(ctx, c.ID, today.AddDate(0, -1, 0), closing.AddDate(0, -1, -1))
+			if err != nil {
+				return err
+			}
+			if more > 0 {
+				in.Bills = append(in.Bills, debts.Line{Label: fmt.Sprintf("Compras no %s até o fechamento de %s (estimativa: o mesmo do mês passado)",
+					balancesCardName(c), closing.Format("02/01")), Amount: -more, Date: &due, Estimate: true})
+			}
 		}
 	}
 	var payees []string
@@ -136,7 +186,7 @@ func (i *Insights) overdraftView(ctx context.Context, v *DebtView, all []domain.
 			continue
 		}
 		payees = append(payees, o.PayeeMatch)
-		if iv := inst[o.ID]; iv != nil && iv.NextDue != nil && !iv.NextDue.After(dip) {
+		if iv := inst[o.ID]; iv != nil && iv.NextDue != nil && !iv.NextDue.After(until) {
 			due := *iv.NextDue
 			if due.Before(today) {
 				due = today
@@ -144,26 +194,33 @@ func (i *Insights) overdraftView(ctx context.Context, v *DebtView, all []domain.
 			in.Bills = append(in.Bills, debts.Line{Label: "Parcela " + o.Name, Amount: -o.InstallmentAmount, Date: &due})
 		}
 	}
-	// O de costume: o que saiu desta conta no mesmo período do mês passado (financiamento, boletos, Pix do dia a dia).
-	outs, err := store.AccountOutflows(ctx, acc.ID, today.AddDate(0, -1, 1), dip.AddDate(0, -1, 0))
+	// O de costume: o que entrou e saiu das contas no mesmo período do mês passado e também no mês anterior (financiamento,
+	// seguro, Pix recorrentes), menos as parcelas de dívidas, que já entram acima.
+	from, to := today.AddDate(0, -1, 1), until.AddDate(0, -1, 0)
+	last, err := store.BankMovements(ctx, from, to)
 	if err != nil {
 		return err
 	}
-	var usual float64
-	for _, o := range outs {
-		skip := false
-		for _, p := range payees {
-			skip = skip || domain.MatchesPayee(o.Label, p)
-		}
-		if !skip {
-			usual += o.Amount
-		}
+	// Uma semana de folga no mês anterior: a conta de um dia 10 pode ter caído no dia 8.
+	before, err := store.BankMovements(ctx, from.AddDate(0, -1, -7), to.AddDate(0, -1, 7))
+	if err != nil {
+		return err
 	}
-	if usual > 0 {
-		from := today.AddDate(0, -1, 1)
-		in.Usual = &debts.Line{Label: fmt.Sprintf("Saídas de costume (%s a %s do mês passado)", from.Format("02/01"),
-			dip.AddDate(0, -1, 0).Format("02/01")), Amount: -usual}
+	keep := func(list []domain.MoneyMovement) []domain.MoneyMovement {
+		var out []domain.MoneyMovement
+		for _, o := range list {
+			skip := false
+			for _, p := range payees {
+				skip = skip || !o.In && domain.MatchesPayee(o.Label, p)
+			}
+			if !skip {
+				out = append(out, o)
+			}
+		}
+		return out
 	}
+	in.Bills = append(in.Bills, debts.Recurring(keep(last), keep(before))...)
+	in.Until = until
 	f := debts.BuildForecast(in)
 	v.Forecast = &f
 	return nil

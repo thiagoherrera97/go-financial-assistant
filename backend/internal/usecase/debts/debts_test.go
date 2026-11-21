@@ -82,17 +82,18 @@ func TestBuildForecastDipAndExit(t *testing.T) {
 			{Label: "Salário dia 15", Amount: 5200, Date: ptr(day(2026, 12, 15))},
 			{Label: "Salário dia 30", Amount: 4366.62, Date: ptr(day(2026, 12, 30))},
 		},
-		Bills: []Line{{Label: "Fatura", Amount: -6000, Date: ptr(day(2026, 12, 10))}, {Label: "Mac mini", Amount: -320}},
+		Bills: []Line{{Label: "Fatura", Amount: -6000, Date: ptr(day(2026, 12, 10))}, {Label: "Mac mini", Amount: -320},
+			{Label: "Compras até o fechamento", Amount: -1000, Estimate: true}},
 		Usual: &Line{Label: "costume", Amount: -2500},
 	})
-	// 1000 + 4366,62 - 6000 - 320 - 2500 = -3453,38
-	if f.Balance != -3453.38 || f.InLimit != 3453.38 {
-		t.Fatalf("balance %v inLimit %v", f.Balance, f.InLimit)
+	// 1000 + 4366,62 - 6000 - 320 - 2500 = -3453,38; com a estimativa de compras, -4453,38
+	if f.Committed != -3453.38 || f.CommittedInLimit != 3453.38 || f.Balance != -4453.38 || f.InLimit != 4453.38 {
+		t.Fatalf("got %+v", f)
 	}
 	if f.ExitDate == nil || !f.ExitDate.Equal(day(2026, 12, 15)) || f.Days != 5 || !f.WithinFree {
 		t.Fatalf("exit %v days %d free %v", f.ExitDate, f.Days, f.WithinFree)
 	}
-	if len(f.Lines) != 4 {
+	if len(f.Lines) != 5 {
 		t.Fatalf("lines %+v", f.Lines)
 	}
 }
@@ -138,5 +139,34 @@ func TestMatchesPayeeSeveralNames(t *testing.T) {
 	}
 	if domain.MatchesPayee("PIX ENVIADO Monica Silva", names) || domain.MatchesPayee("PIX", " ; ") {
 		t.Fatal("não deveria reconhecer")
+	}
+}
+
+func TestRecurringKeepsOnlyRepeated(t *testing.T) {
+	last := []domain.MoneyMovement{
+		{Date: day(2026, 11, 10), Amount: 1300, Label: "Pix enviado William Nunes Herrera"},
+		{Date: day(2026, 11, 10), Amount: 441.04, Label: "Pagamento de conta PORTOSEG SA"},
+		{Date: day(2026, 11, 9), Amount: 3200, Label: "Pix enviado Guilherme Portes"}, // avulso
+		{Date: day(2026, 11, 3), Amount: 1000, Label: "Pix recebido Monica Nunes", In: true},
+		{Date: day(2026, 11, 10), Amount: 3200, Label: "Pix recebido Monica Nunes", In: true}, // avulso, mesmo nome
+		{Date: day(2026, 11, 13), Amount: 91.36, Label: "Pagamento de parcela 5/12 Empréstimos"},
+	}
+	before := []domain.MoneyMovement{
+		{Date: day(2026, 10, 10), Amount: 1300, Label: "PIX ENVIADO William Nunes Herrera"},
+		{Date: day(2026, 10, 9), Amount: 345, Label: "Pagamento de conta PORTOSEG SA"},
+		{Date: day(2026, 10, 1), Amount: 1000, Label: "Pix recebido Monica Nunes", In: true},
+		{Date: day(2026, 10, 13), Amount: 91.36, Label: "Pagamento de parcela 4/12 Empréstimos"},
+		{Date: day(2026, 10, 2), Amount: 1000, Label: "Pix enviado Monica Nunes"}, // outro sentido
+	}
+	got := Recurring(last, before)
+	var sum float64
+	for _, l := range got {
+		sum += l.Amount
+	}
+	if len(got) != 4 || round(sum) != round(-1300-441.04+1000-91.36) {
+		t.Fatalf("got %+v", got)
+	}
+	if !got[0].Date.Equal(day(2026, 12, 3)) || got[0].Amount != 1000 {
+		t.Fatalf("primeira linha %+v", got[0])
 	}
 }

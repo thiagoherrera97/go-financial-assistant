@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { debtOutstanding, emptyDebtForm, nextDueDate, toDebtInput } from './debts'
+import { debtOutstanding, emptyDebtForm, nextDay, nextDueDate, salaryFallsShort, toDebtInput } from './debts'
 import type { Debt } from '../api'
 
 describe('toDebtInput', () => {
@@ -27,7 +27,7 @@ describe('debtOutstanding', () => {
   it('usa o que falta, o limite em uso ou a previsão', () => {
     expect(debtOutstanding({ ...base, progress: { remaining: 2880 } } as Debt)).toBe(2880)
     expect(debtOutstanding({ ...base, limit: { inLimit: 900 }, forecast: { inLimit: 1200 } } as Debt)).toBe(900)
-    expect(debtOutstanding({ ...base, limit: { inLimit: 0 }, forecast: { inLimit: 1200 } } as Debt)).toBe(1200)
+    expect(debtOutstanding({ ...base, limit: { inLimit: 0 }, forecast: { inLimit: 1200, committedInLimit: 800 } } as Debt)).toBe(800)
   })
 })
 
@@ -36,5 +36,15 @@ describe('nextDueDate', () => {
     expect(nextDueDate(new Date(2026, 10, 21), 10)).toBe('2026-12-10')
     expect(nextDueDate(new Date(2026, 10, 5), 10)).toBe('2026-11-10')
     expect(nextDueDate(new Date(2026, 11, 21), 10)).toBe('2027-01-10')
+  })
+})
+
+describe('salaryFallsShort', () => {
+  it('avisa quando o primeiro salário depois do mergulho não cobre', () => {
+    expect(nextDay('2026-12-31')).toBe('2027-01-01')
+    expect(salaryFallsShort({ until: '2026-12-14', exitDate: '2026-12-15', inLimit: 100 })).toBe(false)
+    expect(salaryFallsShort({ until: '2026-12-14', exitDate: '2026-12-30', inLimit: 100 })).toBe(true)
+    expect(salaryFallsShort({ until: '2026-12-14', exitDate: null, inLimit: 100 })).toBe(true)
+    expect(salaryFallsShort({ until: '2026-12-14', exitDate: null, inLimit: 0 })).toBe(false)
   })
 })

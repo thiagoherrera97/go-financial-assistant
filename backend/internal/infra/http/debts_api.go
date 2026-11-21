@@ -28,9 +28,25 @@ type moneyMovementJSON struct {
 }
 
 type debtLineJSON struct {
-	Label  string  `json:"label"`
-	Amount float64 `json:"amount"`
-	Date   *string `json:"date"`
+	Label    string  `json:"label"`
+	Amount   float64 `json:"amount"`
+	Date     *string `json:"date"`
+	Estimate bool    `json:"estimate"`
+}
+
+type debtForecastJSON struct {
+	Date    string         `json:"date"`
+	Until   string         `json:"until"`
+	Lines   []debtLineJSON `json:"lines"`
+	Balance float64        `json:"balance"`
+	InLimit float64        `json:"inLimit"`
+	// Committed: saldo previsto sem as estimativas de compras novas; CommittedInLimit, o uso do limite nesse caso.
+	Committed        float64 `json:"committed"`
+	CommittedInLimit float64 `json:"committedInLimit"`
+	ExitDate         *string `json:"exitDate"`
+	ExitLabel        string  `json:"exitLabel"`
+	Days             int     `json:"days"`
+	WithinFree       bool    `json:"withinFree"`
 }
 
 type debtJSON struct {
@@ -71,16 +87,7 @@ type debtJSON struct {
 			Worst float64 `json:"worst"`
 		} `json:"months"`
 	} `json:"limit"`
-	Forecast *struct {
-		Date       string         `json:"date"`
-		Lines      []debtLineJSON `json:"lines"`
-		Balance    float64        `json:"balance"`
-		InLimit    float64        `json:"inLimit"`
-		ExitDate   *string        `json:"exitDate"`
-		ExitLabel  string         `json:"exitLabel"`
-		Days       int            `json:"days"`
-		WithinFree bool           `json:"withinFree"`
-	} `json:"forecast"`
+	Forecast *debtForecastJSON `json:"forecast"`
 }
 
 func (a *api) debts(w http.ResponseWriter, r *http.Request) {
@@ -133,16 +140,7 @@ func (a *api) debts(w http.ResponseWriter, r *http.Request) {
 			out[n].Limit = lj
 		}
 		if f := v.Forecast; f != nil {
-			out[n].Forecast = &struct {
-				Date       string         `json:"date"`
-				Lines      []debtLineJSON `json:"lines"`
-				Balance    float64        `json:"balance"`
-				InLimit    float64        `json:"inLimit"`
-				ExitDate   *string        `json:"exitDate"`
-				ExitLabel  string         `json:"exitLabel"`
-				Days       int            `json:"days"`
-				WithinFree bool           `json:"withinFree"`
-			}{f.Date.Format("2006-01-02"), linesJSON(f.Lines), cents(f.Balance), cents(f.InLimit), dayString(f.ExitDate), f.ExitLabel, f.Days, f.WithinFree}
+			out[n].Forecast = &debtForecastJSON{f.Date.Format("2006-01-02"), f.Until.Format("2006-01-02"), linesJSON(f.Lines), cents(f.Balance), cents(f.InLimit), cents(f.Committed), cents(f.CommittedInLimit), dayString(f.ExitDate), f.ExitLabel, f.Days, f.WithinFree}
 		}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"debts": out})
@@ -175,7 +173,7 @@ func movementsJSON(list []domain.MoneyMovement) []moneyMovementJSON {
 func linesJSON(list []debts.Line) []debtLineJSON {
 	out := make([]debtLineJSON, len(list))
 	for n, l := range list {
-		out[n] = debtLineJSON{l.Label, cents(l.Amount), dayString(l.Date)}
+		out[n] = debtLineJSON{l.Label, cents(l.Amount), dayString(l.Date), l.Estimate}
 	}
 	return out
 }

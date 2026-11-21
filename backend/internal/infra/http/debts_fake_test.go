@@ -49,6 +49,9 @@ func (f *fakeReader) BalanceDays(context.Context, uuid.UUID, time.Time) ([]domai
 func (f *fakeReader) CardBillTotal(context.Context, uuid.UUID, time.Time) (float64, error) {
 	return f.debt.bill, f.err
 }
-func (f *fakeReader) AccountOutflows(context.Context, uuid.UUID, time.Time, time.Time) ([]domain.MoneyMovement, error) {
+func (f *fakeReader) BankMovements(context.Context, time.Time, time.Time) ([]domain.MoneyMovement, error) {
 	return f.debt.outflows, f.err
+}
+func (f *fakeReader) CardSpend(context.Context, uuid.UUID, time.Time, time.Time) (float64, error) {
+	return f.debt.bill, f.err
 }

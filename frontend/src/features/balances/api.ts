@@ -101,6 +101,8 @@ export interface DebtLine {
   /** Entrada positiva, saída negativa. */
   amount: number
   date: string | null
+  /** Gasto que ainda não aconteceu, estimado pelo mês passado. */
+  estimate: boolean
 }
 
 export interface Debt {
@@ -140,10 +142,16 @@ export interface Debt {
     months: { month: string; days: number; worst: number }[]
   } | null
   forecast: {
+    /** Dia do mergulho (ex.: dia 10). */
     date: string
+    /** Véspera do primeiro salário depois do mergulho: até onde as saídas contam. */
+    until: string
     lines: DebtLine[]
     balance: number
     inLimit: number
+    /** Sem as estimativas de compras novas: só o que já está lançado ou se repete todo mês. */
+    committed: number
+    committedInLimit: number
     exitDate: string | null
     exitLabel: string
     days: number

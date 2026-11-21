@@ -5,7 +5,9 @@ package debts
 import (
 	"math"
 	"sort"
+	"strings"
 	"time"
+	"unicode"
 
 	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/domain"
 )
@@ -110,15 +112,17 @@ func Usage(balance float64, days []domain.BalanceDay, today time.Time) LimitUse 
 
 // Line é uma linha da previsão: entrada (positiva) ou saída (negativa).
 type Line struct {
-	Label  string
-	Amount float64
-	Date   *time.Time
+	Label    string
+	Amount   float64
+	Date     *time.Time
+	Estimate bool // gasto que ainda não aconteceu, estimado pelo mês passado (ex.: compras no cartão até o fechamento)
 }
 
 // ForecastInput é o que a previsão do próximo mergulho no limite usa.
 type ForecastInput struct {
 	Today    time.Time
 	Dip      time.Time // dia em que a conta costuma entrar no limite
+	Until    time.Time // véspera do primeiro salário depois de Dip: até onde as saídas contam (zero = Dip)
 	Balance  float64   // saldo da conta agora
 	FreeDays int
 	Salaries []Line // partes do salário a cair, em ordem de data (podem passar de Dip)
@@ -128,23 +132,35 @@ type ForecastInput struct {
 
 // Forecast é a previsão do saldo no dia do mergulho e de quando o salário tira a conta do limite.
 type Forecast struct {
-	Date       time.Time
-	Lines      []Line  // como se chega ao saldo previsto, a partir do saldo de hoje
-	Balance    float64 // saldo previsto no dia (negativo = no limite)
-	InLimit    float64 // quanto do limite vai usar (0 se não entra)
-	ExitDate   *time.Time
-	ExitLabel  string
-	Days       int // dias no limite até o salário
-	WithinFree bool
+	Date    time.Time
+	Until   time.Time // até quando as saídas foram contadas (véspera do salário)
+	Lines   []Line    // como se chega ao saldo previsto, a partir do saldo de hoje
+	Balance float64   // saldo previsto no dia (negativo = no limite)
+	InLimit float64   // quanto do limite vai usar (0 se não entra)
+	// Committed é o saldo previsto sem as estimativas (só o que já está lançado ou se repete todo mês): o piso se não
+	// houver compras novas. CommittedInLimit é o uso do limite nesse caso.
+	Committed        float64
+	CommittedInLimit float64
+	ExitDate         *time.Time
+	ExitLabel        string
+	Days             int // dias no limite até o salário
+	WithinFree       bool
 }
 
 // BuildForecast soma ao saldo de hoje o salário que cai até o mergulho e tira as faturas, parcelas e o gasto de costume.
 // Depois do mergulho, a primeira parte do salário que deixa a conta positiva é a saída do limite.
 func BuildForecast(in ForecastInput) Forecast {
-	f := Forecast{Date: in.Dip, Balance: in.Balance}
+	f := Forecast{Date: in.Dip, Until: in.Until, Balance: in.Balance}
+	if f.Until.Before(in.Dip) {
+		f.Until = in.Dip
+	}
+	f.Committed = in.Balance
 	add := func(l Line) {
 		f.Lines = append(f.Lines, l)
 		f.Balance += l.Amount
+		if !l.Estimate {
+			f.Committed += l.Amount
+		}
 	}
 	var after []Line
 	for _, s := range in.Salaries {
@@ -160,8 +176,8 @@ func BuildForecast(in ForecastInput) Forecast {
 	if in.Usual != nil && in.Usual.Amount != 0 {
 		add(*in.Usual)
 	}
-	f.Balance = round(f.Balance)
-	f.InLimit = round(max(0, -f.Balance))
+	f.Balance, f.Committed = round(f.Balance), round(f.Committed)
+	f.InLimit, f.CommittedInLimit = round(max(0, -f.Balance)), round(max(0, -f.Committed))
 	if f.InLimit == 0 {
 		f.WithinFree = true
 		return f
@@ -195,3 +211,50 @@ func civil(t time.Time) time.Time {
 }
 
 func round(v float64) float64 { return math.Round(v*100) / 100 }
+
+// recurringSpread: uma conta que se repete pode variar de um mês para o outro (seguro, luz) até 35%.
+const recurringSpread = 0.35
+
+// Recurring são as movimentações do mês passado (last) que têm par no mês anterior (before): mesmo sentido, mesma
+// descrição (números ignorados) e valor parecido. É o que se repete todo mês. Cada par vale uma vez, então Pix avulsos
+// para a mesma pessoa (uma compra, um empréstimo) ficam de fora. Cada uma vira uma linha um mês à frente.
+func Recurring(last, before []domain.MoneyMovement) []Line {
+	key := func(m domain.MoneyMovement) string {
+		dir := "out:"
+		if m.In {
+			dir = "in:"
+		}
+		return dir + strings.Join(strings.Fields(strings.Map(func(r rune) rune {
+			if unicode.IsDigit(r) || unicode.IsPunct(r) {
+				return ' '
+			}
+			return r
+		}, domain.Fold(m.Label))), " ")
+	}
+	used := make([]bool, len(before))
+	var out []Line
+	for _, m := range last {
+		k := key(m)
+		best := -1
+		for n, b := range before {
+			if used[n] || key(b) != k || math.Abs(b.Amount-m.Amount) > recurringSpread*max(b.Amount, m.Amount) {
+				continue
+			}
+			if best < 0 || math.Abs(b.Amount-m.Amount) < math.Abs(before[best].Amount-m.Amount) {
+				best = n
+			}
+		}
+		if best < 0 {
+			continue
+		}
+		used[best] = true
+		amount := m.Amount
+		if !m.In {
+			amount = -amount
+		}
+		date := m.Date.AddDate(0, 1, 0)
+		out = append(out, Line{Label: strings.Join(strings.Fields(m.Label), " "), Amount: round(amount), Date: &date})
+	}
+	sort.SliceStable(out, func(i, j int) bool { return out[i].Date.Before(*out[j].Date) })
+	return out
+}

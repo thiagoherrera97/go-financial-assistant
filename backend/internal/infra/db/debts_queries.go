@@ -78,14 +78,6 @@ func (r *DebtsRepo) DeleteDebt(ctx context.Context, id uuid.UUID) (bool, error) 
 	return tag.RowsAffected() > 0, nil
 }
 
-// bankOutflows são as saídas de conta corrente (Pix, TED, boleto), sem as transferências entre contas próprias.
-const bankOutflows = `
-	SELECT ` + txDate + `::date, pay.amount, COALESCE(p.description, '')
-	FROM payments pay
-	JOIN purchases p ON p.id = pay.purchase_id
-	JOIN accounts a ON a.id = pay.account_id AND a.type = 'BANK'
-	WHERE p.kind = 'EXPENSE' AND pay.status != 'CANCELLED' AND pay.amount > 0`
-
 func (r *DebtsRepo) MovementsWith(ctx context.Context, match string, from time.Time) ([]domain.MoneyMovement, error) {
 	if len(domain.PayeeNames(match)) == 0 {
 		return nil, nil
@@ -118,27 +110,46 @@ func (r *DebtsRepo) MovementsWith(ctx context.Context, match string, from time.T
 	return result, rows.Err()
 }
 
-func (r *DebtsRepo) AccountOutflows(ctx context.Context, accountID uuid.UUID, from, to time.Time) ([]domain.MoneyMovement, error) {
-	return r.movements(ctx, bankOutflows+` AND pay.account_id = $1 AND `+txDate+`::date BETWEEN $2::date AND $3::date ORDER BY 1`,
-		accountID, from, to)
-}
-
-func (r *DebtsRepo) movements(ctx context.Context, query string, args ...any) ([]domain.MoneyMovement, error) {
-	rows, err := r.db.Pool.Query(ctx, query, args...)
+func (r *DebtsRepo) BankMovements(ctx context.Context, from, to time.Time) ([]domain.MoneyMovement, error) {
+	rows, err := r.db.Pool.Query(ctx, `
+		SELECT `+txDate+`::date, ABS(pay.amount), COALESCE(p.description, ''), p.kind = 'INCOME'
+		FROM payments pay
+		JOIN purchases p ON p.id = pay.purchase_id
+		JOIN accounts a ON a.id = pay.account_id AND a.type = 'BANK'
+		WHERE pay.status != 'CANCELLED' AND `+txDate+`::date BETWEEN $1::date AND $2::date
+		  AND ((p.kind = 'EXPENSE' AND pay.amount > 0) OR (p.kind = 'INCOME' AND p.category != 'SALARY'))
+		ORDER BY 1
+	`, from, to)
 	if err != nil {
-		return nil, fmt.Errorf("erro ao ler saídas da conta: %w", err)
+		return nil, fmt.Errorf("erro ao ler movimentações das contas: %w", err)
 	}
 	defer rows.Close()
 	var result []domain.MoneyMovement
 	for rows.Next() {
 		var m domain.MoneyMovement
-		if err := rows.Scan(&m.Date, &m.Amount, &m.Label); err != nil {
-			return nil, fmt.Errorf("erro ao escanear saída da conta: %w", err)
+		if err := rows.Scan(&m.Date, &m.Amount, &m.Label, &m.In); err != nil {
+			return nil, fmt.Errorf("erro ao escanear movimentação: %w", err)
 		}
 		m.Date = m.Date.UTC()
 		result = append(result, m)
 	}
 	return result, rows.Err()
+}
+
+func (r *DebtsRepo) CardSpend(ctx context.Context, cardID uuid.UUID, from, to time.Time) (float64, error) {
+	var total float64
+	// A data da compra, e não a do vencimento: a compra à vista no cartão tem due_date = vencimento da fatura.
+	err := r.db.Pool.QueryRow(ctx, `
+		SELECT COALESCE(SUM(pay.amount), 0)
+		FROM payments pay JOIN purchases p ON p.id = pay.purchase_id
+		WHERE pay.account_id = $1 AND p.type = 'SINGLE' AND p.kind = 'EXPENSE' AND pay.status != 'CANCELLED'
+		  AND COALESCE(p.description, '') !~ '\(\s*\d+\s*/\s*\d+\s*\)'
+		  AND COALESCE(pay.bank_time, pay.paid_at, pay.created_at)::date BETWEEN $2::date AND $3::date
+	`, cardID, from, to).Scan(&total)
+	if err != nil {
+		return 0, fmt.Errorf("erro ao somar compras do cartão: %w", err)
+	}
+	return total, nil
 }
 
 func (r *DebtsRepo) BalanceDays(ctx context.Context, accountID uuid.UUID, from time.Time) ([]domain.BalanceDay, error) {

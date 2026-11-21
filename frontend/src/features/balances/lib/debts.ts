@@ -80,7 +80,7 @@ export function toDebtInput(f: DebtForm): { input: DebtInput } | { error: string
 export function debtOutstanding(d: Debt): number {
   if (d.progress) return d.progress.remaining
   if (d.limit && d.limit.inLimit > 0) return d.limit.inLimit
-  return d.forecast?.inLimit ?? 0
+  return d.forecast?.committedInLimit ?? 0
 }
 
 /** O primeiro dia do próximo mês com o dia dueDay, em AAAA-MM-DD (sugestão para a primeira parcela). */
@@ -94,4 +94,15 @@ export function nextDueDate(today: Date, dueDay: number): string {
   }
   const last = new Date(y, m, 0).getDate()
   return `${y}-${String(m).padStart(2, '0')}-${String(Math.min(dueDay, last)).padStart(2, '0')}`
+}
+
+/** O dia seguinte a iso (AAAA-MM-DD), sem passar por fuso. */
+export function nextDay(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number)
+  return new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10)
+}
+
+/** O primeiro salário depois do mergulho (o dia seguinte a until) não tira a conta do limite. */
+export function salaryFallsShort(f: { until: string; exitDate: string | null; inLimit: number }): boolean {
+  return f.inLimit > 0 && (f.exitDate === null || f.exitDate > nextDay(f.until))
 }

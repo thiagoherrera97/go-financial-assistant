@@ -23,6 +23,9 @@ type DebtStore interface {
 	BalanceDays(ctx context.Context, accountID uuid.UUID, from time.Time) ([]domain.BalanceDay, error)
 	// CardBillTotal soma o que já está na fatura do cartão que vence em due (compras, parcelas previstas e estornos).
 	CardBillTotal(ctx context.Context, cardID uuid.UUID, due time.Time) (float64, error)
-	// AccountOutflows devolve as despesas da conta corrente com data de from a to (inclusive).
-	AccountOutflows(ctx context.Context, accountID uuid.UUID, from, to time.Time) ([]domain.MoneyMovement, error)
+	// BankMovements devolve as despesas (In falso) e as entradas fora o salário (In verdadeiro) de todas as contas correntes
+	// com data de from a to (inclusive), sem as transferências entre contas próprias.
+	BankMovements(ctx context.Context, from, to time.Time) ([]domain.MoneyMovement, error)
+	// CardSpend soma as compras à vista no cartão (estornos abatem) com data de from a to (inclusive).
+	CardSpend(ctx context.Context, cardID uuid.UUID, from, to time.Time) (float64, error)
 }
