@@ -60,3 +60,10 @@ func TestCardCloseEstimate(t *testing.T) {
 		t.Errorf("fechamento estimado deveria ser 04/12, got %s", got.Format("2006-01-02"))
 	}
 }
+
+func TestCardForecastHorizon(t *testing.T) {
+	// Hoje 20/11/2026, vencimento dia 31: 3 meses à frente é fevereiro, que só tem 28 dias.
+	if got := CardForecastHorizon(time.Date(2026, 11, 20, 0, 0, 0, 0, time.UTC), 31); !got.Equal(time.Date(2027, 2, 28, 0, 0, 0, 0, time.UTC)) {
+		t.Errorf("horizonte inesperado: %s", got)
+	}
+}

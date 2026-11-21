@@ -43,7 +43,7 @@ func (r *LedgerRepo) SaveCardBills(ctx context.Context, accountID uuid.UUID, bil
 
 // RebuildCardForecasts refaz os lançamentos que o app cria nos cartões, numa transação:
 //   - parcelas previstas: as parcelas seguintes das compras parceladas que ainda não chegaram do banco, até a fatura
-//     aberta de hoje (domain.ForecastCardInstallments);
+//     de daqui a domain.CardForecastMonthsAhead meses (domain.ForecastCardInstallments);
 //   - ajuste da fatura: para cada fatura fechada informada pelo banco, o que ela cobrou além do que o app conhece
 //     (reais + previstas) vira um lançamento "não detalhado no Open Finance".
 //
@@ -96,8 +96,9 @@ func (r *LedgerRepo) RebuildCardForecasts(ctx context.Context, closeDaysBefore i
 	return forecasts, adjustments, nil
 }
 
-// cardHorizons dá, por cartão com vencimento conhecido, o dia do vencimento e até onde prever: a fatura aberta de hoje,
-// mas nunca além da última fatura com algum lançamento real do cartão (cartão parado não ganha parcela prevista).
+// cardHorizons dá, por cartão com vencimento conhecido, o dia do vencimento e até onde prever: a fatura que vence daqui a
+// domain.CardForecastMonthsAhead meses, para dar para planejar. Cartão parado (sem lançamento real na fatura aberta nem
+// na última fechada) não ganha parcela prevista.
 func cardHorizons(ctx context.Context, tx pgx.Tx, closeDaysBefore int, today time.Time) (map[uuid.UUID]int, map[uuid.UUID]time.Time, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT a.id, EXTRACT(DAY FROM a.due_date)::int,
@@ -125,11 +126,11 @@ func cardHorizons(ctx context.Context, tx pgx.Tx, closeDaysBefore int, today tim
 		if lastReal == nil {
 			continue
 		}
-		limit := domain.CardBillDue(today, day, days)
-		if lastReal.Before(limit) {
-			limit = *lastReal
+		open := domain.CardBillDue(today, day, days)
+		if domain.MonthsBetween(*lastReal, open) > 1 {
+			continue // nada real desde antes da última fatura fechada: o cartão parou
 		}
-		dueDay[id], horizon[id] = day, limit
+		dueDay[id], horizon[id] = day, domain.CardForecastHorizon(today, day)
 	}
 	return dueDay, horizon, rows.Err()
 }

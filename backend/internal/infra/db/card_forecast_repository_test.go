@@ -25,7 +25,7 @@ func TestRebuildCardForecasts(t *testing.T) {
 	// Parcela 3/10 na fatura de outubro (a sincronização data a parcela no mês da fatura) e uma compra à vista em novembro.
 	cardExpense(t, repo, pg, card, "fc-t1", "fc-teste VIVARA (3/10)", 669, day("2026-10-15"))
 	cardExpense(t, repo, pg, card, "fc-t2", "fc-teste mercado", 100, day("2026-10-20"))
-	// Compra de 18/11 já na fatura aberta (10/12): o cartão está em uso até ela, então a previsão vai até dezembro.
+	// Compra de 18/11 já na fatura aberta (10/12): o cartão está em uso, então a previsão vai 3 meses à frente (fev).
 	cardExpense(t, repo, pg, card, "fc-t0", "fc-teste padaria", 12, day("2026-11-18"))
 	if _, err := repo.RecomputeCardBills(ctx, 6); err != nil {
 		t.Fatal(err)
@@ -38,13 +38,13 @@ func TestRebuildCardForecasts(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Hoje 20/11: a fatura aberta é a de 10/12, então prevê 4/10 (nov) e 5/10 (dez).
+	// Hoje 20/11: prevê até a fatura de 10/02 (3 meses à frente): 4/10 (nov), 5/10 (dez), 6/10 (jan) e 7/10 (fev).
 	f, adj, err := repo.RebuildCardForecasts(ctx, 6, day("2026-11-20"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if f != 2 || adj != 1 {
-		t.Fatalf("esperava 2 previstas e 1 ajuste, got %d e %d", f, adj)
+	if f != 4 || adj != 1 {
+		t.Fatalf("esperava 4 previstas e 1 ajuste, got %d e %d", f, adj)
 	}
 
 	type row struct {
@@ -72,8 +72,8 @@ func TestRebuildCardForecasts(t *testing.T) {
 		return out
 	}
 	got := read()
-	if len(got) != 3 {
-		t.Fatalf("esperava 3 lançamentos do app, got %+v", got)
+	if len(got) != 5 {
+		t.Fatalf("esperava 5 lançamentos do app, got %+v", got)
 	}
 	// Novembro: mercado 100 + VIVARA 4/10 prevista 669 = 769; o banco cobrou 1000 → ajuste de 231.
 	if got[0].desc != "Fatura SANTANDER TESTE 10/11 · não detalhado no Open Finance" || got[0].amount != 231 || got[0].status != "PAID" {
@@ -84,6 +84,9 @@ func TestRebuildCardForecasts(t *testing.T) {
 	}
 	if got[2].desc != "fc-teste VIVARA (5/10)" || !got[2].bill.Equal(day("2026-12-10")) {
 		t.Errorf("prevista de dezembro inesperada: %+v", got[2])
+	}
+	if got[4].desc != "fc-teste VIVARA (7/10)" || !got[4].bill.Equal(day("2027-02-10")) {
+		t.Errorf("prevista de fevereiro inesperada: %+v", got[4])
 	}
 
 	// A nota escrita num lançamento do app (ajuste da fatura ou parcela prevista) sobrevive ao refazer.
@@ -110,8 +113,8 @@ func TestRebuildCardForecasts(t *testing.T) {
 	if _, _, err := repo.RebuildCardForecasts(ctx, 6, day("2026-11-20")); err != nil {
 		t.Fatal(err)
 	}
-	if n := len(read()); n != 3 {
-		t.Errorf("refazer deveria manter 3, got %d", n)
+	if n := len(read()); n != 5 {
+		t.Errorf("refazer deveria manter 5, got %d", n)
 	}
 	if got := noteOf(`pay.external_id = 'finassist:bill:fc-bill-nov'`); got != "carro 8/12 + alianças 7/10" {
 		t.Errorf("nota do ajuste da fatura perdida ao refazer: %q", got)
@@ -128,8 +131,8 @@ func TestRebuildCardForecasts(t *testing.T) {
 		t.Fatal(err)
 	}
 	got = read()
-	if len(got) != 2 || got[0].amount != 200 || got[1].desc != "fc-teste VIVARA (5/10)" {
-		t.Errorf("com a 4/10 real, sobra só a 5/10 prevista e o ajuste cai para 200: %+v", got)
+	if len(got) != 4 || got[0].amount != 200 || got[1].desc != "fc-teste VIVARA (5/10)" {
+		t.Errorf("com a 4/10 real, sobram 5/10 a 7/10 previstas e o ajuste cai para 200: %+v", got)
 	}
 
 	// O mês de novembro soma exatamente o total do banco.

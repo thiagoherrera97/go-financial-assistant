@@ -43,6 +43,18 @@ func (f ForecastInstallment) Description() string {
 
 func monthIndex(t time.Time) int { return t.Year()*12 + int(t.Month()) - 1 }
 
+// MonthsBetween é quantos meses de calendário vão de a até b (negativo se b vem antes).
+func MonthsBetween(a, b time.Time) int { return monthIndex(b) - monthIndex(a) }
+
+// CardForecastMonthsAhead é até quantos meses à frente de hoje as parcelas de cartão são previstas.
+const CardForecastMonthsAhead = 3
+
+// CardForecastHorizon é a última fatura com parcelas previstas: a que vence CardForecastMonthsAhead meses depois do mês
+// de today.
+func CardForecastHorizon(today time.Time, dueDay int) time.Time {
+	return cardDueIn(time.Date(today.Year(), today.Month()+CardForecastMonthsAhead, 1, 0, 0, 0, 0, time.UTC), dueDay)
+}
+
 // ForecastCardInstallments prevê as parcelas que faltam chegar do banco. Cada compra parcelada é reconhecida pela conta,
 // descrição, número de parcelas, valor e mês em que começou (fatura menos a parcela, que é constante na mesma compra);
 // compras iguais no mesmo mês contam como cópias. O banco entrega as parcelas com atraso, então só se prevê depois da

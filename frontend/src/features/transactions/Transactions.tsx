@@ -8,7 +8,7 @@ import { TransactionTable } from './components/TransactionTable'
 import { categoryVisual } from '../../shared/lib/categoryVisual'
 import { formatBRL, formatMonthTitle } from '../../shared/lib/format'
 import { CATEGORIES, KINDS, PAYMENT_METHODS } from '../../shared/lib/labels'
-import { shiftMonth } from '../../shared/lib/months'
+import { FORECAST_MONTHS_AHEAD, shiftMonth } from '../../shared/lib/months'
 import { formatDayLabel, incomeSources, INCOME_GROUP, investSummary, withGroupFilter } from './lib/transactions'
 import { useTransactionFilters } from './lib/useTransactionFilters'
 import { useTransactionGroups, useTransactions } from './api'
@@ -21,6 +21,8 @@ export default function Transactions() {
   const accounts = useAccounts()
   // Os totais do topo vêm dos grupos por categoria, agregados no SQL, qualquer que seja a visão.
   const categories = useTransactionGroups(query, 'category')
+  // Dá para olhar até FORECAST_MONTHS_AHEAD meses à frente: as parcelas previstas dos cartões vão até lá.
+  const maxMonth = shiftMonth(now, FORECAST_MONTHS_AHEAD)
 
   const select = (key: string, label: string, options: { value: string; label: string }[]) => (
     <label className="field">
@@ -48,11 +50,11 @@ export default function Transactions() {
           type="month"
           aria-label="Mês"
           value={month ?? ''}
-          max={now}
+          max={maxMonth}
           disabled={!month}
           onChange={(e) => e.target.value && update({ mes: e.target.value })}
         />
-        <button type="button" className="btn" aria-label="Próximo mês" disabled={!month || month >= now} onClick={() => month && update({ mes: shiftMonth(month, 1) })}>
+        <button type="button" className="btn" aria-label="Próximo mês" disabled={!month || month >= maxMonth} onClick={() => month && update({ mes: shiftMonth(month, 1) })}>
           →
         </button>
         <label className="check">

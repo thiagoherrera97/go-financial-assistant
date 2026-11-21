@@ -15,3 +15,6 @@ export function shiftMonth(month: string, delta: number): string {
   const index = year * 12 + (mon - 1) + delta
   return `${Math.floor(index / 12)}-${String((index % 12) + 1).padStart(2, '0')}`
 }
+
+/** Até quantos meses à frente há parcelas de cartão previstas (backend: domain.CardForecastMonthsAhead). */
+export const FORECAST_MONTHS_AHEAD = 3
