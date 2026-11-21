@@ -64,10 +64,12 @@ func CutBaseline(cats []domain.CategoryMonth, category string, now time.Time) (f
 }
 
 // BuildGoalProgress mede uma meta contra o patrimônio (saldo das contas correntes + investimentos), a
-// projeção e os gastos por categoria. today é o dia de hoje.
-func BuildGoalProgress(g domain.Goal, wealth float64, p Projection, cats []domain.CategoryMonth, today time.Time) GoalProgress {
-	now := time.Date(today.Year(), today.Month(), 1, 0, 0, 0, 0, time.UTC)
-	gp := GoalProgress{Goal: g, DayOfMonth: today.Day(), DaysInMonth: now.AddDate(0, 1, -1).Day()}
+// projeção e os gastos por categoria. today é o dia de hoje; o "mês" é o ciclo do salário em que ele cai (ciclos vazios =
+// mês do calendário), e o ritmo conta os dias do ciclo.
+func BuildGoalProgress(g domain.Goal, wealth float64, p Projection, cats []domain.CategoryMonth, today time.Time, cycles domain.Cycles) GoalProgress {
+	now := cycles.KeyOf(today)
+	gp := GoalProgress{Goal: g}
+	gp.DayOfMonth, gp.DaysInMonth = cycles.DayOf(today)
 	switch g.Kind {
 	case domain.GoalSave:
 		gp.Current, gp.Target = wealth, g.TargetAmount

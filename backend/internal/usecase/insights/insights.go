@@ -25,7 +25,22 @@ type Insights struct {
 	closeDays func() int // dias entre o fechamento e o vencimento da fatura (configuração); nil = padrão
 	salary    func() []domain.SalaryPart
 	debts     ports.DebtStore // nil sem dívidas (leitores de teste)
+	cycles    func() domain.Cycles
 }
+
+// SetCycles liga os ciclos do salário (lidos a cada consulta); nil = mês do calendário.
+func (i *Insights) SetCycles(f func() domain.Cycles) { i.cycles = f }
+
+// Cycles são os ciclos em uso (vazio = mês do calendário).
+func (i *Insights) Cycles() domain.Cycles {
+	if i.cycles == nil {
+		return domain.Cycles{}
+	}
+	return i.cycles()
+}
+
+// CycleKey é a chave do ciclo em que today cai.
+func (i *Insights) CycleKey(today time.Time) time.Time { return i.Cycles().KeyOf(today) }
 
 // SetSalarySchedule liga a configuração das partes do salário (lida a cada consulta); nil ou vazio = sem salário configurado.
 func (i *Insights) SetSalarySchedule(f func() []domain.SalaryPart) { i.salary = f }
@@ -51,9 +66,10 @@ func (i *Insights) Salary(ctx context.Context, today time.Time) (SalaryView, err
 	if len(parts) == 0 {
 		return SalaryView{}, nil
 	}
-	month := MonthStart(today)
-	// Folga nas pontas: a parte de um dia 1 pode cair no fim do mês anterior.
-	credits, err := i.reader.SalaryCredits(ctx, month.AddDate(0, 0, -domain.SalaryMatchDays), month.AddDate(0, 1, domain.SalaryMatchDays))
+	month := i.CycleKey(today)
+	// Folga nas pontas: uma parte pode cair alguns dias antes ou depois do previsto.
+	start, end := i.Cycles().Bounds(month)
+	credits, err := i.reader.SalaryCredits(ctx, start.AddDate(0, 0, -domain.SalaryMatchDays), end.AddDate(0, 0, domain.SalaryMatchDays))
 	if err != nil {
 		return SalaryView{}, err
 	}
@@ -165,7 +181,7 @@ func (i *Insights) Review(ctx context.Context, to time.Time) (review.Review, err
 
 // Goals calcula o andamento de todas as metas hoje e o patrimônio (contas correntes + investimentos).
 func (i *Insights) Goals(ctx context.Context, today time.Time) ([]planning.GoalProgress, float64, error) {
-	now := MonthStart(today)
+	now := i.CycleKey(today)
 	goals, err := i.reader.Goals(ctx)
 	if err != nil {
 		return nil, 0, err
@@ -198,7 +214,7 @@ func (i *Insights) Goals(ctx context.Context, today time.Time) ([]planning.GoalP
 	}
 	out := make([]planning.GoalProgress, len(goals))
 	for n, g := range goals {
-		out[n] = planning.BuildGoalProgress(g, wealth, proj, cats, today)
+		out[n] = planning.BuildGoalProgress(g, wealth, proj, cats, today, i.Cycles())
 	}
 	return out, wealth, nil
 }

@@ -5,7 +5,6 @@ import (
 	"regexp"
 	"slices"
 	"strconv"
-	"time"
 
 	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/usecase/planning"
 	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/usecase/review"
@@ -78,8 +77,7 @@ func (a *api) projection(w http.ResponseWriter, r *http.Request) {
 		}
 		months = n
 	}
-	now := a.now()
-	start := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+	start := a.monthStart()
 
 	p, err := a.insights.Projection(r.Context(), start, months)
 	if err != nil {

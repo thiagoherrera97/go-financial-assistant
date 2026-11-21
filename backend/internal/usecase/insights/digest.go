@@ -21,7 +21,7 @@ const (
 
 // WeeklyDigest monta o resumo semanal: o que merece atenção agora, calculado só por código (sem IA).
 func (i *Insights) WeeklyDigest(ctx context.Context, today time.Time) (string, error) {
-	month := MonthStart(today)
+	month := i.CycleKey(today)
 	totals, err := i.reader.MonthlyTotals(ctx, month, month)
 	if err != nil || len(totals) != 1 {
 		return "", fmt.Errorf("totais do mês indisponíveis: %w", err)

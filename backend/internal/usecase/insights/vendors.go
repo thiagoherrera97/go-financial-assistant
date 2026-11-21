@@ -25,7 +25,7 @@ func (i *Insights) Vendors(ctx context.Context, store ports.VendorStore, today t
 	if err != nil {
 		return planning.VendorSummary{}, nil, err
 	}
-	proj, err := i.Projection(ctx, MonthStart(today), goalProjectionMonths)
+	proj, err := i.Projection(ctx, i.CycleKey(today), goalProjectionMonths)
 	if err != nil {
 		return planning.VendorSummary{}, nil, err
 	}

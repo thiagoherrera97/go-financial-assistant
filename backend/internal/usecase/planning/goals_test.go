@@ -23,7 +23,7 @@ func goalProjection() Projection {
 func TestBuildGoalProgress_Save(t *testing.T) {
 	g := domain.Goal{Kind: domain.GoalSave, TargetAmount: 10000, TargetDate: month(2027, time.January)}
 
-	gp := BuildGoalProgress(g, 4000, goalProjection(), nil, goalNow)
+	gp := BuildGoalProgress(g, 4000, goalProjection(), nil, goalNow, domain.Cycles{})
 	// Faltam 6000 e a data (jan/27) está a 3 meses: 2000 por mês.
 	if gp.MonthsLeft != 3 || math.Abs(gp.PerMonth-2000) > 0.01 || gp.Done {
 		t.Fatalf("prazo e quanto guardar: %+v", gp)
@@ -33,38 +33,38 @@ func TestBuildGoalProgress_Save(t *testing.T) {
 		t.Errorf("não cabe na sobra: surplus=%v fits=%v", gp.Surplus, gp.Fits)
 	}
 
-	if gp := BuildGoalProgress(domain.Goal{Kind: domain.GoalSave, TargetAmount: 10000, TargetDate: month(2027, time.January)}, 7000, goalProjection(), nil, goalNow); gp.Fits == nil || !*gp.Fits {
+	if gp := BuildGoalProgress(domain.Goal{Kind: domain.GoalSave, TargetAmount: 10000, TargetDate: month(2027, time.January)}, 7000, goalProjection(), nil, goalNow, domain.Cycles{}); gp.Fits == nil || !*gp.Fits {
 		t.Errorf("faltam 3000 em 3 meses (1000/mês) cabe em 1300: %+v", gp.Fits)
 	}
-	if gp := BuildGoalProgress(g, 10000, goalProjection(), nil, goalNow); !gp.Done || gp.PerMonth != 0 || gp.Fits != nil {
+	if gp := BuildGoalProgress(g, 10000, goalProjection(), nil, goalNow, domain.Cycles{}); !gp.Done || gp.PerMonth != 0 || gp.Fits != nil {
 		t.Errorf("meta batida: %+v", gp)
 	}
 }
 
 func TestBuildGoalProgress_SaveEdges(t *testing.T) {
 	late := domain.Goal{Kind: domain.GoalSave, TargetAmount: 1000, TargetDate: month(2026, time.August)}
-	if gp := BuildGoalProgress(late, 400, goalProjection(), nil, goalNow); gp.MonthsLeft != 0 || gp.PerMonth != 600 {
+	if gp := BuildGoalProgress(late, 400, goalProjection(), nil, goalNow, domain.Cycles{}); gp.MonthsLeft != 0 || gp.PerMonth != 600 {
 		t.Errorf("data vencida: falta tudo de uma vez: %+v", gp)
 	}
 	noHistory := goalProjection()
 	noHistory.Assumptions.BasedOn = 0
-	if gp := BuildGoalProgress(domain.Goal{Kind: domain.GoalSave, TargetAmount: 1000, TargetDate: month(2027, time.January)}, 0, noHistory, nil, goalNow); gp.Surplus != nil || gp.Fits != nil {
+	if gp := BuildGoalProgress(domain.Goal{Kind: domain.GoalSave, TargetAmount: 1000, TargetDate: month(2027, time.January)}, 0, noHistory, nil, goalNow, domain.Cycles{}); gp.Surplus != nil || gp.Fits != nil {
 		t.Errorf("sem histórico não há como projetar: %+v", gp)
 	}
 }
 
 func TestBuildGoalProgress_Reserve(t *testing.T) {
 	g := domain.Goal{Kind: domain.GoalReserve, ReserveMonths: 6}
-	gp := BuildGoalProgress(g, 9000, goalProjection(), nil, goalNow)
+	gp := BuildGoalProgress(g, 9000, goalProjection(), nil, goalNow, domain.Cycles{})
 	if gp.Target != 12000 || gp.Coverage != 4.5 || gp.Done {
 		t.Errorf("6 x 2000 = 12000; 9000 cobre 4,5 meses: %+v", gp)
 	}
-	if gp := BuildGoalProgress(g, 12000, goalProjection(), nil, goalNow); !gp.Done {
+	if gp := BuildGoalProgress(g, 12000, goalProjection(), nil, goalNow, domain.Cycles{}); !gp.Done {
 		t.Errorf("reserva completa: %+v", gp)
 	}
 	none := goalProjection()
 	none.Assumptions.Fixed = 0
-	if gp := BuildGoalProgress(g, 5000, none, nil, goalNow); gp.Done || gp.Coverage != 0 {
+	if gp := BuildGoalProgress(g, 5000, none, nil, goalNow, domain.Cycles{}); gp.Done || gp.Coverage != 0 {
 		t.Errorf("sem contas fixas não há alvo: %+v", gp)
 	}
 }
@@ -77,7 +77,7 @@ func TestBuildGoalProgress_Cut(t *testing.T) {
 		{Category: "MARKET", Month: goalNow, Total: 9999},
 	}
 	g := domain.Goal{Kind: domain.GoalCut, Category: "FOOD", CutPercent: 15, Baseline: 800, CreatedAt: time.Date(2026, 9, 20, 10, 0, 0, 0, time.UTC)}
-	gp := BuildGoalProgress(g, 0, Projection{}, cats, goalNow)
+	gp := BuildGoalProgress(g, 0, Projection{}, cats, goalNow, domain.Cycles{})
 
 	if math.Abs(gp.Target-680) > 0.01 || gp.Current != 600 {
 		t.Errorf("teto de 15%% abaixo de 800 e gasto do mês: %+v", gp)
@@ -108,15 +108,27 @@ func TestBuildGoalProgress_CutPace(t *testing.T) {
 	cats := []domain.CategoryMonth{{Category: "FOOD", Month: goalNow, Total: 300}}
 	day := func(d int) time.Time { return time.Date(2026, time.October, d, 12, 0, 0, 0, time.UTC) }
 
-	if gp := BuildGoalProgress(g, 0, Projection{}, cats, day(3)); gp.Projected != nil || gp.DayOfMonth != 3 || gp.DaysInMonth != 31 {
+	if gp := BuildGoalProgress(g, 0, Projection{}, cats, day(3), domain.Cycles{}); gp.Projected != nil || gp.DayOfMonth != 3 || gp.DaysInMonth != 31 {
 		t.Errorf("nos primeiros dias não há ritmo confiável: %+v", gp)
 	}
 	// 300 em 10 dias de um mês de 31 dias: fecha em 930, acima do teto de 800 mesmo estando abaixo dele hoje.
-	gp := BuildGoalProgress(g, 0, Projection{}, cats, day(10))
+	gp := BuildGoalProgress(g, 0, Projection{}, cats, day(10), domain.Cycles{})
 	if gp.Projected == nil || math.Abs(*gp.Projected-930) > 0.01 || gp.Current != 300 || gp.Target != 800 {
 		t.Errorf("ritmo: %+v", gp)
 	}
-	if gp := BuildGoalProgress(g, 0, Projection{}, cats, day(7)); gp.Projected == nil {
+	if gp := BuildGoalProgress(g, 0, Projection{}, cats, day(7), domain.Cycles{}); gp.Projected == nil {
 		t.Error("o ritmo aparece a partir do dia 7")
+	}
+}
+
+func TestGoalProgressCyclePace(t *testing.T) {
+	cyc := domain.NewCycles([]domain.CycleStart{
+		{Key: time.Date(2026, 11, 1, 0, 0, 0, 0, time.UTC), Start: time.Date(2026, 11, 13, 0, 0, 0, 0, time.UTC)},
+		{Key: time.Date(2026, 12, 1, 0, 0, 0, 0, time.UTC), Start: time.Date(2026, 12, 15, 0, 0, 0, 0, time.UTC)},
+	})
+	g := domain.Goal{Kind: domain.GoalCut, Category: "FOOD", CutPercent: 20, Baseline: 1000, CreatedAt: time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)}
+	gp := BuildGoalProgress(g, 0, Projection{}, nil, time.Date(2026, 11, 21, 12, 0, 0, 0, time.UTC), cyc)
+	if gp.DayOfMonth != 9 || gp.DaysInMonth != 32 {
+		t.Errorf("ritmo no ciclo 13/nov–14/dez em 21/nov = dia %d de %d, want 9 de 32", gp.DayOfMonth, gp.DaysInMonth)
 	}
 }

@@ -21,6 +21,7 @@ type api struct {
 	sessions *sessions
 	logger   *slog.Logger
 	now      func() time.Time
+	cycles   func() domain.Cycles // nil = mês do calendário
 	coach    *coachService
 	insights *insights.Insights
 	syncer   chat.Syncer   // nil sem Open Finance
@@ -47,7 +48,8 @@ func (s *Server) mountAPI(password PasswordCheck, reader ports.DashboardReader, 
 	if err != nil {
 		return err
 	}
-	a := &api{reader: reader, sessions: sess, logger: s.logger, now: now, coach: newCoachService(s.coach, s.coachPaid), insights: insights.NewInsights(reader), syncer: s.syncer, settings: s.settings, factor: s.factor, challenges: auth.NewChallenges(), setup: s.setup}
+	a := &api{reader: reader, sessions: sess, logger: s.logger, now: now, coach: newCoachService(s.coach, s.coachPaid), insights: insights.NewInsights(reader), syncer: s.syncer, settings: s.settings, factor: s.factor, challenges: auth.NewChallenges(), setup: s.setup, cycles: s.cycles}
+	a.insights.SetCycles(s.cycles)
 	if s.settings != nil {
 		svc := s.settings.Service
 		a.insights.SetCardCloseDays(func() int { return svc.Int("CARD_CLOSE_DAYS_BEFORE_DUE") })

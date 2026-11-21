@@ -28,9 +28,12 @@ const (
 // cutCategories são as categorias de despesa que aceitam meta de redução.
 var cutCategories = []domain.Category{domain.CategoryFood, domain.CategoryTransport, domain.CategoryHealth, domain.CategoryEntertainment, domain.CategoryShopping, domain.CategoryMarket, domain.CategoryHousing, domain.CategoryBills, domain.CategoryEducation, domain.CategoryPeople, domain.CategoryOther}
 
+// monthStart é a chave do ciclo do salário atual (sem ciclos, o primeiro dia do mês).
 func (a *api) monthStart() time.Time {
-	now := a.now()
-	return time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+	if a.cycles == nil {
+		return domain.Cycles{}.KeyOf(a.now())
+	}
+	return a.cycles().KeyOf(a.now())
 }
 
 // goals: as metas com o andamento calculado agora: patrimônio (contas correntes + investimentos),

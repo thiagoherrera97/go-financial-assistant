@@ -17,6 +17,7 @@ func (a *app) mountDashboard() error {
 	a.server = httpserver.NewServer(a.cfg.Port, a.logger)
 	a.server.SetCoach(a.gemini, a.cfg.GeminiPaidPlan)
 	a.server.SetSyncer(a.syncer)
+	a.server.SetCycles(a.cycles.Current)
 	a.settingsDeps = &httpserver.SettingsDeps{
 		Service: a.settings, // o canal da página vem da configuração CHANNEL, que o setup pode mudar
 		Audit:   a.store,

@@ -148,3 +148,24 @@ func TestMonthlyReport_AsksForThePreviousMonthInTheOwnersTimezone(t *testing.T) 
 		t.Errorf("às 21:30 de 30/11 local o anterior é outubro, got %v", asked)
 	}
 }
+
+func TestMonthlyReport_AsksForThePreviousCycle(t *testing.T) {
+	var asked time.Time
+	exporter := &mockCSVExporterUC{executeFn: func(_ context.Context, m time.Time) ([]byte, string, *ExportSummary, error) {
+		asked = m
+		return nil, "", nil, nil
+	}}
+	r := NewMonthlyReport(exporter, &mockMessengerUC{}, "x", silentReportLogger())
+	cyc := domain.NewCycles([]domain.CycleStart{
+		{Key: time.Date(2026, 11, 1, 0, 0, 0, 0, time.UTC), Start: time.Date(2026, 11, 13, 0, 0, 0, 0, time.UTC)},
+		{Key: time.Date(2026, 12, 1, 0, 0, 0, 0, time.UTC), Start: time.Date(2026, 12, 15, 0, 0, 0, 0, time.UTC)},
+	})
+	r.SetCycles(func() domain.Cycles { return cyc })
+	r.SetClock(domain.FixedClock{T: time.Date(2026, 12, 1, 12, 0, 0, 0, time.UTC)}) // ciclo de novembro ainda em andamento
+	if err := r.Send(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if want := time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC); !asked.Equal(want) {
+		t.Errorf("relatório pediu %v, want o último ciclo fechado (outubro)", asked)
+	}
+}

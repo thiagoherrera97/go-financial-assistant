@@ -17,6 +17,7 @@ type MonthlyReport struct {
 	logger    *slog.Logger
 	clock     domain.Clock
 	loc       *time.Location // fuso do dono: o "mês anterior" é o do calendário dele
+	cycles    func() domain.Cycles
 }
 
 func NewMonthlyReport(exporter CSVExporter, messenger ports.Messenger, phone string, logger *slog.Logger) *MonthlyReport {
@@ -33,6 +34,9 @@ func NewMonthlyReport(exporter CSVExporter, messenger ports.Messenger, phone str
 // SetClock troca o relógio (testes).
 func (r *MonthlyReport) SetClock(c domain.Clock) { r.clock = c }
 
+// SetCycles liga os ciclos do salário: o relatório é do último ciclo fechado. Sem ciclos, o mês anterior.
+func (r *MonthlyReport) SetCycles(f func() domain.Cycles) { r.cycles = f }
+
 // SetLocation define o fuso do dono. O padrão é UTC.
 func (r *MonthlyReport) SetLocation(loc *time.Location) {
 	if loc != nil {
@@ -41,7 +45,12 @@ func (r *MonthlyReport) SetLocation(loc *time.Location) {
 }
 
 func (r *MonthlyReport) Send(ctx context.Context) error {
-	prevMonth := previousMonth(r.clock.Now().In(r.loc))
+	now := r.clock.Now().In(r.loc)
+	prevMonth := previousMonth(now)
+	if r.cycles != nil {
+		// O último ciclo fechado: o do mês em curso ainda está em andamento.
+		prevMonth = r.cycles().KeyOf(now).AddDate(0, -1, 0)
+	}
 
 	data, filename, summary, err := r.exporter.Execute(ctx, prevMonth)
 	if err != nil {

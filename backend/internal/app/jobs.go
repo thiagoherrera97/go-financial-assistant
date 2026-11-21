@@ -34,6 +34,7 @@ func (a *app) startJobs() {
 	go insights.NewDigestJob(a.insights, &a.channel, "", a.logger, a.settings.Digest, a.onChange()).Run(a.ctx)
 	report := ledger.NewMonthlyReport(a.exportCSV, &a.channel, "", a.logger)
 	report.SetLocation(a.location())
+	report.SetCycles(a.cycles.Current)
 	go a.runDaily(report)
 }
 

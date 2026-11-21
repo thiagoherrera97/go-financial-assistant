@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/domain"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -49,10 +50,14 @@ type Server struct {
 
 	mu     sync.Mutex
 	runCtx context.Context // definido em Start: rotas montadas depois (canal ligado pelo setup) já sobem as limpezas
+	cycles func() domain.Cycles
 }
 
 // SetSyncer liga a sincronização do Open Finance à API do dashboard (chame antes de MountAPI).
 func (s *Server) SetSyncer(syncer chat.Syncer) { s.syncer = syncer }
+
+// SetCycles liga os ciclos do salário: o "mês" das telas passa a ser o ciclo. Chamar antes de MountAPI.
+func (s *Server) SetCycles(f func() domain.Cycles) { s.cycles = f }
 
 // SetCoach liga o Coach com IA da API do dashboard. Sem plano pago declarado, ele fica bloqueado.
 func (s *Server) SetCoach(coach ports.Coach, paidPlan bool) {

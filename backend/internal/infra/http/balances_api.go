@@ -9,7 +9,6 @@ import (
 
 	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/domain"
 	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/usecase/balances"
-	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/usecase/insights"
 
 	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/usecase/openfinance"
 
@@ -243,7 +242,7 @@ func (a *api) salary(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"extras": extras, "extrasTotal": cents(extrasTotal),
-		"configured": view.Configured, "month": formatMonth(insights.MonthStart(now)), "parts": parts,
+		"configured": view.Configured, "month": formatMonth(a.monthStart()), "parts": parts,
 		"expected": cents(expected), "received": cents(received), "pending": cents(pending),
 	})
 }
