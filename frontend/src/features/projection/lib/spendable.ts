@@ -55,16 +55,18 @@ export interface DebtGoal {
 
 /**
  * Quanto falta de uma dívida: o que resta das parcelas ou, no cheque especial, o maior entre o limite em uso agora e o
- * previsto no próximo mergulho (logo depois do salário a conta está zerada, mas o buraco volta antes do próximo).
+ * previsto no próximo mergulho (logo depois do salário a conta está zerada, mas o buraco volta antes do próximo). Da
+ * previsão vale só o já comprometido (committedInLimit), sem a estimativa de compras novas: o quanto gastar é o que o
+ * card calcula, e contá-lo aqui também seria contar duas vezes.
  */
 export function debtRemaining(d: {
   kind: string
   progress: { remaining: number } | null
   limit: { inLimit: number } | null
-  forecast?: { inLimit: number } | null
+  forecast?: { inLimit: number; committedInLimit?: number } | null
 }): number {
   if (d.kind === 'INSTALLMENTS') return d.progress?.remaining ?? 0
-  return Math.max(d.limit?.inLimit ?? 0, d.forecast?.inLimit ?? 0)
+  return Math.max(d.limit?.inLimit ?? 0, d.forecast?.committedInLimit ?? d.forecast?.inLimit ?? 0)
 }
 
 /** Nome da dívida para a frase: "dívida com a Mãe" quando há credor, senão o nome dela. */
