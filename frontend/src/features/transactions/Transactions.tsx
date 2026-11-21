@@ -97,31 +97,30 @@ const VIEWS = [
   { key: 'lista', label: 'Lista', Icon: List },
 ] as const
 
-/** Totais do que está filtrado: despesas, receitas e investimentos. */
+/** Totais do que está filtrado: despesas e receitas. Movimento de caixinhas e investimentos fica de fora: não é dinheiro
+ * a mais, só troca de lugar (o rendimento já entra em Receitas). */
 function Summary({ groups }: { groups: TransactionGroup[] | undefined }) {
   if (!groups) return null
   const total = groups.reduce(
     (acc, g) => ({
       expense: acc.expense + g.expense,
       income: acc.income + g.income,
-      applied: acc.applied + g.applied,
-      redeemed: acc.redeemed + g.redeemed,
       count: acc.count + g.count,
     }),
-    { expense: 0, income: 0, applied: 0, redeemed: 0, count: 0 },
+    { expense: 0, income: 0, count: 0 },
   )
-  const invest = investSummary(total.applied, total.redeemed)
   return (
     <div className="tiles section-gap">
       <StatTile label="Despesas" value={formatBRL(total.expense)} />
       <StatTile label="Receitas" value={formatBRL(total.income)} />
-      <StatTile label="Investimentos e caixinhas" value={invest.signed} note={`${invest.headline} · ${invest.detail}`} />
       <StatTile label="Lançamentos" value={String(total.count)} />
     </div>
   )
 }
 
-function CategoryCards({ groups, query, stale }: { groups: TransactionGroup[]; query: string; stale: boolean }) {
+function CategoryCards({ groups: all, query, stale }: { groups: TransactionGroup[]; query: string; stale: boolean }) {
+  // Caixinha não aparece: só troca dinheiro de lugar (o rendimento já está em Entradas).
+  const groups = all.filter((g) => g.key !== 'RESERVE')
   if (groups.length === 0) return <p className="state">Nenhuma transação encontrada.</p>
   const max = Math.max(...groups.map((g) => Math.max(g.expense, g.income, Math.abs(g.applied - g.redeemed))), 1)
   return (
