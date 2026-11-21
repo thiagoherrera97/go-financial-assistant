@@ -97,7 +97,9 @@
 /* Dívidas */
 .bal-debts .btn svg { vertical-align: -3px; }
 .bal-debt-list { list-style: none; margin: 12px 0; padding: 0; display: grid; gap: 12px; }
-.bal-debt { border-top: 1px solid var(--grid); padding-top: 14px; }
+/* O card reaproveita .bal-salary; a linha da dívida não herda a grade das linhas do salário. */
+.bal-debts .bal-debt { display: block; border-top: 1px solid var(--grid); padding-top: 16px; color: var(--text-primary); }
+.bal-debts .bal-debt-head { align-items: center; }
 .bal-debt-head { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: start; }
 .bal-debt-head > svg { margin-top: 3px; color: var(--text-secondary); }
 .bal-debt-head h3 { margin: 0; font-size: 1rem; font-weight: 600; }
