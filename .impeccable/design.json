@@ -1,0 +1,343 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-21T19:31:50.390911Z",
+  "title": "Design System: FinAssist",
+  "extensions": {
+    "colorMeta": {
+      "accent": {
+        "role": "primary",
+        "displayName": "Roxo FinAssist",
+        "canonical": "#7135d4",
+        "tonalRamp": [
+          "oklch(25% 0.1 295)",
+          "oklch(35% 0.2 295)",
+          "oklch(45% 0.2 295)",
+          "oklch(55% 0.2 295)",
+          "oklch(65% 0.2 295)",
+          "oklch(75% 0.2 295)",
+          "oklch(85% 0.2 295)",
+          "oklch(95% 0.1 295)"
+        ]
+      },
+      "hero": {
+        "role": "primary",
+        "displayName": "Roxo do Herói",
+        "canonical": "#6c2ecf",
+        "tonalRamp": [
+          "oklch(25% 0.1 295)",
+          "oklch(35% 0.2 295)",
+          "oklch(45% 0.2 295)",
+          "oklch(55% 0.2 295)",
+          "oklch(65% 0.2 295)",
+          "oklch(75% 0.2 295)",
+          "oklch(85% 0.2 295)",
+          "oklch(95% 0.1 295)"
+        ]
+      },
+      "accent-soft": {
+        "role": "primary",
+        "displayName": "Véu Lilás",
+        "canonical": "#efe8fb",
+        "tonalRamp": [
+          "oklch(25% 0.025 300)",
+          "oklch(35% 0.05 300)",
+          "oklch(45% 0.05 300)",
+          "oklch(55% 0.05 300)",
+          "oklch(65% 0.05 300)",
+          "oklch(75% 0.05 300)",
+          "oklch(85% 0.05 300)",
+          "oklch(95% 0.025 300)"
+        ]
+      },
+      "page": {
+        "role": "neutral",
+        "displayName": "Página Violeta-Névoa",
+        "canonical": "#f4f3f8",
+        "tonalRamp": [
+          "oklch(25% 0.007 295)",
+          "oklch(35% 0.015 295)",
+          "oklch(45% 0.015 295)",
+          "oklch(55% 0.015 295)",
+          "oklch(65% 0.015 295)",
+          "oklch(75% 0.015 295)",
+          "oklch(85% 0.015 295)",
+          "oklch(95% 0.007 295)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Card Branco",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "oklch(25% 0.005 295)",
+          "oklch(35% 0.01 295)",
+          "oklch(45% 0.01 295)",
+          "oklch(55% 0.01 295)",
+          "oklch(65% 0.01 295)",
+          "oklch(75% 0.01 295)",
+          "oklch(85% 0.01 295)",
+          "oklch(95% 0.005 295)"
+        ]
+      },
+      "text-primary": {
+        "role": "neutral",
+        "displayName": "Tinta Violeta",
+        "canonical": "#16131d",
+        "tonalRamp": [
+          "oklch(25% 0.01 295)",
+          "oklch(35% 0.02 295)",
+          "oklch(45% 0.02 295)",
+          "oklch(55% 0.02 295)",
+          "oklch(65% 0.02 295)",
+          "oklch(75% 0.02 295)",
+          "oklch(85% 0.02 295)",
+          "oklch(95% 0.01 295)"
+        ]
+      },
+      "good": {
+        "role": "semantic",
+        "displayName": "Bom",
+        "canonical": "#0b7a3b",
+        "tonalRamp": [
+          "oklch(25% 0.075 150)",
+          "oklch(35% 0.15 150)",
+          "oklch(45% 0.15 150)",
+          "oklch(55% 0.15 150)",
+          "oklch(65% 0.15 150)",
+          "oklch(75% 0.15 150)",
+          "oklch(85% 0.15 150)",
+          "oklch(95% 0.075 150)"
+        ]
+      },
+      "bad": {
+        "role": "semantic",
+        "displayName": "Ruim",
+        "canonical": "#c0302e",
+        "tonalRamp": [
+          "oklch(25% 0.09 25)",
+          "oklch(35% 0.18 25)",
+          "oklch(45% 0.18 25)",
+          "oklch(55% 0.18 25)",
+          "oklch(65% 0.18 25)",
+          "oklch(75% 0.18 25)",
+          "oklch(85% 0.18 25)",
+          "oklch(95% 0.09 25)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "hero-number": {
+        "displayName": "Número do herói",
+        "purpose": "Total em conta no card-herói."
+      },
+      "display": {
+        "displayName": "Título de página",
+        "purpose": "Título de cada tela."
+      },
+      "headline": {
+        "displayName": "Título de seção",
+        "purpose": "Seções dentro da tela."
+      },
+      "title": {
+        "displayName": "Título de card",
+        "purpose": "Cards e gráficos."
+      },
+      "body": {
+        "displayName": "Corpo",
+        "purpose": "Texto corrido e controles, tabular-nums."
+      },
+      "label": {
+        "displayName": "Rótulo",
+        "purpose": "Rótulos de tile, cabeçalhos de tabela, notas."
+      }
+    },
+    "shadows": [
+      {
+        "name": "shadow-sm",
+        "value": "0 1px 2px rgba(35,20,70,.05), 0 2px 8px rgba(35,20,70,.04)",
+        "purpose": "Cards em repouso (claro); nenhuma no escuro."
+      },
+      {
+        "name": "shadow-md",
+        "value": "0 2px 4px rgba(35,20,70,.05), 0 12px 32px rgba(35,20,70,.1)",
+        "purpose": "Hover de cards clicáveis, grupo aberto, tooltip."
+      },
+      {
+        "name": "drawer",
+        "value": "8px 0 40px rgba(20,10,40,.25)",
+        "purpose": "Menu aberto no celular."
+      }
+    ],
+    "motion": [
+      {
+        "name": "transition-state",
+        "value": "0.15s ease",
+        "purpose": "Cor e fundo em hover/foco de botões, itens e campos."
+      },
+      {
+        "name": "transition-lift",
+        "value": "0.2s ease",
+        "purpose": "Sombra e translateY(-1px) em cards clicáveis."
+      },
+      {
+        "name": "drawer-ease",
+        "value": "0.22s cubic-bezier(0.22, 1, 0.36, 1)",
+        "purpose": "Entrada da gaveta do menu."
+      },
+      {
+        "name": "press",
+        "value": "0.1s ease, scale(0.98)",
+        "purpose": "Feedback de :active em botões."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "mobile-narrow",
+        "value": "520px"
+      },
+      {
+        "name": "mobile",
+        "value": "640px"
+      },
+      {
+        "name": "tablet",
+        "value": "720px"
+      },
+      {
+        "name": "desktop",
+        "value": "900px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Botão primário",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Ação principal, pílula roxa.",
+      "html": "<button class=\"ds-btn ds-btn-primary\">Sincronizar</button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 16px;border:1px solid transparent;border-radius:999px;font:500 15px/1.2 Figtree,system-ui,sans-serif;cursor:pointer;transition:background-color .15s ease,transform .1s ease}.ds-btn:active{transform:scale(.98)}.ds-btn:focus-visible{outline:2px solid var(--focus,#7135d4);outline-offset:2px}.ds-btn-primary{background:#7135d4;color:#fff;font-weight:600}.ds-btn-primary:hover{background:#5f25bd}"
+    },
+    {
+      "name": "Botão secundário",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Ação neutra em superfície tonal.",
+      "html": "<button class=\"ds-btn ds-btn-sec\">Ocultar valores</button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 16px;border:1px solid transparent;border-radius:999px;font:500 15px/1.2 Figtree,system-ui,sans-serif;cursor:pointer;transition:background-color .15s ease,transform .1s ease}.ds-btn:active{transform:scale(.98)}.ds-btn:focus-visible{outline:2px solid var(--focus,#7135d4);outline-offset:2px}.ds-btn-sec{background:#f0eef5;color:#16131d}.ds-btn-sec:hover{background:#e7e4ef}"
+    },
+    {
+      "name": "Campo de texto",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Campo tonal que sobe para branco com anel roxo no foco.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Buscar transação\">",
+      "css": ".ds-input{min-height:40px;padding:8px 12px;border:1px solid rgba(22,19,29,.08);border-radius:10px;background:#f0eef5;color:#16131d;font:16px Figtree,system-ui,sans-serif;transition:border-color .15s,background-color .15s,box-shadow .15s}.ds-input:hover{border-color:rgba(22,19,29,.16)}.ds-input:focus-visible{outline:none;border-color:#7135d4;background:#fff;box-shadow:0 0 0 3px rgba(113,53,212,.22)}"
+    },
+    {
+      "name": "Item de menu",
+      "kind": "nav",
+      "refersTo": "nav-link",
+      "description": "Item do menu lateral; ativo em Véu Lilás.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-link\" href=\"#\">Mês</a><a class=\"ds-link\" aria-current=\"page\" href=\"#\">Painel</a></nav>",
+      "css": ".ds-nav{display:flex;flex-direction:column;gap:2px;width:220px}.ds-link{display:flex;align-items:center;min-height:40px;padding:8px 12px;border-radius:12px;color:#4f4a5b;font:500 15px Figtree,system-ui,sans-serif;text-decoration:none;transition:background-color .15s,color .15s}.ds-link:hover{background:#f0eef5;color:#16131d}.ds-link:focus-visible{outline:2px solid #7135d4;outline-offset:-2px}.ds-link[aria-current=page]{background:#efe8fb;color:#5a1fb8;font-weight:600}"
+    },
+    {
+      "name": "Chip de categoria",
+      "kind": "chip",
+      "refersTo": "chip-category",
+      "description": "Ícone sobre fundo a 15% da cor da categoria.",
+      "html": "<span class=\"ds-chip\" style=\"--cat:#eb6834\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M7 3v8a3 3 0 0 0 3 3v7M7 3v5M11 3v5M17 3c-2 2-2 6 0 8v10\"/></svg></span>",
+      "css": ".ds-chip{display:inline-grid;place-items:center;width:40px;height:40px;border-radius:12px;color:var(--cat);background:color-mix(in srgb,var(--cat) 15%,transparent)}"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Card branco sem borda com sombra suave e número em destaque.",
+      "html": "<div class=\"ds-card\"><div class=\"ds-lbl\">Gasto no mês</div><div class=\"ds-val\">R$ 3.482,10</div><div class=\"ds-note\">12% abaixo do mês passado</div></div>",
+      "css": ".ds-card{background:#fff;border-radius:20px;box-shadow:0 1px 2px rgba(35,20,70,.05),0 2px 8px rgba(35,20,70,.04);padding:20px;font-family:Figtree,system-ui,sans-serif;font-variant-numeric:tabular-nums;width:260px;transition:box-shadow .2s,transform .2s}.ds-card:hover{box-shadow:0 2px 4px rgba(35,20,70,.05),0 12px 32px rgba(35,20,70,.1);transform:translateY(-1px)}.ds-lbl{color:#4f4a5b;font-size:14px;font-weight:500}.ds-val{font-size:26px;font-weight:650;letter-spacing:-.025em;line-height:1.25;margin-top:6px;color:#16131d}.ds-note{font-size:13px;color:#6a6575;margin-top:4px}"
+    },
+    {
+      "name": "Card-herói",
+      "kind": "custom",
+      "refersTo": "hero-card",
+      "description": "Faixa roxa com o total em conta e barra de participação por banco.",
+      "html": "<div class=\"ds-hero\"><div class=\"ds-hband\"><div class=\"ds-hl\">Total em conta</div><div class=\"ds-hv\">R$ 12.840,55</div></div><div class=\"ds-hbody\"><div class=\"ds-share\"><span style=\"flex:6;background:#7135d4\"></span><span style=\"flex:3;background:#eb6834\"></span><span style=\"flex:1;background:#1baf7a\"></span></div></div></div>",
+      "css": ".ds-hero{background:#fff;border-radius:24px;box-shadow:0 1px 2px rgba(35,20,70,.05),0 2px 8px rgba(35,20,70,.04);overflow:hidden;width:360px;font-family:Figtree,system-ui,sans-serif;font-variant-numeric:tabular-nums}.ds-hband{padding:28px;background:#6c2ecf;color:#fff}.ds-hl{color:rgba(255,255,255,.78);font-size:15px;font-weight:500}.ds-hv{font-size:44px;font-weight:650;letter-spacing:-.035em;line-height:1.1;margin-top:6px}.ds-hbody{padding:20px 28px 22px}.ds-share{display:flex;gap:3px;height:10px;border-radius:999px;overflow:hidden}.ds-share span{display:block;height:100%}"
+    },
+    {
+      "name": "Controle segmentado",
+      "kind": "custom",
+      "refersTo": "button-secondary",
+      "description": "Alternância de visualização em trilha pílula.",
+      "html": "<div class=\"ds-seg\"><button>Categoria</button><button aria-pressed=\"true\">Dia</button></div>",
+      "css": ".ds-seg{display:inline-flex;gap:2px;padding:4px;background:#f0eef5;border-radius:999px}.ds-seg button{min-height:34px;padding:0 14px;border:0;border-radius:999px;background:transparent;color:#4f4a5b;font:500 14px Figtree,system-ui,sans-serif;cursor:pointer}.ds-seg button:hover{background:rgba(255,255,255,.6);color:#16131d}.ds-seg button[aria-pressed=true]{background:#fff;color:#16131d;font-weight:600;box-shadow:0 1px 2px rgba(35,20,70,.05),0 2px 8px rgba(35,20,70,.04)}.ds-seg button:focus-visible{outline:2px solid #7135d4;outline-offset:2px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "O Banco Pessoal",
+    "overview": "O FinAssist se veste como um banco digital de uma pessoa só: o saldo é o herói, cada tela é uma pilha calma de cards brancos sobre um fundo levemente violeta, e o roxo aparece apenas onde há ação ou onde mora o número principal. Nubank é referência de acabamento e clareza, nunca de marca.\n\nA densidade é de uso diário: olhada rápida no celular, revisão longa no desktop, com a mesma linguagem de componentes nos dois. Cor informa, nunca decora. O sistema recusa o painel cinza genérico de admin, com borda fina em tudo.",
+    "keyCharacteristics": [
+      "Fundo neutro com leve tinta violeta; cards brancos sem borda e com sombra suave.",
+      "Raio generoso (20px em cards, 24px no herói), botões em pílula.",
+      "Figtree em todo texto; números tabulares sempre.",
+      "Roxo como único acento de interface; paleta de dataviz fixa para categorias.",
+      "Tema claro e escuro, com o botão de tema vencendo a preferência do sistema."
+    ],
+    "rules": [
+      {
+        "name": "The Purple Means Act Rule",
+        "body": "Roxo aparece só em ação (botão, foco, item ativo), no número principal (herói) e na série 1 de gráficos.",
+        "section": "colors"
+      },
+      {
+        "name": "The Category Colors Are Fixed Rule",
+        "body": "Uma categoria tem sempre a mesma cor em todas as telas e nos dois temas.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tinted Neutral Rule",
+        "body": "Neutros carregam um fio de violeta; nunca cinza puro nem #000/#fff como texto ou fundo de página.",
+        "section": "colors"
+      },
+      {
+        "name": "The Number First Rule",
+        "body": "O valor monetário é o maior elemento do seu card, em 650 com tracking negativo.",
+        "section": "typography"
+      },
+      {
+        "name": "The One Family Rule",
+        "body": "Figtree em tudo; hierarquia por tamanho, peso e cor.",
+        "section": "typography"
+      },
+      {
+        "name": "The Card Inside Card Rule",
+        "body": "Card dentro de card vira bloco tonal, sem sombra e sem borda.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Shadow Is Soft Rule",
+        "body": "Sombras difusas, para baixo, tingidas de violeta; nenhuma sombra dura.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do deixar o número principal de cada card como o maior elemento, em 650 com tracking negativo e tabular-nums.",
+      "Do usar roxo só em ação, foco, item ativo, herói e série 1.",
+      "Do usar variáveis (--surface, --accent, --shadow-sm, --r-lg) e nunca hex solto, para o tema escuro funcionar.",
+      "Do reaproveitar .card, .btn, .chip, .badge, .status antes de criar variante nova.",
+      "Do manter foco visível (2px roxo, offset 2px) e respeitar prefers-reduced-motion.",
+      "Do garantir contraste AA nos dois temas; texto sobre o herói é sempre branco."
+    ],
+    "donts": [
+      "Don't voltar ao painel cinza de admin: bordas finas em todo card, fundo neutro puro, sem hierarquia de número.",
+      "Don't usar o logo, o nome ou o roxo exato do Nubank.",
+      "Don't empilhar sombra em card dentro de card, nem usar sombra dura sem desfoque.",
+      "Don't usar faixa lateral colorida em avisos; use fundo tonal.",
+      "Don't colorir por decoração: cor só informa categoria, bom/ruim ou alerta.",
+      "Don't introduzir uma segunda família tipográfica nem números proporcionais em valores.",
+      "Don't reatribuir a cor de uma categoria entre telas."
+    ]
+  }
+}

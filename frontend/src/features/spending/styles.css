@@ -1,18 +1,18 @@
 /* Essencial ou supérfluo e "onde cortar" (tela Gastos) */
-.split-bar { display: flex; height: 14px; margin: 12px 0 10px; border-radius: 999px; overflow: hidden; background: var(--border); gap: 2px; }
+.split-bar { display: flex; height: 12px; margin: 14px 0 12px; border-radius: 999px; overflow: hidden; background: var(--surface-2); gap: 3px; }
 .split-bar span { display: block; min-width: 3px; }
-.split-essential { background: var(--good); }
-.split-superfluous { background: var(--bad); }
-.split-unknown { background: var(--text-muted); opacity: 0.55; }
+.split-bar > .split-essential, .split-essential { background: var(--good); }
+.split-bar > .split-superfluous, .split-superfluous { background: var(--bad); }
+.split-bar > .split-unknown, .split-unknown { background: var(--text-muted); opacity: 0.55; }
 .split-legend { display: flex; flex-wrap: wrap; gap: 6px 20px; margin: 0; padding: 0; list-style: none; font-size: 0.875rem; color: var(--text-secondary); }
 .split-legend li { display: inline-flex; align-items: center; gap: 6px; }
 .split-legend strong { color: var(--text-primary); font-weight: 600; }
 .split-dot { width: 10px; height: 10px; border-radius: 50%; }
 .grid-2 .chart-sub { margin: -6px 0 10px; }
 .cut-list { margin: 0; padding: 0; list-style: none; }
-.cut-list li + li { border-top: 1px solid var(--border); }
-.cut-row { display: flex; align-items: center; gap: 10px; padding: 10px 4px; color: inherit; text-decoration: none; border-radius: 6px; }
-.cut-row:hover, .cut-row:focus-visible { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+.cut-list li + li { border-top: 1px solid var(--grid); }
+.cut-row { display: flex; align-items: center; gap: 12px; padding: 12px 8px; margin: 0 -8px; color: inherit; text-decoration: none; border-radius: var(--r-sm); transition: background-color 0.15s ease; }
+.cut-row:hover, .cut-row:focus-visible { background: var(--surface-2); }
 .cut-name { display: flex; flex-direction: column; flex: 1; min-width: 0; }
 .cut-label { font-size: 0.9375rem; font-weight: 500; }
 .cut-meta { font-size: 0.75rem; color: var(--text-muted); overflow-wrap: anywhere; }

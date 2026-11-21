@@ -63,7 +63,10 @@ export default function Login() {
   return (
     <div className="login">
       <form className="card" onSubmit={handleSubmit}>
-        <h1 className="chart-title">FinAssist</h1>
+        <h1 className="brand login-brand">
+          <span className="brand-mark" aria-hidden="true">F</span>
+          FinAssist
+        </h1>
         {step === 'password' ? (
           <label>
             Senha

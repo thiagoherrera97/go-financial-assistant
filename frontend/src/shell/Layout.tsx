@@ -93,7 +93,10 @@ export function Layout({ children }: { children: ReactNode }) {
         <button type="button" className="icon-btn" aria-label="Abrir menu" aria-expanded={open} aria-controls="sidebar" onClick={() => setOpen(true)}>
           <Menu size={22} aria-hidden="true" />
         </button>
-        <span className="brand">FinAssist</span>
+        <span className="brand">
+          <span className="brand-mark" aria-hidden="true">F</span>
+          FinAssist
+        </span>
         <span className="mobilebar-end">
           <SyncControl compact />
         </span>
@@ -103,7 +106,10 @@ export function Layout({ children }: { children: ReactNode }) {
 
       <aside id="sidebar" className={`sidebar ${open ? 'is-open' : ''}`}>
         <div className="side-brand">
-          <span className="brand">FinAssist</span>
+          <span className="brand">
+            <span className="brand-mark" aria-hidden="true">F</span>
+            FinAssist
+          </span>
           <button type="button" className="icon-btn side-close" aria-label="Fechar menu" onClick={() => setOpen(false)}>
             <X size={20} aria-hidden="true" />
           </button>

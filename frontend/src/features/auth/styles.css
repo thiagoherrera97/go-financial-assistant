@@ -1,8 +1,12 @@
 /* Login */
-.login { min-height: 100vh; display: grid; place-items: center; padding: 16px; }
-.login form { width: min(360px, 100%); display: grid; gap: 12px; }
+.login { min-height: 100vh; display: grid; place-items: center; padding: 16px; background: var(--page); }
+.login form { width: min(400px, 100%); display: grid; gap: 16px; padding: 32px; }
 .login label { display: grid; gap: 4px; font-size: 0.875rem; color: var(--text-secondary); }
-.login input { padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--page); }
+.login label { font-weight: 500; }
+.login-brand { font-size: 1.375rem; margin-bottom: 4px; }
+.login-brand .brand-mark { width: 36px; height: 36px; border-radius: 11px; font-size: 1.0625rem; }
+.login input { width: 100%; min-height: 48px; font-size: 1rem; }
+.login .btn { min-height: 48px; }
 
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 

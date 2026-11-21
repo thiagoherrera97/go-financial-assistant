@@ -2,28 +2,28 @@
 .setup { min-height: 100vh; padding: 32px 16px; background: var(--page); }
 .setup-box { width: min(640px, 100%); margin: 0 auto; display: grid; gap: 16px; }
 .setup-head { display: grid; gap: 12px; }
-.setup-card { display: grid; gap: 16px; padding: 24px; }
+.setup-card { display: grid; gap: 18px; padding: 28px; }
 .setup-step, .setup-substep { display: grid; gap: 12px; }
 .setup-step > .setup-substep { margin-top: 4px; }
 .setup-lead { margin: 0; color: var(--text-secondary); }
 .setup-subtitle { margin: 4px 0 0; font-size: 0.9375rem; font-weight: 600; }
-.setup-note { margin: 0; padding: 10px 12px; border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 6px; font-size: 0.875rem; color: var(--text-secondary); background: var(--surface); }
+.setup-note { margin: 0; padding: 12px 16px; border-radius: var(--r-md); font-size: 0.875rem; color: var(--text-primary); background: var(--accent-soft); }
 .setup-howto { margin: 0; padding-left: 1.25rem; display: grid; gap: 6px; color: var(--text-secondary); font-size: 0.9375rem; }
 .setup-field { display: grid; gap: 4px; font-size: 0.875rem; color: var(--text-secondary); }
-.setup-field input { padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--page); color: var(--text-primary); font: inherit; }
+.setup-field input { width: 100%; }
 .setup-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .setup-cta { justify-self: start; text-decoration: none; }
 .setup a:not(.btn) { color: var(--accent); }
 .setup-link { padding: 0; border: 0; background: none; color: var(--accent); font: inherit; text-decoration: underline; cursor: pointer; }
 .setup-done-line { margin: 0; font-size: 0.875rem; color: var(--text-secondary); }
 .setup-done-line > span { color: var(--good); font-weight: 600; }
-.setup code, .setup-code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.8125rem; padding: 1px 4px; border-radius: 4px; background: var(--grid); overflow-wrap: anywhere; }
-.setup-code { display: block; margin: 6px 0 0; padding: 8px 10px; white-space: pre-wrap; }
+.setup code, .setup-code { font-family: var(--font-mono); font-size: 0.8125rem; padding: 1px 6px; border-radius: 6px; background: var(--surface-2); overflow-wrap: anywhere; }
+.setup-code { display: block; margin: 6px 0 0; padding: 10px 12px; border-radius: var(--r-sm); white-space: pre-wrap; }
 
 .setup-progress { display: grid; gap: 6px; }
 .setup-progress-text { margin: 0; font-size: 0.875rem; color: var(--text-secondary); }
 .setup-steps { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
-.setup-steps li { height: 6px; border-radius: 3px; background: var(--grid); }
+.setup-steps li { height: 6px; border-radius: 999px; background: var(--grid); }
 .setup-steps li.is-done { background: var(--good); }
 .setup-steps li.is-current { background: var(--accent); }
 

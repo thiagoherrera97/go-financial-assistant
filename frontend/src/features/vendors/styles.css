@@ -16,12 +16,12 @@
 
 .bill-foot .btn-small { margin-left: 0; display: inline-flex; align-items: center; gap: 4px; }
 
-.vendor-pay { display: grid; gap: 8px; border-top: 1px solid var(--border); padding-top: 8px; }
+.vendor-pay { display: grid; gap: 10px; border-top: 1px solid var(--grid); padding-top: 12px; }
 .vendor-pay .view-toggle { margin: 0; }
 .vendor-pay .btn-small { margin-left: 0; display: inline-flex; align-items: center; gap: 4px; }
 .vendor-search, .vendor-manual { display: flex; gap: 6px; flex-wrap: wrap; align-items: flex-end; }
 .vendor-search input { flex: 1; min-width: 0; }
-.vendor-pay input { padding: 6px 9px; border: 1px solid var(--border); border-radius: 6px; background: var(--page); min-width: 0; }
+.vendor-pay input { min-width: 0; }
 .vendor-manual label { display: grid; gap: 4px; font-size: 0.8125rem; color: var(--text-secondary); flex: 1; min-width: 120px; }
 .vendor-hits { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; max-height: 260px; overflow-y: auto; }
 .vendor-hits li { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 0.8125rem; padding: 4px 0; border-bottom: 1px solid var(--border); }
