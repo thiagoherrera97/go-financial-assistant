@@ -86,12 +86,38 @@ func TestRebuildCardForecasts(t *testing.T) {
 		t.Errorf("prevista de dezembro inesperada: %+v", got[2])
 	}
 
+	// A nota escrita num lançamento do app (ajuste da fatura ou parcela prevista) sobrevive ao refazer.
+	if _, err := pg.Pool.Exec(ctx, `UPDATE payments SET note = 'carro 8/12 + alianças 7/10' WHERE external_id = 'finassist:bill:fc-bill-nov'`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pg.Pool.Exec(ctx, `UPDATE payments pay SET note = 'alianças 5/10' FROM purchases p
+		WHERE p.id = pay.purchase_id AND pay.account_id = $1 AND p.description = 'fc-teste VIVARA (5/10)'`, card); err != nil {
+		t.Fatal(err)
+	}
+	noteOf := func(where string) string {
+		var n *string
+		if err := pg.Pool.QueryRow(ctx, `SELECT pay.note FROM payments pay JOIN purchases p ON p.id = pay.purchase_id
+			WHERE pay.account_id = $1 AND `+where, card).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		if n == nil {
+			return ""
+		}
+		return *n
+	}
+
 	// Refazer não duplica; quando a parcela real chega, a prevista some e o ajuste diminui.
 	if _, _, err := repo.RebuildCardForecasts(ctx, 6, day("2026-11-20")); err != nil {
 		t.Fatal(err)
 	}
 	if n := len(read()); n != 3 {
 		t.Errorf("refazer deveria manter 3, got %d", n)
+	}
+	if got := noteOf(`pay.external_id = 'finassist:bill:fc-bill-nov'`); got != "carro 8/12 + alianças 7/10" {
+		t.Errorf("nota do ajuste da fatura perdida ao refazer: %q", got)
+	}
+	if got := noteOf(`p.description = 'fc-teste VIVARA (5/10)'`); got != "alianças 5/10" {
+		t.Errorf("nota da parcela prevista perdida ao refazer: %q", got)
 	}
 	cardExpense(t, repo, pg, card, "fc-t3", "fc-teste VIVARA (4/10)", 669, day("2026-11-15"))
 	cardExpense(t, repo, pg, card, "fc-t4", "fc-teste farmácia", 31, day("2026-10-25"))

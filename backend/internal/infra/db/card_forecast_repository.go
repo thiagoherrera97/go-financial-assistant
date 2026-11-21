@@ -55,6 +55,12 @@ func (r *LedgerRepo) RebuildCardForecasts(ctx context.Context, closeDaysBefore i
 	}
 	defer tx.Rollback(ctx) //nolint:errcheck
 
+	// As notas escritas nesses lançamentos (ex.: o que compõe o ajuste da fatura) voltam depois de recriá-los: o
+	// external_id de cada um é estável (id da fatura, chave da parcela), então a nota acha o mesmo lançamento.
+	if _, err := tx.Exec(ctx, `CREATE TEMP TABLE synthetic_notes ON COMMIT DROP AS
+		SELECT external_id, note FROM payments WHERE external_id LIKE '`+syntheticPrefix+`%' AND note IS NOT NULL`); err != nil {
+		return 0, 0, fmt.Errorf("erro ao guardar as notas das previsões: %w", err)
+	}
 	if _, err := tx.Exec(ctx, `DELETE FROM purchases WHERE id IN (SELECT purchase_id FROM payments WHERE external_id LIKE '`+syntheticPrefix+`%')`); err != nil {
 		return 0, 0, fmt.Errorf("erro ao apagar previsões antigas: %w", err)
 	}
@@ -80,6 +86,9 @@ func (r *LedgerRepo) RebuildCardForecasts(ctx context.Context, closeDaysBefore i
 	adjustments, err = insertBillGaps(ctx, tx)
 	if err != nil {
 		return 0, 0, err
+	}
+	if _, err := tx.Exec(ctx, `UPDATE payments pay SET note = s.note FROM synthetic_notes s WHERE pay.external_id = s.external_id`); err != nil {
+		return 0, 0, fmt.Errorf("erro ao devolver as notas das previsões: %w", err)
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return 0, 0, fmt.Errorf("erro ao gravar previsões: %w", err)
