@@ -581,6 +581,14 @@ func TestToExternal_H1ExactCategories(t *testing.T) {
 		{"Digital services", domain.CategoryEntertainment},
 		{"Financial services", domain.CategoryOther},
 		{"Public utilities and housing", domain.CategoryOther},
+		// Antes em Outros.
+		{"Rent", domain.CategoryHousing},
+		{"Gas stations", domain.CategoryTransport},
+		{"Electricity", domain.CategoryBills},
+		{"Cinema, theater and concerts", domain.CategoryEntertainment},
+		{"Houseware", domain.CategoryShopping},
+		{"University", domain.CategoryEducation},
+		{"Transfer - PIX", domain.CategoryOther}, // Pix segue sem categoria: só você sabe o que foi
 		// As categorias que já existiam não mudam.
 		{"Groceries", domain.CategoryMarket},
 		{"Food and drinks", domain.CategoryFood},
@@ -612,7 +620,7 @@ func TestToExternal_H1ExactCategories(t *testing.T) {
 
 func TestExactExpenseCategories_IsACopy(t *testing.T) {
 	m := ExactExpenseCategories()
-	if len(m) != 7 || m["housing"] != domain.CategoryHousing {
+	if len(m) != 26 || m["housing"] != domain.CategoryHousing {
 		t.Fatalf("mapa inesperado: %v", m)
 	}
 	delete(m, "housing")

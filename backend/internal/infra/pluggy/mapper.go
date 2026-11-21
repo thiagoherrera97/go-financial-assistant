@@ -60,6 +60,26 @@ var (
 		"services":                 domain.CategoryBills,
 		"bookstore":                domain.CategoryEducation,
 		"gyms and fitness centers": domain.CategoryHealth,
+		// Chegavam em Outros (conferido no extrato): cada uma tem subcategoria no catálogo (domain/subcategory.go).
+		"rent":                         domain.CategoryHousing,
+		"electricity":                  domain.CategoryBills,
+		"water":                        domain.CategoryBills,
+		"life insurance":               domain.CategoryBills,
+		"financing":                    domain.CategoryBills,
+		"gas stations":                 domain.CategoryTransport,
+		"car rental":                   domain.CategoryTransport,
+		"wellness and fitness":         domain.CategoryHealth,
+		"university":                   domain.CategoryEducation,
+		"school":                       domain.CategoryEducation,
+		"cinema, theater and concerts": domain.CategoryEntertainment,
+		"stadiums and arenas":          domain.CategoryEntertainment,
+		"tickets":                      domain.CategoryEntertainment,
+		"online bet":                   domain.CategoryEntertainment,
+		"accomodation":                 domain.CategoryEntertainment,
+		"houseware":                    domain.CategoryShopping,
+		"sports goods":                 domain.CategoryShopping,
+		"pet supplies and vet":         domain.CategoryShopping,
+		"kids and toys":                domain.CategoryShopping,
 	}
 
 	expenseCategories = []struct {
