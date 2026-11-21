@@ -30,6 +30,9 @@ func transactionWhere(f domain.TransactionFilter) (string, []any) {
 	if f.Kind != "" {
 		add("p.kind = ?", f.Kind)
 	}
+	if f.ExcludeKind != "" {
+		add("p.kind != ?", f.ExcludeKind)
+	}
 	if f.Category != "" {
 		add("p.category = ?", f.Category)
 	}
@@ -91,7 +94,9 @@ func (r *TransactionsRepo) TransactionGroups(ctx context.Context, f domain.Trans
 	var key, order string
 	switch by {
 	case domain.GroupByCategory:
-		key, order = "p.category", "expense DESC, income DESC, transfer DESC, key"
+		// Toda receita vai para um grupo só (Entradas), na frente; as categorias ficam só com gastos e investimentos.
+		key = "CASE WHEN p.kind = 'INCOME' THEN '" + domain.IncomeGroupKey + "' ELSE p.category END"
+		order = "(" + key + ") = '" + domain.IncomeGroupKey + "' DESC, expense DESC, income DESC, transfer DESC, key"
 	case domain.GroupByDay:
 		key, order = "TO_CHAR("+txDate+", 'YYYY-MM-DD')", "key DESC"
 	default:

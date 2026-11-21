@@ -9,7 +9,7 @@ import { categoryVisual } from '../../shared/lib/categoryVisual'
 import { formatBRL, formatMonthTitle } from '../../shared/lib/format'
 import { CATEGORIES, KINDS, PAYMENT_METHODS } from '../../shared/lib/labels'
 import { shiftMonth } from '../../shared/lib/months'
-import { formatDayLabel, investSummary, withGroupFilter } from './lib/transactions'
+import { formatDayLabel, incomeSources, INCOME_GROUP, investSummary, withGroupFilter } from './lib/transactions'
 import { useTransactionFilters } from './lib/useTransactionFilters'
 import { useTransactionGroups, useTransactions } from './api'
 import { useAccounts } from '../../shared/api/accounts'
@@ -136,7 +136,13 @@ function CategoryCards({ groups, query, stale }: { groups: TransactionGroup[]; q
             {...amounts(g)}
             share={Math.max(g.expense, g.income, Math.abs(g.applied - g.redeemed)) / max}
           >
-            {() => <GroupDetails query={withGroupFilter(query, 'category', g.key)} hideCategory />}
+            {() =>
+              g.key === INCOME_GROUP ? (
+                <IncomeDetails query={withGroupFilter(query, 'category', g.key)} />
+              ) : (
+                <GroupDetails query={withGroupFilter(query, 'category', g.key)} hideCategory />
+              )
+            }
           </GroupCard>
         )
       })}
@@ -199,6 +205,39 @@ function GroupDetails({ query, hideCategory = false }: { query: string; hideCate
           )}
         </>
       )}
+    </QueryState>
+  )
+}
+
+/** Entradas abertas: as receitas separadas por fonte (salário, Pix de cada pessoa, rendimentos...). */
+function IncomeDetails({ query }: { query: string }) {
+  const result = useTransactions(query)
+  return (
+    <QueryState query={result}>
+      {(page) => {
+        const sources = incomeSources(page.items)
+        const max = Math.max(...sources.map((s) => s.total), 1)
+        return (
+          <div className="income-sources">
+            {sources.map((s) => (
+              <GroupCard
+                key={s.key}
+                color="var(--cat-salary)"
+                icon={<CategoryChip category={s.items[0].category === 'SALARY' ? 'SALARY' : INCOME_GROUP} size={16} />}
+                title={s.label}
+                subtitle={`${s.items.length} ${s.items.length === 1 ? 'entrada' : 'entradas'}`}
+                amount={`+${formatBRL(s.total)}`}
+                share={s.total / max}
+              >
+                {() => <TransactionTable items={s.items} />}
+              </GroupCard>
+            ))}
+            {page.total > page.items.length && (
+              <p className="tile-note">Somando as {page.items.length} primeiras de {page.total}. Refine os filtros para ver o restante.</p>
+            )}
+          </div>
+        )
+      }}
     </QueryState>
   )
 }

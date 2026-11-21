@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { describeAmount, investSummary, formatDay, formatDayLabel, monthFilter, toApiQuery, withGroupFilter } from './transactions'
+import { describeAmount, investSummary, formatDay, formatDayLabel, incomeSources, INCOME_GROUP, monthFilter, toApiQuery, withGroupFilter } from './transactions'
+import type { Transaction } from '../api'
 
 const q = (s: string) => new URLSearchParams(s)
 const plain = (s: string) => s.replace(/ /g, ' ')
@@ -77,5 +78,38 @@ describe('investSummary', () => {
     expect(investSummary(1171.33, 5627.18).signed).toBe('-R$\u00a04.455,85')
     expect(investSummary(2171.33, 6178.11, true)).toMatchObject({ headline: 'Tirou R$\u00a04.006,78 da caixinha', detail: 'foi para a caixinha R$\u00a02.171,33 · saiu R$\u00a06.178,11' })
     expect(investSummary(1000, 200).detail).toBe('aplicado R$\u00a01.000,00 · resgatado R$\u00a0200,00')
+  })
+})
+
+describe('incomeSources', () => {
+  const tx = (description: string, amount: number, category = 'OTHER') =>
+    ({ id: description + amount, description, amount, category }) as unknown as Transaction
+
+  it('junta por fonte, ignorando maiúsculas e espaços, da maior para a menor', () => {
+    const groups = incomeSources([
+      tx('Pix recebido Monica Nunes de Andrade', 100),
+      tx('Pix recebido MONICA NUNES DE ANDRADE', 50),
+      tx('LIQUIDO DE VENCIMENTO   45007649848', 5000, 'SALARY'),
+      tx('Rendimentos', 0.15),
+      tx('REMUNERACAO APLICACAO AUTOMATICA', 0.01),
+      tx('TED RECEBIDA   Monica Nunes Herrera', 2000),
+      tx('Reembolso Compra garantida', 30),
+    ])
+    expect(groups.map((g) => [g.label, g.items.length])).toEqual([
+      ['Salário', 1],
+      ['TED de Monica Nunes Herrera', 1],
+      ['Pix de Monica Nunes de Andrade', 2],
+      ['Reembolso Compra garantida', 1],
+      ['Rendimentos', 2],
+    ])
+  })
+})
+
+describe('withGroupFilter em Entradas', () => {
+  it('Entradas filtra por tipo; as categorias tiram as receitas', () => {
+    expect(new URLSearchParams(withGroupFilter('month=2026-11', 'category', INCOME_GROUP)).get('kind')).toBe('INCOME')
+    const other = new URLSearchParams(withGroupFilter('month=2026-11', 'category', 'OTHER'))
+    expect(other.get('category')).toBe('OTHER')
+    expect(other.get('exclude_kind')).toBe('INCOME')
   })
 })

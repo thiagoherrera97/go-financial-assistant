@@ -33,6 +33,9 @@ func (a *api) filterParams(w http.ResponseWriter, r *http.Request) (domain.Trans
 	if f.Kind, ok = enumParam(w, q.Get("kind"), "kind", kinds); !ok {
 		return f, false
 	}
+	if f.ExcludeKind, ok = enumParam(w, q.Get("exclude_kind"), "exclude_kind", kinds); !ok {
+		return f, false
+	}
 	if f.Category, ok = enumParam(w, q.Get("category"), "category", categories); !ok {
 		return f, false
 	}
@@ -83,7 +86,10 @@ func (a *api) transactionGroups(w http.ResponseWriter, r *http.Request) {
 	out := make([]item, len(groups))
 	for i, g := range groups {
 		label := g.Key
-		if by == domain.GroupByCategory {
+		switch {
+		case by == domain.GroupByCategory && g.Key == domain.IncomeGroupKey:
+			label = "Entradas"
+		case by == domain.GroupByCategory:
 			label = domain.Category(g.Key).Label()
 		}
 		out[i] = item{g.Key, label, g.Count, g.Expense, g.Income, g.Transfer, g.Applied, g.Redeemed}

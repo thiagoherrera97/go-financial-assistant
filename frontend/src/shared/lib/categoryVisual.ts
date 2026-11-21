@@ -3,6 +3,7 @@ import {
   CircleEllipsis,
   Clapperboard,
   GraduationCap,
+  HandCoins,
   HeartPulse,
   PiggyBank,
   House,
@@ -38,6 +39,8 @@ const VISUALS: Record<string, CategoryVisual> = {
   EDUCATION: { color: 'var(--cat-education)', Icon: GraduationCap },
   PEOPLE: { color: 'var(--cat-people)', Icon: Users },
   OTHER: { color: 'var(--cat-other)', Icon: CircleEllipsis },
+  // Grupo "Entradas" da tela de transações: todas as receitas juntas.
+  INCOME: { color: 'var(--cat-salary)', Icon: HandCoins },
   RESERVE: { color: 'var(--cat-investment)', Icon: PiggyBank },
 }
 

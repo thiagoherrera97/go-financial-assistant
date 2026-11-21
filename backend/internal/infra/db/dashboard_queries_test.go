@@ -298,19 +298,29 @@ func TestDashboard_TransactionGroupsAndDayFilter(t *testing.T) {
 	seed(t, repo, pg, seedEntry{kind: domain.KindExpense, cat: domain.CategoryFood, desc: "grp-b", amount: 20, date: mar1999.AddDate(0, 0, 1)})
 	seed(t, repo, pg, seedEntry{kind: domain.KindExpense, cat: domain.CategoryMarket, desc: "grp-c", amount: 70, date: mar1999.AddDate(0, 0, 4)})
 	seed(t, repo, pg, seedEntry{kind: domain.KindIncome, cat: domain.CategorySalary, desc: "grp-d", amount: 900, date: mar1999.AddDate(0, 0, 4)})
+	seed(t, repo, pg, seedEntry{kind: domain.KindIncome, cat: domain.CategoryOther, desc: "grp-pix", amount: 100, date: mar1999.AddDate(0, 0, 4)})
+	seed(t, repo, pg, seedEntry{kind: domain.KindExpense, cat: domain.CategoryOther, desc: "grp-other", amount: 5, date: mar1999.AddDate(0, 0, 4)})
 	seed(t, repo, pg, seedEntry{kind: domain.KindExpense, cat: domain.CategoryFood, desc: "grp-e", amount: 9, date: apr1999})
 	seed(t, repo, pg, seedEntry{kind: domain.KindExpense, cat: domain.CategoryFood, desc: "grp-cancel", amount: 500, date: mar1999, status: domain.PaymentStatusCancelled})
 
 	f := domain.TransactionFilter{Month: &mar1999}
 	byCat, err := repo.TransactionGroups(ctx, f, domain.GroupByCategory)
-	if err != nil || len(byCat) != 3 {
+	if err != nil || len(byCat) != 4 {
 		t.Fatalf("por categoria: %+v %v", byCat, err)
 	}
-	if byCat[0].Key != "MARKET" || byCat[0].Expense != 70 || byCat[1].Key != "FOOD" || byCat[1].Expense != 50 || byCat[1].Count != 2 {
+	// Toda receita (salário ou Pix em Outros) vai para Entradas, na frente; Outros fica só com o gasto.
+	if byCat[0].Key != domain.IncomeGroupKey || byCat[0].Income != 1000 || byCat[0].Count != 2 || byCat[0].Expense != 0 {
+		t.Errorf("entradas juntas e primeiro: %+v", byCat[0])
+	}
+	if byCat[1].Key != "MARKET" || byCat[1].Expense != 70 || byCat[2].Key != "FOOD" || byCat[2].Expense != 50 || byCat[2].Count != 2 {
 		t.Errorf("ordem e somas: %+v (o cancelado e abril não contam)", byCat)
 	}
-	if byCat[2].Key != "SALARY" || byCat[2].Income != 900 || byCat[2].Expense != 0 {
-		t.Errorf("renda separada da despesa: %+v", byCat[2])
+	if byCat[3].Key != "OTHER" || byCat[3].Expense != 5 || byCat[3].Income != 0 || byCat[3].Count != 1 {
+		t.Errorf("outros sem receita: %+v", byCat[3])
+	}
+	// O detalhe de uma categoria tira as receitas.
+	if txs, total, err := repo.Transactions(ctx, domain.TransactionFilter{Month: &mar1999, Category: "OTHER", ExcludeKind: "INCOME", Limit: 50}); err != nil || total != 1 || txs[0].Description != "grp-other" {
+		t.Errorf("outros sem receita no detalhe: total=%d %v", total, err)
 	}
 
 	byDay, err := repo.TransactionGroups(ctx, f, domain.GroupByDay)

@@ -16,7 +16,7 @@ O app expõe uma API JSON sob `/api`, **somente leitura** (as únicas escritas, 
 | `GET /api/timeseries?from=&to=` | os mesmos totais, mês a mês |
 | `GET /api/breakdown?month=&by=category\|payment_method\|account` | despesas do mês agrupadas |
 | `GET /api/investments?from=&to=` | aplicado, resgatado e **líquido acumulado desde o primeiro lançamento** |
-| `GET /api/transactions?month=&kind=&category=&payment_method=&account=&q=&page=&limit=` | lista paginada (padrão 50, máx. 100), manual e Open Finance |
+| `GET /api/transactions?month=&kind=&exclude_kind=&category=&payment_method=&account=&q=&page=&limit=` | lista paginada (padrão 50, máx. 100), manual e Open Finance; `exclude_kind` tira um tipo |
 | `GET /api/accounts` | contas e cartões, com saldo e limite |
 | `GET /api/balances` | painel: total em conta, bancos, contas e cartões (saldo devedor, limite, vencimento) |
 | `DELETE /api/transactions/{id}` | apaga um lançamento manual avulso (204); do banco, parcelado ou recorrente: 404. Exige mesma origem |

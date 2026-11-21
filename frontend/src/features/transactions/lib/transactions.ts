@@ -53,10 +53,66 @@ export function formatDayLabel(iso: string): string {
   return `${weekday}, ${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}`
 }
 
+/** Chave do grupo que junta todas as receitas no agrupamento por categoria (vem da API). */
+export const INCOME_GROUP = 'INCOME'
+
+export interface IncomeSource {
+  key: string
+  label: string
+  total: number
+  items: Transaction[]
+}
+
+const titleCase = (s: string) =>
+  s
+    .toLowerCase()
+    .split(' ')
+    .map((w) => (['de', 'da', 'do', 'das', 'dos', 'e'].includes(w) ? w : w.charAt(0).toUpperCase() + w.slice(1)))
+    .join(' ')
+
+/**
+ * De onde veio uma receita: salário, Pix/TED de uma pessoa, rendimentos ou, sem padrão conhecido, a própria descrição.
+ * Maiúsculas e espaços não separam fontes ("Pix recebido MONICA" e "Pix recebido Monica" são a mesma).
+ */
+export function incomeSource(t: Pick<Transaction, 'category' | 'description'>): { key: string; label: string } {
+  if (t.category === 'SALARY') return { key: 'salary', label: 'Salário' }
+  const desc = t.description.replace(/\s+/g, ' ').trim()
+  if (/^(rendimentos?|remunera[cç][aã]o aplica[cç][aã]o)/i.test(desc)) return { key: 'yield', label: 'Rendimentos' }
+  const person = desc.match(/^(?:pix|ted|transfer[eê]ncia)(?: recebid[oa])? (.+)$/i)
+  if (person) {
+    const name = titleCase(person[1])
+    return { key: `from:${name.toLowerCase()}`, label: `${/^ted/i.test(desc) ? 'TED' : 'Pix'} de ${name}` }
+  }
+  if (!desc) return { key: 'other', label: 'Sem descrição' }
+  return { key: `desc:${desc.toLowerCase()}`, label: desc }
+}
+
+/** Receitas agrupadas por fonte, da maior para a menor. */
+export function incomeSources(items: Transaction[]): IncomeSource[] {
+  const map = new Map<string, IncomeSource>()
+  for (const t of items) {
+    const { key, label } = incomeSource(t)
+    const g = map.get(key) ?? { key, label, total: 0, items: [] }
+    g.total += t.amount
+    g.items.push(t)
+    map.set(key, g)
+  }
+  return [...map.values()].sort((a, b) => b.total - a.total)
+}
+
 /** Parâmetros de um filtro extra (categoria ou dia) sobre a query atual, para listar o detalhe de um grupo. */
 export function withGroupFilter(query: string, key: 'category' | 'day', value: string): string {
   const q = new URLSearchParams(query)
-  q.set(key, value)
+  if (key === 'category' && value === INCOME_GROUP) {
+    // "Entradas" junta todas as receitas, de qualquer categoria.
+    q.set('kind', 'INCOME')
+  } else if (key === 'category') {
+    // As categorias mostram só gastos e investimentos: as receitas estão em Entradas.
+    q.set(key, value)
+    if (!q.get('kind')) q.set('exclude_kind', 'INCOME')
+  } else {
+    q.set(key, value)
+  }
   q.delete('page')
   q.set('limit', '100')
   if (key === 'day') q.delete('month')

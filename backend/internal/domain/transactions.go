@@ -9,6 +9,7 @@ import (
 type TransactionFilter struct {
 	Month         *time.Time // primeiro dia do mês; nil = todos os meses
 	Kind          string
+	ExcludeKind   string // tira um tipo (ex.: INCOME, para os grupos de categoria só com gastos)
 	Category      string
 	PaymentMethod string
 	AccountID     *uuid.UUID
@@ -24,6 +25,11 @@ const (
 	GroupByCategory GroupBy = "category"
 	GroupByDay      GroupBy = "day"
 )
+
+// IncomeGroupKey é a chave do grupo que junta todas as receitas no agrupamento por categoria: receita não se mistura
+// com os gastos de uma categoria (ex.: Outros fica só com gastos sem categoria).
+const IncomeGroupKey = "INCOME"
+
 
 // TransactionGroup soma as transações de um grupo (categoria ou dia) sob os mesmos filtros da lista.
 // Key é o valor do enum (categoria) ou a data AAAA-MM-DD.

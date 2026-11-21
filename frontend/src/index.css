@@ -277,6 +277,8 @@ table.tx td { vertical-align: top; }
 .group-bar { height: 4px; margin: 0 16px 12px; background: color-mix(in srgb, var(--cat) 14%, transparent); border-radius: 2px; }
 .group-bar div { height: 100%; background: var(--cat); border-radius: 2px; }
 .group-body { padding: 0 16px 14px; border-top: 1px solid var(--grid); }
+.income-sources { display: grid; gap: 8px; padding-top: 12px; }
+.income-sources .group-card { box-shadow: none; }
 
 .bar-label { display: inline-flex; align-items: center; gap: 8px; }
 .bar-label .chip { width: 24px; height: 24px; border-radius: 7px; }
