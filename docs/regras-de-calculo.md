@@ -72,7 +72,8 @@ Cada conta (chave) é classificada como **fixa**, **parcelada** ou **variável**
 
 Projeta N meses (6, 12 ou 24) a partir do mês atual:
 
-- **Fixas e variáveis**: média dos últimos 3 meses completos com dados (editável na tela).
+- **Fixas**: média dos últimos 3 meses completos com dados (editável na tela).
+- **Variáveis**: nos mesmos 3 meses, a soma da **mediana de cada categoria** (mês sem gasto conta zero). Um gasto pontual enorme (entrada de um carro, um Pix grande para a família) pesa num mês só e não vira gasto de todo mês, como aconteceria com a média. Editável na tela.
 - **Renda**: mediana da renda total dos últimos 6 meses (um mês fora do padrão — 13º, adiantamento de férias — não pesa). As fontes recorrentes (`EstimateIncome`) explicam a maior parte; o restante aparece como "outras entradas". **Todo lançamento da categoria Salário é uma fonte só**, mesmo que a descrição mude. Com o **salário configurado** (`SALARY_SCHEDULE`), ele entra pelo valor combinado de cada parte ("Salário do dia 15", "Salário do dia 30") no lugar da estimativa, e a mediana e as fontes recorrentes passam a olhar só as outras entradas.
 - **Parcelas**: as que faltam das compras parceladas (inferidas do `n/m` da descrição e das já cadastradas).
 - **Saldo projetado** = renda − fixas − variáveis − parcelas, acumulado.

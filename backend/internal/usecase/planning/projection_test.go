@@ -247,3 +247,21 @@ func TestBuildProjection_ConfiguredSalaryReplacesEstimate(t *testing.T) {
 		t.Errorf("sem histórico: %+v", a)
 	}
 }
+
+func TestBuildProjection_OneOffVariableDoesNotInflateTheMonth(t *testing.T) {
+	start := month(2026, time.November)
+	var rows []domain.ExpenseKeyMonth
+	for _, m := range []time.Month{time.August, time.September, time.October} {
+		rows = append(rows,
+			domain.ExpenseKeyMonth{Key: "mercado-" + m.String(), Label: "Mercado", Category: "GROCERIES", Month: month(2026, m), Total: 1000, Count: 9},
+			domain.ExpenseKeyMonth{Key: "posto-" + m.String(), Label: "Posto", Category: "TRANSPORT", Month: month(2026, m), Total: 300, Count: 2})
+	}
+	// Um Pix pontual enorme em agosto (ex.: entrada de um carro) não vira gasto de todo mês.
+	rows = append(rows, domain.ExpenseKeyMonth{Key: "pix-carro", Label: "Pix enviado Loja", Category: "TRANSPORT", Month: month(2026, time.August), Total: 60000, Count: 1})
+
+	p := BuildProjection(rows, nil, nil, nil, nil, start, 1)
+
+	if got := p.Assumptions.Variable; math.Abs(got-1300) > 0.01 {
+		t.Errorf("variável = mediana de cada categoria nos 3 meses (1000 + 300): %.2f", got)
+	}
+}

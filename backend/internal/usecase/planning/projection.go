@@ -96,7 +96,8 @@ func BuildProjection(rows []domain.ExpenseKeyMonth, rules map[string]domain.Expe
 	}
 	if a.BasedOn > 0 {
 		n := float64(a.BasedOn)
-		a.Fixed, a.Variable = a.Fixed/n, a.Variable/n
+		a.Fixed = a.Fixed / n
+		a.Variable = typicalVariable(rows, b.Classes, used)
 		a.IncomeSources, a.Income = estimateIncomeTotal(incomes, used, window)
 	}
 	if len(salary) > 0 {
@@ -128,6 +129,35 @@ func BuildProjection(rows []domain.ExpenseKeyMonth, rules map[string]domain.Expe
 	}
 	sort.Slice(p.Months, func(i, j int) bool { return p.Months[i].Month.Before(p.Months[j].Month) })
 	return p
+}
+
+// typicalVariable é o gasto variável de um mês comum: a soma, por categoria, da mediana do que ela gastou em cada mês de
+// used (mês sem gasto conta como zero). Um gasto pontual enorme (a entrada de um carro, um Pix para a família) pesa
+// num mês só e fica de fora, enquanto a média o espalharia por todos os meses projetados.
+func typicalVariable(rows []domain.ExpenseKeyMonth, classes map[string]domain.ExpenseClass, used []time.Time) float64 {
+	inUsed := map[time.Time]bool{}
+	for _, m := range used {
+		inUsed[m] = true
+	}
+	byCategory := map[string]map[time.Time]float64{}
+	for _, r := range rows {
+		if classes[r.Key] != domain.ClassVariable || !inUsed[r.Month] {
+			continue
+		}
+		if byCategory[r.Category] == nil {
+			byCategory[r.Category] = map[time.Time]float64{}
+		}
+		byCategory[r.Category][r.Month] += r.Total
+	}
+	var total float64
+	for _, perMonth := range byCategory {
+		values := make([]float64, len(used))
+		for i, m := range used {
+			values[i] = perMonth[m]
+		}
+		total += median(values)
+	}
+	return total
 }
 
 // estimateIncomeTotal combina as duas leituras da renda: a mediana da renda total dos meses de window e as
