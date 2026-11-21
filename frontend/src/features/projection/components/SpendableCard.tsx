@@ -3,8 +3,7 @@ import { QueryState } from '../../../shared/components/QueryState'
 import { StatTile } from '../../../shared/components/StatTile'
 import { formatBRL, formatMonthLong } from '../../../shared/lib/format'
 import { currentMonth } from '../../../shared/lib/months'
-import { useMonthSheet } from '../../month/api'
-import { useDebts, type Debt } from '../api'
+import { useDebts, useMonthTotals, type Debt } from '../api'
 import { debtLabel, debtRemaining, loadGoal, saveGoal, spendable, type DebtGoal } from '../lib/spendable'
 
 /** A dívida escolhida; sem escolha salva, a primeira em aberto com a mãe. debtId '' é "digitar outra". */
@@ -17,7 +16,8 @@ function pickDebt(debts: Debt[], goal: DebtGoal): Debt | undefined {
 /** Quanto ainda dá para gastar neste mês para fechar no zero a zero e para sobrar a meta de abatimento da dívida. */
 export function SpendableCard({ averageFixed }: { averageFixed: number }) {
   const month = currentMonth()
-  const query = useMonthSheet(month)
+  const query = useMonthTotals(month)
+  const [today] = useState(() => new Date())
   const debts = useDebts().data ?? []
   const [goal, setGoal] = useState<DebtGoal>(loadGoal)
   const update = (g: DebtGoal) => {
@@ -32,7 +32,7 @@ export function SpendableCard({ averageFixed }: { averageFixed: number }) {
       </h2>
       <QueryState query={query}>
         {(sheet) => {
-          const s = spendable(sheet, averageFixed, goal.amount, new Date())
+          const s = spendable(sheet, averageFixed, goal.amount, today)
           const debt = pickDebt(debts, goal)
           const target = debt ? debtLabel(debt) : goal.label.trim() || 'dívida'
           const remaining = debt ? debtRemaining(debt) : null

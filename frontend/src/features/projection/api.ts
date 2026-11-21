@@ -35,3 +35,15 @@ export const useDebts = () =>
     queryKey: ['debts'],
     queryFn: () => request<{ debts: Debt[] }>('/api/debts').then((r) => r.debts ?? []),
   })
+
+/** O que o card de quanto ainda dá para gastar usa da tela do mês (GET /api/month). */
+export interface MonthTotals {
+  leftoverWithPending: number
+  fixedTotal: number
+}
+
+export const useMonthTotals = (month: string) =>
+  useQuery({
+    queryKey: ['month-sheet', month],
+    queryFn: () => request<MonthTotals>(`/api/month?month=${month}`),
+  })
