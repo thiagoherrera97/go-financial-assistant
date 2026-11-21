@@ -13,6 +13,9 @@ export interface BalanceAccount {
   /** Caixinhas da conta (dinheiro separado para render); entram no total em conta. balance é só o que está na conta. */
   reserved: { name: string; amount: number }[]
   reservedTotal: number
+  /** Quanto do limite (cheque especial) a conta usa para cobrir a dívida overdraftDebt; o balance aparece zerado. */
+  overdraft: number
+  overdraftDebt: string
 }
 
 export interface BalanceCard {
@@ -90,3 +93,86 @@ export interface Salary {
 }
 
 export const useSalary = () => useQuery({ queryKey: ['salary'], queryFn: () => request<Salary>('/api/salary') })
+
+export type DebtKind = 'OVERDRAFT' | 'INSTALLMENTS'
+
+export interface DebtLine {
+  label: string
+  /** Entrada positiva, saída negativa. */
+  amount: number
+  date: string | null
+}
+
+export interface Debt {
+  id: string
+  kind: DebtKind
+  name: string
+  creditor: string
+  note: string
+  originalAmount: number
+  /** INSTALLMENTS: dia da parcela; OVERDRAFT: dia em que a conta costuma entrar no limite. */
+  dueDay: number
+  accountId: string | null
+  accountName: string
+  freeDays: number
+  installmentAmount: number
+  installments: number
+  /** AAAA-MM-DD */
+  firstDue: string | null
+  payeeMatch: string
+  paidManual: number
+  progress: {
+    paid: number
+    total: number
+    paidAmount: number
+    remaining: number
+    nextDue: string | null
+    overdue: boolean
+    done: boolean
+    payments: { date: string; amount: number; label: string }[]
+  } | null
+  limit: {
+    inLimit: number
+    since: string | null
+    daysUsed: number
+    months: { month: string; days: number; worst: number }[]
+  } | null
+  forecast: {
+    date: string
+    lines: DebtLine[]
+    balance: number
+    inLimit: number
+    exitDate: string | null
+    exitLabel: string
+    days: number
+    withinFree: boolean
+  } | null
+}
+
+export interface DebtInput {
+  kind: DebtKind
+  name: string
+  creditor: string
+  note: string
+  originalAmount: number
+  dueDay: number
+  accountId?: string
+  freeDays?: number
+  installmentAmount?: number
+  installments?: number
+  firstDue?: string
+  payeeMatch?: string
+  paidManual?: number
+}
+
+export const useDebts = () => useQuery({ queryKey: ['debts'], queryFn: () => request<{ debts: Debt[] }>('/api/debts') })
+
+const jsonBody = (method: string, input: DebtInput) => ({
+  method,
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(input),
+})
+
+export const createDebt = (input: DebtInput) => request('/api/debts', jsonBody('POST', input))
+export const updateDebt = (id: string, input: DebtInput) => request(`/api/debts/${encodeURIComponent(id)}`, jsonBody('PUT', input))
+export const deleteDebt = (id: string) => request(`/api/debts/${encodeURIComponent(id)}`, { method: 'DELETE' })

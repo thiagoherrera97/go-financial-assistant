@@ -5,6 +5,7 @@ import { HideValuesToggle } from './components/HideValuesToggle'
 import { InstitutionCard } from './components/InstitutionCard'
 import { useHideValues } from './lib/useHideValues'
 import { SalaryCard } from './components/SalaryCard'
+import { DebtsCard } from './components/DebtsCard'
 import { useBalances, useSalary } from './api'
 
 export default function Panel() {
@@ -31,6 +32,12 @@ export default function Panel() {
           <div className={`chart-body ${query.isFetching ? 'is-stale' : ''}`}>
             <BalanceHero data={data} hidden={hidden} now={now} />
             {salary.data && <SalaryCard salary={salary.data} hidden={hidden} />}
+            <DebtsCard
+              hidden={hidden}
+              accounts={data.institutions.flatMap((i) =>
+                i.accounts.map((a) => ({ id: a.id, label: `${i.name} · ${a.name}${a.last4 ? ` final ${a.last4}` : ''}` })),
+              )}
+            />
             <div className="bal-grid">
               {data.institutions.map((i) => (
                 <InstitutionCard key={i.id} institution={i} hidden={hidden} now={now} />

@@ -30,6 +30,11 @@ export function InstitutionCard({ institution: i, hidden, now }: { institution: 
           <p className="bal-balance">
             <Money value={a.balance + a.reservedTotal} hidden={hidden} />
           </p>
+          {a.overdraft > 0 && (
+            <p className="tile-note bal-overdraft">
+              <StaticMoney value={a.overdraft} hidden={hidden} /> do limite cobrindo a dívida “{a.overdraftDebt}” (veja em Dívidas)
+            </p>
+          )}
           {a.reservedTotal > 0 && (
             <ul className="bal-reserved">
               <li>

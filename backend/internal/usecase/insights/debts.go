@@ -237,7 +237,7 @@ func DebtsText(views []DebtView) string {
 	if len(views) == 0 {
 		return ""
 	}
-	out := "\n🤝 *Dívidas*\n"
+	out := "\n\n🤝 *Dívidas*\n"
 	for _, v := range views {
 		d := v.Debt
 		switch {
