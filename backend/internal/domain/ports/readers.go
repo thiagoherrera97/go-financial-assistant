@@ -47,3 +47,10 @@ type PortfolioReader interface {
 	// partir da primeira sincronização de investimentos.
 	PortfolioHistory(ctx context.Context, from, to time.Time) ([]domain.PortfolioMonth, error)
 }
+
+// CycleStore guarda os ciclos do salário que o SQL usa para atribuir cada lançamento a um ciclo.
+type CycleStore interface {
+	ReplaceCycles(ctx context.Context, starts []domain.CycleStart) error
+	LoadCycles(ctx context.Context) ([]domain.CycleStart, error)
+	OldestPaymentDate(ctx context.Context) (time.Time, bool, error)
+}

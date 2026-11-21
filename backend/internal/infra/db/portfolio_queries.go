@@ -41,7 +41,7 @@ func (r *PortfolioRepo) PortfolioHistory(ctx context.Context, from, to time.Time
 			FROM first_snap f
 			JOIN investment_balances ib ON ib.investment_id = f.investment_id AND ib.day = f.day
 		), cutoff AS (
-			SELECT DATE_TRUNC('month', MIN(day))::date AS month FROM first_snap
+			SELECT cycle_of(MIN(day)::date) AS month FROM first_snap
 		)
 		SELECT s.month::date,
 		       CASE WHEN s.month::date < (SELECT month FROM cutoff) THEN est.balance ELSE ex.balance END,
@@ -51,7 +51,7 @@ func (r *PortfolioRepo) PortfolioHistory(ctx context.Context, from, to time.Time
 			SELECT SUM(x.balance) AS balance FROM (
 				SELECT DISTINCT ON (ib.investment_id) ib.balance
 				FROM investment_balances ib
-				WHERE ib.day < s.month + INTERVAL '1 month'
+				WHERE ib.day < cycle_next_start(s.month::date)
 				ORDER BY ib.investment_id, ib.day DESC
 			) x
 		) ex ON TRUE
@@ -59,12 +59,12 @@ func (r *PortfolioRepo) PortfolioHistory(ctx context.Context, from, to time.Time
 			SELECT SUM(GREATEST(0, r.balance - COALESCE((
 				SELECT SUM(m.amount) FROM investment_movements m
 				WHERE m.investment_id = r.investment_id
-				  AND m.day >= s.month + INTERVAL '1 month' AND m.day <= r.day
+				  AND m.day >= cycle_next_start(s.month::date) AND m.day <= r.day
 			), 0))) AS balance
 			FROM ref r
 			WHERE EXISTS (
 				SELECT 1 FROM investment_movements m
-				WHERE m.investment_id = r.investment_id AND m.day < s.month + INTERVAL '1 month'
+				WHERE m.investment_id = r.investment_id AND m.day < cycle_next_start(s.month::date)
 			)
 		) est ON TRUE
 		ORDER BY s.month

@@ -7,9 +7,13 @@ import (
 // txDate é o dia da transação (vencimento, mês de referência, pagamento ou criação). Numa compra no cartão é o dia da compra.
 const txDate = `COALESCE(pay.due_date, pay.reference_month, pay.paid_at::date, pay.created_at::date)`
 
-// paymentMonth é o mês a que um pagamento pertence, o mesmo em todas as consultas. Compra no cartão com fatura calculada
-// (bill_due_date) conta no mês do vencimento da fatura, como na planilha; o resto, no mês do dia da transação.
-const paymentMonth = `DATE_TRUNC('month', COALESCE(pay.bill_due_date, pay.due_date, pay.reference_month, pay.paid_at, pay.created_at))::date`
+// paymentMonth é o ciclo do salário (chave AAAA-MM-01, ver tabela cycles) a que um pagamento pertence, o mesmo em todas
+// as consultas. Compra no cartão com fatura calculada (bill_due_date) conta no ciclo do vencimento da fatura; lançamento
+// só com mês de referência (recorrente lançado à mão) fica no ciclo com o nome desse mês; o resto, no ciclo do dia da
+// transação. Sem ciclos gravados, cycle_of é o mês do calendário.
+const paymentMonth = `(CASE WHEN pay.bill_due_date IS NULL AND pay.due_date IS NULL AND pay.reference_month IS NOT NULL
+	THEN DATE_TRUNC('month', pay.reference_month)::date
+	ELSE cycle_of(COALESCE(pay.bill_due_date, pay.due_date, pay.paid_at, pay.created_at)::date) END)`
 
 // monthlyCTE agrega por mês as entradas, despesas e transferências (pagamentos cancelados ficam de fora).
 const monthlyCTE = `
