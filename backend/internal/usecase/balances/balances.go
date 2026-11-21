@@ -44,6 +44,10 @@ type BalanceAccount struct {
 	// na conta; o saldo da conta com as caixinhas é Balance + ReservedTotal.
 	Reserved      []domain.ReservedBalance
 	ReservedTotal float64
+	// Overdraft é quanto do limite (cheque especial) a conta usa para cobrir a dívida OverdraftDebt. Nesse caso Balance
+	// aparece zerado: o negativo é mostrado como a dívida, não como conta no negativo.
+	Overdraft     float64
+	OverdraftDebt string
 }
 
 // BalanceCard é um cartão de crédito. Cartões nunca são somados entre si.
@@ -153,7 +157,6 @@ func BuildBalances(accounts []domain.Account, institutions []domain.Institution,
 
 	view := BalancesView{}
 	var bank *float64
-	var positive float64
 	for _, key := range order {
 		g := groups[key]
 		g.Stale = now.Sub(g.UpdatedAt) > StaleAfter
@@ -175,7 +178,6 @@ func BuildBalances(accounts []domain.Account, institutions []domain.Institution,
 				sum += *bank
 			}
 			bank = &sum
-			positive += max(0, g.Total)
 		}
 		if view.AsOf.IsZero() || g.UpdatedAt.Before(view.AsOf) {
 			view.AsOf = g.UpdatedAt
@@ -183,10 +185,23 @@ func BuildBalances(accounts []domain.Account, institutions []domain.Institution,
 		view.Institutions = append(view.Institutions, *g)
 	}
 	view.TotalInAccount = bank
+	view.Recompute()
+	return view
+}
 
+// Recompute refaz a participação de cada banco no total em conta e a ordem (do maior para o menor).
+func (view *BalancesView) Recompute() {
+	var positive float64
+	for _, in := range view.Institutions {
+		if in.HasBank {
+			positive += max(0, in.Total)
+		}
+	}
 	// Banco negativo mostra o valor, mas não ganha fatia na barra.
 	for n := range view.Institutions {
-		if in := &view.Institutions[n]; in.HasBank && in.Total > 0 && positive > 0 {
+		in := &view.Institutions[n]
+		in.Share = 0
+		if in.HasBank && in.Total > 0 && positive > 0 {
 			in.Share = in.Total / positive
 		}
 	}
@@ -199,7 +214,6 @@ func BuildBalances(accounts []domain.Account, institutions []domain.Institution,
 		}
 		return strings.Compare(strings.ToLower(x.Name), strings.ToLower(y.Name))
 	})
-	return view
 }
 
 // autoInvested devolve o aplicado automaticamente só quando ele diz algo além do saldo. Alguns bancos (Itaú e Santander
@@ -363,6 +377,9 @@ func FormatBalances(v BalancesView, now time.Time) string {
 			}
 			head.WriteString(line + "\n")
 			for _, a := range in.Accounts {
+				if a.Overdraft > 0 {
+					fmt.Fprintf(&head, "   No limite %s · %s\n", format.FormatBRL(a.Overdraft), clean(a.OverdraftDebt))
+				}
 				if a.ReservedTotal > 0 {
 					fmt.Fprintf(&head, "   Na conta %s · caixinhas %s\n", format.FormatBRL(a.Balance), format.FormatBRL(a.ReservedTotal))
 				}

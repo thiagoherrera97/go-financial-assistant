@@ -43,6 +43,9 @@ type balanceAccountJSON struct {
 	AutoInvested  *float64                 `json:"autoInvested"`
 	Reserved      []domain.ReservedBalance `json:"reserved"`
 	ReservedTotal float64                  `json:"reservedTotal"`
+	// Overdraft: quanto do limite a conta usa para cobrir a dívida OverdraftDebt (o saldo aparece zerado).
+	Overdraft     float64 `json:"overdraft"`
+	OverdraftDebt string  `json:"overdraftDebt"`
 }
 
 type balanceCardJSON struct {
@@ -117,7 +120,7 @@ func (a *api) balances(w http.ResponseWriter, r *http.Request) {
 			if reserved == nil {
 				reserved = []domain.ReservedBalance{}
 			}
-			j.Accounts[n] = balanceAccountJSON{acc.ID, acc.Name, acc.Last4, acc.Balance, acc.AutoInvested, reserved, cents(acc.ReservedTotal)}
+			j.Accounts[n] = balanceAccountJSON{acc.ID, acc.Name, acc.Last4, acc.Balance, acc.AutoInvested, reserved, cents(acc.ReservedTotal), cents(acc.Overdraft), acc.OverdraftDebt}
 		}
 		for n, c := range in.Cards {
 			j.Cards[n] = balanceCardJSON{

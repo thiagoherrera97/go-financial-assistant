@@ -38,6 +38,17 @@ func (r *LedgerRepo) UpsertAccount(ctx context.Context, a ports.ExternalAccount)
 	).Scan(&id); err != nil {
 		return uuid.Nil, fmt.Errorf("erro ao salvar conta: %w", err)
 	}
+	if a.Type == domain.AccountBank {
+		// O menor saldo do dia diz se a conta entrou no limite, mesmo que o salário caia antes da próxima sincronização.
+		if _, err := r.db.Pool.Exec(ctx, `
+			INSERT INTO account_balance_days (account_id, day, min_balance, last_balance)
+			VALUES ($1, (NOW() AT TIME ZONE 'America/Sao_Paulo')::date, $2, $2)
+			ON CONFLICT (account_id, day) DO UPDATE SET
+				min_balance = LEAST(account_balance_days.min_balance, EXCLUDED.min_balance), last_balance = EXCLUDED.last_balance
+		`, id, a.Balance); err != nil {
+			return uuid.Nil, fmt.Errorf("erro ao registrar saldo do dia: %w", err)
+		}
+	}
 	return id, nil
 }
 

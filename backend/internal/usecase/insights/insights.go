@@ -24,6 +24,7 @@ type Insights struct {
 	reader    ports.InsightsReader
 	closeDays func() int // dias entre o fechamento e o vencimento da fatura (configuração); nil = padrão
 	salary    func() []domain.SalaryPart
+	debts     ports.DebtStore // nil sem dívidas (leitores de teste)
 }
 
 // SetSalarySchedule liga a configuração das partes do salário (lida a cada consulta); nil ou vazio = sem salário configurado.
@@ -63,7 +64,13 @@ func (i *Insights) Salary(ctx context.Context, today time.Time) (SalaryView, err
 // SetCardCloseDays liga a configuração de quantos dias antes do vencimento a fatura fecha (lida a cada consulta).
 func (i *Insights) SetCardCloseDays(f func() int) { i.closeDays = f }
 
-func NewInsights(reader ports.InsightsReader) *Insights { return &Insights{reader: reader} }
+func NewInsights(reader ports.InsightsReader) *Insights {
+	i := &Insights{reader: reader}
+	if store, ok := reader.(ports.DebtStore); ok {
+		i.debts = store
+	}
+	return i
+}
 
 // MonthStart é o primeiro dia do mês de t, no fuso de t (quem chama passa o instante já no fuso do dono), como data em UTC.
 func MonthStart(t time.Time) time.Time {
@@ -224,7 +231,15 @@ func (i *Insights) Balances(ctx context.Context, now time.Time) (balances.Balanc
 	if i.closeDays != nil {
 		days = i.closeDays()
 	}
-	return balances.BuildBalances(accounts, institutions, now, days), nil
+	view := balances.BuildBalances(accounts, institutions, now, days)
+	if i.debts != nil {
+		list, err := i.debts.Debts(ctx)
+		if err != nil {
+			return balances.BalancesView{}, err
+		}
+		coverOverdraft(&view, list)
+	}
+	return view, nil
 }
 
 // BalancesText é o comando /saldos: o mesmo cálculo do painel, em texto.
@@ -233,5 +248,9 @@ func (i *Insights) BalancesText(ctx context.Context, now time.Time) (string, err
 	if err != nil {
 		return "", err
 	}
-	return balances.FormatBalances(view, now), nil
+	text := balances.FormatBalances(view, now)
+	if list, err := i.Debts(ctx, now); err == nil {
+		text += DebtsText(list)
+	}
+	return text, nil
 }

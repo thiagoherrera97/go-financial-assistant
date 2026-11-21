@@ -46,6 +46,7 @@ type fakeReader struct {
 	analyses       []domain.CoachAnalysis
 	goals          []domain.Goal
 	vend           vendorFake
+	debt           debtFake
 	created        []domain.Goal
 	deleted        uuid.UUID
 	deleteFound    bool

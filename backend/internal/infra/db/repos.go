@@ -37,6 +37,9 @@ type TransferReviewRepo struct{ db *DB }
 // VendorsRepo lê e grava o plano de fornecedores e os pagamentos a eles.
 type VendorsRepo struct{ db *DB }
 
+// DebtsRepo lê e grava as dívidas pessoais e os saldos diários das contas.
+type DebtsRepo struct{ db *DB }
+
 // DashboardRepo reúne os repositórios de leitura do dashboard; os métodos de cada um são promovidos e ele satisfaz ports.DashboardReader.
 type DashboardRepo struct {
 	*TotalsRepo
@@ -50,6 +53,7 @@ type DashboardRepo struct {
 	*ClassifyRepo
 	*TransferReviewRepo
 	*VendorsRepo
+	*DebtsRepo
 }
 
 func NewDashboardRepo(db *DB) *DashboardRepo {
@@ -65,6 +69,7 @@ func NewDashboardRepo(db *DB) *DashboardRepo {
 		&ClassifyRepo{db: db},
 		&TransferReviewRepo{db: db},
 		&VendorsRepo{db: db},
+		&DebtsRepo{db: db},
 	}
 }
 

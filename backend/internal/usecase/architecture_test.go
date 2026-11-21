@@ -15,11 +15,12 @@ import (
 var allowed = map[string][]string{
 	"planning":    {},
 	"balances":    {},
+	"debts":       {},
 	"ledger":      {},
 	"openfinance": {},
 	"review":      {"planning"},
 	"coach":       {"planning", "review"},
-	"insights":    {"planning", "review", "balances"},
+	"insights":    {"planning", "review", "balances", "debts"},
 }
 
 func TestContextDependencies(t *testing.T) {
