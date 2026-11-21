@@ -30,6 +30,8 @@ export interface Debt {
   limit: { inLimit: number } | null
   /** Cheque especial: previsão do próximo mergulho no limite. */
   forecast: { inLimit: number; committedInLimit?: number } | null
+  /** Cheque especial: quanto o salário do ciclo passado teve de cobrir (nulo sem salário recente). */
+  lastCycle?: { amount: number } | null
 }
 
 export const useDebts = () =>

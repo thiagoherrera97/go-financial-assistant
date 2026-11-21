@@ -51,6 +51,8 @@ describe('debtRemaining', () => {
     expect(debtRemaining({ kind: 'OVERDRAFT', progress: null, limit: null })).toBe(0)
     expect(debtRemaining({ kind: 'OVERDRAFT', progress: null, limit: { inLimit: 0 }, forecast: { inLimit: 3434.83 } })).toBe(3434.83)
     expect(debtRemaining({ kind: 'OVERDRAFT', progress: null, limit: { inLimit: 0 }, forecast: { inLimit: 7084, committedInLimit: 3668 } })).toBe(3668)
+    expect(debtRemaining({ kind: 'OVERDRAFT', progress: null, limit: { inLimit: 0 }, lastCycle: { amount: 4877.11 }, forecast: { inLimit: 6656, committedInLimit: 3240 } })).toBe(4877.11)
+    expect(debtRemaining({ kind: 'OVERDRAFT', progress: null, limit: { inLimit: 1200 }, lastCycle: { amount: 4877.11 }, forecast: null })).toBe(1200)
   })
 
   it('nomeia pela pessoa quando há credor', () => {
