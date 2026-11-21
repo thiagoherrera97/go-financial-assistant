@@ -2,6 +2,7 @@ import { Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { QueryState } from '../../shared/components/QueryState'
 import { ScenarioForm } from './components/ScenarioForm'
+import { SpendableCard } from './components/SpendableCard'
 import { StatTile } from '../../shared/components/StatTile'
 import { TrendChart } from '../../shared/components/TrendChart'
 import { BUDGET, type ChartRow, type Series } from '../../shared/lib/chart'
@@ -63,6 +64,8 @@ export default function Projection() {
 
           return (
             <>
+              <SpendableCard averageFixed={premises.fixed} />
+
               <section className="card" aria-labelledby="prem-title">
                 <h2 className="chart-title" id="prem-title">Premissas de um mês comum</h2>
                 <p className="tile-note">
