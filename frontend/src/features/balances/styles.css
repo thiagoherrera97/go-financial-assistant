@@ -6,16 +6,23 @@
 .bal-money { font-variant-numeric: tabular-nums; }
 .bal-muted { color: var(--text-muted); }
 
-.bal-hero { background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 12%, var(--surface)), var(--surface) 60%); border: 1px solid var(--border); border-radius: 20px; padding: 24px; }
-.bal-hero-label { color: var(--text-secondary); font-size: 0.8125rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; }
-.bal-hero-value { font-size: clamp(2.2rem, 7vw, 3.4rem); font-weight: 750; letter-spacing: -0.02em; line-height: 1.15; margin: 2px 0; }
-.bal-share { display: flex; gap: 2px; height: 18px; margin: 14px 0 10px; }
-.bal-share span { display: block; height: 100%; min-width: 6px; border-radius: 4px; }
-.bal-legend { display: flex; flex-wrap: wrap; gap: 8px 22px; margin: 0; padding: 0; list-style: none; }
+/* Herói: faixa roxa com o total; abaixo, em superfície, a participação de cada banco. */
+.bal-hero { background: var(--surface); border: 1px solid var(--card-border); border-radius: var(--r-xl); box-shadow: var(--shadow-sm); overflow: hidden; }
+.bal-hero-band { padding: 28px 28px 26px; background: var(--hero); color: var(--hero-ink); }
+.bal-hero-label { color: var(--hero-muted); font-size: 0.9375rem; font-weight: 500; }
+.bal-hero-value { font-size: clamp(2.25rem, 6vw, 3.25rem); font-weight: 650; letter-spacing: -0.035em; line-height: 1.1; margin: 6px 0 10px; }
+.bal-hero-note { font-size: 0.875rem; color: var(--hero-muted); }
+.bal-hero .bal-aside { display: inline-flex; flex-wrap: wrap; gap: 4px; margin-top: 16px; padding: 8px 14px; border-radius: var(--r-md); background: rgba(255, 255, 255, 0.14); color: var(--hero-ink); font-size: 0.8125rem; }
+.bal-hero-body { padding: 20px 28px 22px; }
+.bal-hero-body:empty { display: none; }
+.bal-share { display: flex; gap: 3px; height: 10px; margin: 0 0 16px; border-radius: 999px; overflow: hidden; }
+.bal-share span { display: block; height: 100%; min-width: 6px; }
+.bal-legend { display: flex; flex-wrap: wrap; gap: 10px 28px; margin: 0; padding: 0; list-style: none; }
 .bal-legend li { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 0.9375rem; }
-.bal-salary { margin-top: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 16px 18px; }
+.bal-legend strong { font-weight: 600; }
+.bal-salary { margin-top: 16px; background: var(--surface); border: 1px solid var(--card-border); border-radius: var(--r-lg); box-shadow: var(--shadow-sm); padding: 20px; }
 .bal-salary-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 16px; }
-.bal-salary-head h2 { font-size: 1.0625rem; font-weight: 700; margin: 0; }
+.bal-salary-head h2 { font-size: 1.0625rem; font-weight: 650; letter-spacing: -0.01em; margin: 0; }
 .bal-salary-head p { margin: 0; color: var(--text-secondary); }
 .bal-salary ul { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
 .bal-salary li { display: grid; grid-template-columns: auto auto 1fr auto; align-items: center; gap: 4px 10px; font-size: 0.9375rem; color: var(--text-secondary); }
@@ -29,57 +36,50 @@
 }
 .bal-reserved { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 2px; font-size: 0.8125rem; color: var(--text-secondary); }
 .bal-reserved li { display: flex; justify-content: space-between; gap: 12px; }
-.bal-aside { margin-top: 12px; font-size: 0.8125rem; color: var(--text-secondary); }
 .bal-flag { display: inline-flex; align-items: center; gap: 4px; font-size: 0.8125rem; font-weight: 600; }
 .bal-flag-critical { color: var(--bad); }
 
-.bal-mark { display: inline-grid; place-items: center; flex: none; width: 40px; height: 40px; border-radius: 12px; font-weight: 800; overflow: hidden; }
-.bal-mark-sm { width: 26px; height: 26px; border-radius: 8px; font-size: 0.8rem; }
-.bal-mark-logo { background: #fff; border: 1px solid var(--border); }
+.bal-mark { display: inline-grid; place-items: center; flex: none; width: 44px; height: 44px; border-radius: 50%; font-weight: 750; overflow: hidden; }
+.bal-mark-sm { width: 26px; height: 26px; font-size: 0.75rem; }
+.bal-mark-logo { background: #fff; box-shadow: inset 0 0 0 1px var(--border); }
 .bal-mark img { width: 100%; height: 100%; object-fit: contain; padding: 15%; }
 
 .bal-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-top: 16px; align-items: stretch; }
-.bal-bank { --brand-ui: var(--brand); display: flex; flex-direction: column; position: relative; overflow: hidden; background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 18px 18px 18px 24px; }
-.bal-bank::before { content: ''; position: absolute; inset: 0 auto 0 0; width: 6px; background: var(--brand-ui); }
+.bal-bank { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--card-border); border-radius: var(--r-lg); box-shadow: var(--shadow-sm); padding: 20px; }
 .bal-bank-head { display: flex; align-items: center; gap: 12px; }
 .bal-bank-id { display: flex; flex-direction: column; min-width: 0; }
-.bal-bank-name { font-size: 1.0625rem; font-weight: 700; overflow-wrap: anywhere; }
+.bal-bank-name { font-size: 1.0625rem; font-weight: 650; letter-spacing: -0.01em; overflow-wrap: anywhere; }
 .bal-fresh { font-size: 0.8125rem; color: var(--text-muted); }
 .bal-fresh-stale { display: inline-flex; align-items: center; gap: 4px; color: var(--text-primary); font-weight: 600; }
 .bal-fresh-stale svg { color: var(--warning); }
-.bal-acc-label { margin-top: 14px; color: var(--text-secondary); font-size: 0.8125rem; }
-.bal-balance { font-size: 2rem; font-weight: 750; letter-spacing: -0.01em; line-height: 1.2; }
+.bal-acc-label { margin-top: 18px; color: var(--text-secondary); font-size: 0.875rem; }
+.bal-balance { font-size: 1.875rem; font-weight: 650; letter-spacing: -0.03em; line-height: 1.2; margin-top: 2px; }
 .bal-nocard { margin-top: auto; padding-top: 14px; }
-.bal-cards { display: grid; gap: 12px; margin-top: auto; padding-top: 16px; border-top: 1px solid var(--border); }
+.bal-cards { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin-top: auto; padding-top: 18px; }
 
 /* Cartão: gradiente da cor do banco; a tinta (--on-brand) é a de maior contraste sobre ela. */
-.bal-card { display: flex; flex-direction: column; justify-content: space-between; gap: 6px; aspect-ratio: 85.6 / 54; width: 100%; max-width: 360px; margin-inline: auto; color: var(--on-brand); border-radius: 14px; padding: 16px 18px; background: linear-gradient(135deg, var(--brand), color-mix(in srgb, var(--brand) 55%, #000)); }
+.bal-card { display: flex; flex-direction: column; justify-content: space-between; gap: 6px; aspect-ratio: 85.6 / 54; width: 100%; max-width: 360px; margin-inline: auto; color: var(--on-brand); border-radius: 16px; padding: 18px 20px; box-shadow: 0 6px 18px color-mix(in srgb, var(--brand) 28%, transparent); background: linear-gradient(135deg, var(--brand), color-mix(in srgb, var(--brand) 55%, #000)); }
 .bal-card.is-light { background: linear-gradient(135deg, var(--brand), color-mix(in srgb, var(--brand) 70%, #fff)); }
 .bal-card-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 0.875rem; }
 .bal-card-top svg { vertical-align: -3px; }
-.bal-card-invoice { font-size: 1.75rem; line-height: 1.2; font-weight: 750; margin-top: 4px; }
+.bal-card-invoice { font-size: 1.75rem; line-height: 1.2; font-weight: 650; letter-spacing: -0.03em; margin-top: 4px; }
 .bal-card-sub { font-size: 0.8125rem; opacity: 0.92; }
 .bal-pill { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; padding: 2px 10px; border-radius: 999px; font-size: 0.8125rem; font-weight: 600; background: rgba(255, 255, 255, 0.22); }
 .bal-card.is-light .bal-pill { background: rgba(0, 0, 0, 0.14); }
 .bal-pill.is-alert { outline: 2px solid currentColor; outline-offset: -2px; }
-.bal-meter { height: 10px; margin: 12px 0 6px; border-radius: 5px; overflow: hidden; background: rgba(255, 255, 255, 0.28); }
+.bal-meter { height: 6px; margin: 12px 0 6px; border-radius: 5px; overflow: hidden; background: rgba(255, 255, 255, 0.28); }
 .bal-card.is-light .bal-meter { background: rgba(0, 0, 0, 0.18); }
 .bal-meter i { display: block; height: 100%; border-radius: 5px; background: var(--on-brand); }
 .bal-card-row { display: flex; justify-content: space-between; gap: 4px 8px; flex-wrap: wrap; font-size: 0.8125rem; }
 .bal-card-flag { display: inline-flex; align-items: center; gap: 4px; font-weight: 700; }
 
 .bal-table { margin-top: 16px; }
-.bal-table summary { cursor: pointer; color: var(--text-secondary); min-height: 24px; }
+.bal-table summary { cursor: pointer; color: var(--text-secondary); min-height: 40px; display: flex; align-items: center; font-weight: 500; }
 
-.bal-skel { border-radius: 18px; background: var(--grid); }
+.bal-skel { border-radius: var(--r-lg); background: var(--surface-2); }
 .bal-skel-hero { height: 190px; }
 .bal-skel-card { height: 220px; }
 
-/* Cor de marca no tema escuro: clareada para a faixa lateral ter contraste com o fundo. */
-@media (prefers-color-scheme: dark) {
-  :root:where(:not([data-theme='light'])) .bal-bank { --brand-ui: color-mix(in srgb, var(--brand) 65%, #fff); }
-}
-:root[data-theme='dark'] .bal-bank { --brand-ui: color-mix(in srgb, var(--brand) 65%, #fff); }
 
 @media (prefers-reduced-motion: no-preference) {
   .bal-share span { transition: width 0.6s ease; }
@@ -87,7 +87,8 @@
 }
 @keyframes bal-pulse { 50% { opacity: 0.55; } }
 @media (max-width: 640px) {
-  .bal-hero { padding: 18px; }
+  .bal-hero-band { padding: 22px 20px; }
+  .bal-hero-body { padding: 16px 20px 18px; }
   .bal-btn { min-height: 44px; }
   .bal-legend { flex-direction: column; }
   .bal-table summary { min-height: 44px; display: flex; align-items: center; }
@@ -96,10 +97,10 @@
 /* Dívidas */
 .bal-debts .btn svg { vertical-align: -3px; }
 .bal-debt-list { list-style: none; margin: 12px 0; padding: 0; display: grid; gap: 12px; }
-.bal-debt { border-top: 1px solid var(--border); padding-top: 12px; }
+.bal-debt { border-top: 1px solid var(--grid); padding-top: 14px; }
 .bal-debt-head { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: start; }
 .bal-debt-head > svg { margin-top: 3px; color: var(--text-secondary); }
-.bal-debt-head h3 { margin: 0; font-size: 1rem; font-weight: 700; }
+.bal-debt-head h3 { margin: 0; font-size: 1rem; font-weight: 600; }
 .bal-debt-head .tile-note { margin: 2px 0 0; }
 .bal-debt-actions { display: flex; gap: 4px; }
 .bal-debt-body { margin: 8px 0 0 28px; display: grid; gap: 6px; font-size: 0.9375rem; color: var(--text-secondary); }
@@ -110,7 +111,7 @@
 .bal-debt-ok svg { color: var(--good); }
 .bal-debt-warn { color: var(--text-primary); }
 .bal-debt-warn svg { color: var(--warning, #b45309); }
-.bal-debt-forecast { background: var(--surface-2, transparent); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; display: grid; gap: 6px; }
+.bal-debt-forecast { background: none; border-top: 1px solid var(--grid); border-radius: 0; padding: 12px 0 0; margin-top: 4px; display: grid; gap: 6px; }
 .bal-debt-forecast summary { cursor: pointer; font-weight: 600; color: var(--text-primary); }
 .bal-debt-lines { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 4px; }
 .bal-debt-lines li { display: flex; justify-content: space-between; gap: 12px; }
@@ -118,4 +119,4 @@
 .bal-debt-form { margin-top: 8px; display: grid; gap: 10px; }
 .bal-overdraft { margin-top: 2px; }
 @media (max-width: 520px) { .bal-debt-body { margin-left: 0; } }
-.bal-debts .btn-icon { padding: 6px; line-height: 0; }
+.bal-debts .btn-icon { padding: 0; line-height: 0; }

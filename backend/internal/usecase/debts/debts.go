@@ -5,14 +5,14 @@ package debts
 import (
 	"math"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/domain"
 )
 
-// paymentTolerance: um Pix a partir de 90% da parcela conta como parcela paga (arredondamentos, centavos a menos).
-const paymentTolerance = 0.9
+// paymentTolerance: um Pix conta como parcela se o valor for uma parcela (ou algumas) com até 2% de diferença. Outros
+// valores para a mesma pessoa (presente, divisão de conta) não abatem a dívida.
+const paymentTolerance = 0.02
 
 // InstallmentView é a situação de uma dívida parcelada.
 type InstallmentView struct {
@@ -26,12 +26,18 @@ type InstallmentView struct {
 	Payments   []domain.MoneyMovement // Pix reconhecidos, do mais recente ao mais antigo
 }
 
-// Installments soma os Pix reconhecidos (hits) e as parcelas marcadas à mão.
-func Installments(d domain.Debt, hits []domain.MoneyMovement, today time.Time) InstallmentView {
+// Installments soma os Pix enviados que têm valor de parcela (moves; os recebidos são ignorados) e as parcelas marcadas
+// à mão. Um Pix de duas parcelas conta como duas.
+func Installments(d domain.Debt, moves []domain.MoneyMovement, today time.Time) InstallmentView {
 	v := InstallmentView{Total: d.Installments}
 	paid := float64(d.PaidManual) * d.InstallmentAmount
-	for _, h := range hits {
-		if d.InstallmentAmount > 0 && h.Amount >= d.InstallmentAmount*paymentTolerance && !h.Date.Before(d.FirstDue.AddDate(0, -1, 0)) {
+	for _, h := range moves {
+		if h.In || d.InstallmentAmount <= 0 || h.Date.Before(d.FirstDue.AddDate(0, -1, 0)) {
+			continue
+		}
+		left := d.Installments - int(math.Floor(paid/d.InstallmentAmount+0.01))
+		k := math.Round(h.Amount / d.InstallmentAmount)
+		if k >= 1 && int(k) <= left && math.Abs(h.Amount-k*d.InstallmentAmount) <= k*d.InstallmentAmount*paymentTolerance {
 			paid += h.Amount
 			v.Payments = append(v.Payments, h)
 		}
@@ -181,12 +187,6 @@ func NextDip(today time.Time, dueDay int) time.Time {
 		d = domain.DebtDueIn(today.AddDate(0, 1, 1-today.Day()), dueDay)
 	}
 	return d
-}
-
-// Matches diz se label contém match, sem diferenciar maiúsculas e acentos.
-func Matches(label, match string) bool {
-	m := domain.Fold(match)
-	return m != "" && strings.Contains(domain.Fold(label), m)
 }
 
 func civil(t time.Time) time.Time {

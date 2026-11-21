@@ -25,7 +25,8 @@ export function ShareBar({ institutions, hidden }: { institutions: BalanceInstit
 
   return (
     <>
-      {parts.length > 0 && (
+      {/* Um banco só ocupa 100%: a barra não diria nada. */}
+      {parts.length > 1 && (
         <div className="bal-share" role="img" aria-label={shareLabel(institutions)}>
           {parts.map((i, n) => (
             <span key={i.id} style={{ width: grown ? `${i.shareOfTotal * 100}%` : '0%', background: colors[n].css }} />

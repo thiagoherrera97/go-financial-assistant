@@ -24,6 +24,7 @@ type moneyMovementJSON struct {
 	Date   string  `json:"date"`
 	Amount float64 `json:"amount"`
 	Label  string  `json:"label"`
+	In     bool    `json:"in"`
 }
 
 type debtLineJSON struct {
@@ -48,7 +49,9 @@ type debtJSON struct {
 	FirstDue          *string `json:"firstDue"`
 	PayeeMatch        string  `json:"payeeMatch"`
 	PaidManual        int     `json:"paidManual"`
-	Progress          *struct {
+	// Transfers: Pix e TED enviados e recebidos com quem recebe a dívida, do mais recente ao mais antigo.
+	Transfers []moneyMovementJSON `json:"transfers"`
+	Progress  *struct {
 		Paid       int                 `json:"paid"`
 		Total      int                 `json:"total"`
 		PaidAmount float64             `json:"paidAmount"`
@@ -94,6 +97,7 @@ func (a *api) debts(w http.ResponseWriter, r *http.Request) {
 	for n, v := range views {
 		out[n] = debtToJSON(v.Debt)
 		out[n].AccountName = v.AccountName
+		out[n].Transfers = movementsJSON(v.Transfers)
 		if p := v.Installments; p != nil {
 			j := &out[n]
 			j.Progress = &struct {
@@ -163,7 +167,7 @@ func debtToJSON(d domain.Debt) debtJSON {
 func movementsJSON(list []domain.MoneyMovement) []moneyMovementJSON {
 	out := make([]moneyMovementJSON, len(list))
 	for n, m := range list {
-		out[n] = moneyMovementJSON{m.Date.Format("2006-01-02"), cents(m.Amount), m.Label}
+		out[n] = moneyMovementJSON{m.Date.Format("2006-01-02"), cents(m.Amount), m.Label, m.In}
 	}
 	return out
 }
@@ -258,7 +262,7 @@ func (a *api) debtFromInput(r *http.Request, in debtInput, id uuid.UUID) (domain
 		if in.PaidManual < 0 || in.PaidManual > in.Installments {
 			return d, badRequest("paidManual deve ser de 0 ao número de parcelas")
 		}
-		if d.PayeeMatch, err = cleanText("payeeMatch", in.PayeeMatch, 0, 60); err != nil {
+		if d.PayeeMatch, err = cleanText("payeeMatch", strings.ReplaceAll(in.PayeeMatch, "\n", ";"), 0, 200); err != nil {
 			return d, err
 		}
 		d.InstallmentAmount, d.Installments, d.FirstDue, d.PaidManual = money(in.InstallmentAmount), in.Installments, first, in.PaidManual

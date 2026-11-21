@@ -121,6 +121,8 @@ export interface Debt {
   firstDue: string | null
   payeeMatch: string
   paidManual: number
+  /** Pix e TED enviados e recebidos com quem recebe a dívida (nomes em payeeMatch), do mais recente ao mais antigo. */
+  transfers: { date: string; amount: number; label: string; in: boolean }[]
   progress: {
     paid: number
     total: number
@@ -129,7 +131,7 @@ export interface Debt {
     nextDue: string | null
     overdue: boolean
     done: boolean
-    payments: { date: string; amount: number; label: string }[]
+    payments: { date: string; amount: number; label: string; in: boolean }[]
   } | null
   limit: {
     inLimit: number

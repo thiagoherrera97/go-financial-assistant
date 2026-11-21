@@ -99,8 +99,9 @@ export function DebtForm({ initial, editing, accounts, busy, serverError, onSubm
                 onChange={(e) => set({ firstDue: e.target.value, dueDay: e.target.value ? String(Number(e.target.value.slice(8))) : f.dueDay })} />
             </label>
             <label>
-              Nome no Pix de quem recebe
-              <input type="text" maxLength={60} placeholder="Como aparece no extrato" value={f.payeeMatch} onChange={(e) => set({ payeeMatch: e.target.value })} />
+              Nomes no Pix de quem recebe
+              <input type="text" maxLength={200} placeholder="Separe com ; (ex.: Maria Silva; Maria S Souza)" value={f.payeeMatch}
+                onChange={(e) => set({ payeeMatch: e.target.value })} />
             </label>
             <label>
               Parcelas pagas fora do Pix

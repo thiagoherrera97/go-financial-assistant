@@ -40,7 +40,7 @@ func (f *fakeReader) DeleteDebt(_ context.Context, id uuid.UUID) (bool, error) {
 	}
 	return false, f.err
 }
-func (f *fakeReader) PaymentsMatching(context.Context, string, time.Time) ([]domain.MoneyMovement, error) {
+func (f *fakeReader) MovementsWith(context.Context, string, time.Time) ([]domain.MoneyMovement, error) {
 	return f.debt.hits, f.err
 }
 func (f *fakeReader) BalanceDays(context.Context, uuid.UUID, time.Time) ([]domain.BalanceDay, error) {

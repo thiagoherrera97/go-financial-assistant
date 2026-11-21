@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, CalendarClock, CircleCheck, HandCoins, Pencil, Plus, Trash2 } from 'lucide-react'
+import { AlertTriangle, ArrowDownLeft, ArrowUpRight, CalendarClock, CircleCheck, HandCoins, Pencil, Plus, Trash2 } from 'lucide-react'
 import { formatMonthShort, shortDay } from '../../../shared/lib/format'
 import { createDebt, deleteDebt, updateDebt, useDebts, type Debt, type DebtInput } from '../api'
 import { debtOutstanding, debtToForm, emptyDebtForm, nextDueDate } from '../lib/debts'
@@ -123,10 +123,46 @@ function Installments({ debt: d, hidden }: { debt: Debt; hidden: boolean }) {
       )}
       {p.payments.length > 0 && (
         <p className="tile-note">
-          Último Pix reconhecido: {shortDay(p.payments[0].date)}, <StaticMoney value={p.payments[0].amount} hidden={hidden} />
+          Último Pix reconhecido como parcela: {shortDay(p.payments[0].date)}, <StaticMoney value={p.payments[0].amount} hidden={hidden} />
         </p>
       )}
+      <Transfers debt={d} hidden={hidden} />
     </div>
+  )
+}
+
+/** Os Pix e TED com quem recebe a dívida, nos dois sentidos, para conferir. */
+function Transfers({ debt: d, hidden }: { debt: Debt; hidden: boolean }) {
+  const [all, setAll] = useState(false)
+  if (d.transfers.length === 0) return null
+  const names = d.creditor || 'quem recebe'
+  const sent = d.transfers.filter((t) => !t.in).reduce((s, t) => s + t.amount, 0)
+  const received = d.transfers.filter((t) => t.in).reduce((s, t) => s + t.amount, 0)
+  const shown = all ? d.transfers : d.transfers.slice(0, 5)
+  return (
+    <details className="bal-debt-forecast">
+      <summary>
+        Pix com {names} nos últimos 90 dias: enviou <StaticMoney value={sent} hidden={hidden} />, recebeu{' '}
+        <StaticMoney value={received} hidden={hidden} />
+      </summary>
+      <ul className="bal-debt-lines">
+        {shown.map((t, n) => (
+          <li key={`${t.date}-${t.amount}-${n}`}>
+            <span>
+              {t.in ? <ArrowDownLeft size={14} aria-label="recebido" /> : <ArrowUpRight size={14} aria-label="enviado" />}{' '}
+              {shortDay(t.date)} · {t.in ? 'recebido' : 'enviado'}
+            </span>
+            <StaticMoney value={t.in ? t.amount : -t.amount} hidden={hidden} />
+          </li>
+        ))}
+      </ul>
+      {d.transfers.length > 5 && (
+        <button type="button" className="btn" onClick={() => setAll(!all)}>
+          {all ? 'Mostrar menos' : `Ver todos (${d.transfers.length})`}
+        </button>
+      )}
+      <p className="tile-note">Só os enviados com valor de parcela (ou de algumas parcelas) abatem a dívida.</p>
+    </details>
   )
 }
 

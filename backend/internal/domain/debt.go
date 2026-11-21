@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -33,7 +34,7 @@ type Debt struct {
 	InstallmentAmount float64   // INSTALLMENTS
 	Installments      int       // INSTALLMENTS
 	FirstDue          time.Time // INSTALLMENTS: vencimento da primeira parcela
-	PayeeMatch        string    // INSTALLMENTS: trecho do nome no Pix que paga a parcela (ex.: nome da mãe)
+	PayeeMatch        string    // INSTALLMENTS: nomes de quem recebe no Pix/TED, separados por ";" (ex.: os nomes da mãe)
 	PaidManual        int       // INSTALLMENTS: parcelas marcadas como pagas à mão
 	CreatedAt         time.Time
 }
@@ -50,6 +51,30 @@ type MoneyMovement struct {
 	Date   time.Time
 	Amount float64
 	Label  string
+	In     bool // entrada (recebido); falso = saída (enviado)
+}
+
+// PayeeNames separa os nomes de PayeeMatch (";" ou quebra de linha), já normalizados com Fold; ignora os vazios.
+func PayeeNames(match string) []string {
+	var out []string
+	for _, n := range strings.FieldsFunc(match, func(r rune) bool { return r == ';' || r == '\n' }) {
+		if f := Fold(n); f != "" {
+			out = append(out, f)
+		}
+	}
+	return out
+}
+
+// MatchesPayee diz se a descrição de uma transação traz algum dos nomes de PayeeMatch, sem diferenciar maiúsculas e
+// acentos (o banco escreve o mesmo nome de jeitos diferentes: "MONICA NUNES", "Monica Nunes").
+func MatchesPayee(label, match string) bool {
+	l := Fold(label)
+	for _, n := range PayeeNames(match) {
+		if strings.Contains(l, n) {
+			return true
+		}
+	}
+	return false
 }
 
 // DebtDueIn é o vencimento da dívida no mês de month: o dia DueDay, ou o último dia nos meses mais curtos.

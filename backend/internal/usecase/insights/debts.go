@@ -24,7 +24,13 @@ type DebtView struct {
 	Installments *debts.InstallmentView
 	Limit        *debts.LimitUse
 	Forecast     *debts.Forecast
+	// Transfers são os Pix e TED enviados e recebidos com quem recebe a dívida (PayeeMatch), do mais recente ao mais
+	// antigo, nos últimos transfersDays dias.
+	Transfers []domain.MoneyMovement
 }
+
+// transfersDays é até onde vão as transferências com o credor mostradas na dívida.
+const transfersDays = 90
 
 func (i *Insights) debtStore() ports.DebtStore { return i.debts }
 
@@ -52,11 +58,20 @@ func (i *Insights) Debts(ctx context.Context, now time.Time) ([]DebtView, error)
 		if d.Kind != domain.DebtInstallments {
 			continue
 		}
-		hits, err := store.PaymentsMatching(ctx, d.PayeeMatch, d.FirstDue.AddDate(0, -1, 0))
+		from := d.FirstDue.AddDate(0, -1, 0)
+		if t := today.AddDate(0, 0, -transfersDays); t.Before(from) {
+			from = t
+		}
+		moves, err := store.MovementsWith(ctx, d.PayeeMatch, from)
 		if err != nil {
 			return nil, err
 		}
-		v := debts.Installments(d, hits, today)
+		for k := len(moves) - 1; k >= 0; k-- {
+			if !moves[k].Date.Before(today.AddDate(0, 0, -transfersDays)) {
+				views[n].Transfers = append(views[n].Transfers, moves[k])
+			}
+		}
+		v := debts.Installments(d, moves, today)
 		views[n].Installments, installments[d.ID] = &v, &v
 	}
 	for n, d := range list {
@@ -138,7 +153,7 @@ func (i *Insights) overdraftView(ctx context.Context, v *DebtView, all []domain.
 	for _, o := range outs {
 		skip := false
 		for _, p := range payees {
-			skip = skip || debts.Matches(o.Label, p)
+			skip = skip || domain.MatchesPayee(o.Label, p)
 		}
 		if !skip {
 			usual += o.Amount

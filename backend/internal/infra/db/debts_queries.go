@@ -7,7 +7,6 @@ import (
 
 	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/domain"
 	"github.com/google/uuid"
-	"strings"
 )
 
 const debtColumns = `id, kind, name, creditor, note, original_amount, due_day, account_id, free_days,
@@ -87,23 +86,36 @@ const bankOutflows = `
 	JOIN accounts a ON a.id = pay.account_id AND a.type = 'BANK'
 	WHERE p.kind = 'EXPENSE' AND pay.status != 'CANCELLED' AND pay.amount > 0`
 
-func (r *DebtsRepo) PaymentsMatching(ctx context.Context, match string, from time.Time) ([]domain.MoneyMovement, error) {
-	if match == "" {
+func (r *DebtsRepo) MovementsWith(ctx context.Context, match string, from time.Time) ([]domain.MoneyMovement, error) {
+	if len(domain.PayeeNames(match)) == 0 {
 		return nil, nil
 	}
-	want := domain.Fold(match)
-	rows, err := r.movements(ctx, bankOutflows+` AND `+txDate+`::date >= $1::date ORDER BY 1`, from)
+	rows, err := r.db.Pool.Query(ctx, `
+		SELECT `+txDate+`::date, ABS(pay.amount), COALESCE(p.description, ''),
+		       p.kind = 'INCOME' OR (p.kind = 'TRANSFER' AND p.transfer_direction = 'IN')
+		FROM payments pay
+		JOIN purchases p ON p.id = pay.purchase_id
+		JOIN accounts a ON a.id = pay.account_id AND a.type = 'BANK'
+		WHERE pay.status != 'CANCELLED' AND `+txDate+`::date >= $1::date
+		ORDER BY 1, pay.created_at
+	`, from)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("erro ao ler transferências: %w", err)
 	}
+	defer rows.Close()
 	var result []domain.MoneyMovement
-	for _, m := range rows {
+	for rows.Next() {
+		var m domain.MoneyMovement
+		if err := rows.Scan(&m.Date, &m.Amount, &m.Label, &m.In); err != nil {
+			return nil, fmt.Errorf("erro ao escanear transferência: %w", err)
+		}
 		// O filtro é em Go para ignorar acentos e maiúsculas do mesmo jeito que no resto do app.
-		if strings.Contains(domain.Fold(m.Label), want) {
+		if domain.MatchesPayee(m.Label, match) {
+			m.Date = m.Date.UTC()
 			result = append(result, m)
 		}
 	}
-	return result, nil
+	return result, rows.Err()
 }
 
 func (r *DebtsRepo) AccountOutflows(ctx context.Context, accountID uuid.UUID, from, to time.Time) ([]domain.MoneyMovement, error) {

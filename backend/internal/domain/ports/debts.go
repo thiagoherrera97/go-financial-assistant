@@ -16,9 +16,9 @@ type DebtStore interface {
 	UpdateDebt(ctx context.Context, d domain.Debt) (bool, error)
 	// DeleteDebt apaga a dívida; false se ela não existe.
 	DeleteDebt(ctx context.Context, id uuid.UUID) (bool, error)
-	// PaymentsMatching devolve as saídas de conta corrente desde from cuja descrição contém match (sem diferenciar
-	// maiúsculas e acentos).
-	PaymentsMatching(ctx context.Context, match string, from time.Time) ([]domain.MoneyMovement, error)
+	// MovementsWith devolve as entradas e saídas de conta corrente desde from cuja descrição traz algum dos nomes de match
+	// (domain.MatchesPayee), em ordem de data.
+	MovementsWith(ctx context.Context, match string, from time.Time) ([]domain.MoneyMovement, error)
 	// BalanceDays devolve o menor e o último saldo de cada dia da conta desde from.
 	BalanceDays(ctx context.Context, accountID uuid.UUID, from time.Time) ([]domain.BalanceDay, error)
 	// CardBillTotal soma o que já está na fatura do cartão que vence em due (compras, parcelas previstas e estornos).

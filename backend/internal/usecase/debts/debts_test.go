@@ -30,14 +30,17 @@ func TestInstallmentsCountsPixAndManual(t *testing.T) {
 	d.PaidManual = 1
 	hits := []domain.MoneyMovement{
 		{Date: day(2027, 1, 9), Amount: 320, Label: "PIX ENVIADO Maria"},
-		{Date: day(2027, 1, 20), Amount: 50, Label: "PIX ENVIADO Maria"}, // não é parcela
-		{Date: day(2026, 6, 1), Amount: 320, Label: "PIX ENVIADO Maria"}, // antes da dívida
+		{Date: day(2027, 1, 20), Amount: 50, Label: "PIX ENVIADO Maria"},             // não é parcela
+		{Date: day(2027, 1, 20), Amount: 800, Label: "PIX ENVIADO Maria"},            // não é múltiplo da parcela
+		{Date: day(2027, 1, 21), Amount: 320, Label: "PIX RECEBIDO Maria", In: true}, // recebido não abate
+		{Date: day(2026, 6, 1), Amount: 320, Label: "PIX ENVIADO Maria"},             // antes da dívida
+		{Date: day(2027, 2, 9), Amount: 640, Label: "PIX ENVIADO Maria"},             // duas parcelas de uma vez
 	}
-	v := Installments(d, hits, day(2027, 1, 21))
-	if v.Paid != 2 || v.Remaining != 2560 || len(v.Payments) != 1 {
+	v := Installments(d, hits, day(2027, 2, 21))
+	if v.Paid != 4 || v.Remaining != 1920 || len(v.Payments) != 2 {
 		t.Fatalf("got %+v", v)
 	}
-	if !v.NextDue.Equal(day(2027, 2, 10)) || v.Overdue {
+	if !v.NextDue.Equal(day(2027, 4, 10)) || v.Overdue {
 		t.Fatalf("next due %v overdue %v", v.NextDue, v.Overdue)
 	}
 }
@@ -126,8 +129,14 @@ func TestNextDip(t *testing.T) {
 	}
 }
 
-func TestMatchesIgnoresAccentsAndCase(t *testing.T) {
-	if !Matches("PIX ENVIADO   MÁRCIA  Souza", "marcia souza") || Matches("PIX", "") {
-		t.Fatal("match")
+func TestMatchesPayeeSeveralNames(t *testing.T) {
+	names := "Monica Nunes de Andrade; Monica Nunes Herrera"
+	for _, label := range []string{"PIX ENVIADO   MÔNICA  NUNES DE ANDRADE", "Pix recebido Monica Nunes De Andrade", "TED RECEBIDA   Monica Nunes Herrera"} {
+		if !domain.MatchesPayee(label, names) {
+			t.Fatalf("deveria reconhecer %q", label)
+		}
+	}
+	if domain.MatchesPayee("PIX ENVIADO Monica Silva", names) || domain.MatchesPayee("PIX", " ; ") {
+		t.Fatal("não deveria reconhecer")
 	}
 }
