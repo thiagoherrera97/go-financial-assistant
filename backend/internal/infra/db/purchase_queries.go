@@ -210,7 +210,7 @@ func (r *LedgerRepo) FindPaymentDetailsByMonth(ctx context.Context, month time.T
 		JOIN purchases p ON p.id = pay.purchase_id
 		WHERE ` + paymentMonth + ` = DATE_TRUNC('month', $1::date)::date
 		  AND pay.status != 'CANCELLED'
-		ORDER BY COALESCE(pay.due_date, pay.reference_month, pay.created_at)
+		ORDER BY COALESCE(pay.due_date, pay.reference_month, pay.paid_at, pay.created_at)
 	`
 	rows, err := r.db.Pool.Query(ctx, query, month)
 	if err != nil {

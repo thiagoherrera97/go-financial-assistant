@@ -699,6 +699,7 @@ func TestManualExpense_MonthFollowsSessionTimezone(t *testing.T) {
 	p, _ := domain.NewPurchase(123.45, &desc, domain.CategoryFood, domain.PaymentMethodPix, domain.PurchaseTypeSingle, "teste")
 	pay := domain.NewPayment(p.ID, 123.45, domain.PaymentStatusPaid)
 	pay.CreatedAt = time.Date(2026, 11, 30, 22, 0, 0, 0, sp)
+	pay.PaidAt = &pay.CreatedAt // pago na hora em que foi lançado; o mês segue o paid_at quando não há vencimento
 	if err := (&LedgerRepo{db: pgUTC}).Save(ctx, p, []domain.Payment{*pay}); err != nil {
 		t.Fatal(err)
 	}

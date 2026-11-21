@@ -15,7 +15,7 @@ func (r *BudgetRepo) ExpenseKeyMonths(ctx context.Context, from, to time.Time) (
 		       (ARRAY_AGG(p.category ORDER BY pay.created_at DESC))[1] AS category,
 		       ` + paymentMonth + ` AS month,
 		       SUM(pay.amount), COUNT(*),
-		       EXTRACT(DAY FROM MAX(COALESCE(pay.due_date, pay.reference_month, pay.created_at::date)))::int,
+		       EXTRACT(DAY FROM MAX(COALESCE(pay.due_date, pay.reference_month, pay.paid_at::date, pay.created_at::date)))::int,
 		       BOOL_AND(pay.status = 'PAID'),
 		       BOOL_OR(p.type = 'INSTALLMENT' OR COALESCE(p.description, '') ~* '(\(\s*\d+\s*/\s*\d+\s*\)|parc[a-z.]*\s*\d+\s*/\s*\d+)'),
 		       BOOL_OR(p.type = 'RECURRING')
