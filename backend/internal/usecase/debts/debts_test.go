@@ -171,3 +171,17 @@ func TestRecurringKeepsOnlyRepeated(t *testing.T) {
 		t.Fatalf("primeira linha %+v", got[0])
 	}
 }
+
+func TestBuildLastCycle(t *testing.T) {
+	credits := []domain.SalaryCredit{{Date: day(2026, 10, 30), Amount: 4366.62}, {Date: day(2026, 11, 13), Amount: 5200}}
+	lc := BuildLastCycle(credits, 0, 322.89, day(2026, 11, 21))
+	if lc == nil || !lc.SalaryDate.Equal(day(2026, 11, 13)) || lc.Amount != 4877.11 || lc.Leftover != 322.89 {
+		t.Fatalf("got %+v", lc)
+	}
+	if BuildLastCycle(credits, 6000, 0, day(2026, 11, 21)) != nil {
+		t.Fatal("salário que sobrou inteiro não é dívida")
+	}
+	if BuildLastCycle(nil, 0, 0, day(2026, 11, 21)) != nil {
+		t.Fatal("sem salário")
+	}
+}

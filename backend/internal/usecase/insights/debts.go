@@ -24,6 +24,7 @@ type DebtView struct {
 	AccountName  string // OVERDRAFT: banco e conta do limite
 	Installments *debts.InstallmentView
 	Limit        *debts.LimitUse
+	LastCycle    *debts.LastCycle // OVERDRAFT: quanto do último salário o buraco engoliu
 	Forecast     *debts.Forecast
 	// Transfers são os Pix e TED enviados e recebidos com quem recebe a dívida (PayeeMatch), do mais recente ao mais
 	// antigo, nos últimos transfersDays dias.
@@ -187,6 +188,11 @@ func (i *Insights) overdraftView(ctx context.Context, v *DebtView, all []domain.
 	if saved > 0 {
 		in.Bills = append(in.Bills, debts.Line{Label: "Guardado em outras contas e caixinhas (" + strings.Join(savedWhere, ", ") + ")", Amount: saved})
 	}
+	credits, err := i.reader.SalaryCredits(ctx, today.AddDate(0, 0, -45), today)
+	if err != nil {
+		return err
+	}
+	v.LastCycle = debts.BuildLastCycle(credits, acc.Balance, saved, today)
 	// Faturas dos cartões do mesmo banco: saem desta conta. Até o fechamento ainda entram compras: estimadas pelo que se
 	// gastou à vista no cartão no mesmo período do mês passado.
 	for _, c := range accounts {
@@ -372,8 +378,13 @@ func DebtsText(views []DebtView) string {
 			}
 		case v.Limit != nil && v.Limit.InLimit > 0:
 			out += fmt.Sprintf("• %s: %s no limite (dia %d de %d sem juros)", d.Name, format.FormatBRL(v.Limit.InLimit), v.Limit.DaysUsed, d.FreeDays)
-		case v.Forecast != nil && v.Forecast.InLimit > 0:
-			out += fmt.Sprintf("• %s: coberta agora · previsão %s: %s no limite", d.Name, v.Forecast.Date.Format("02/01"), format.FormatBRL(v.Forecast.InLimit))
+		case v.LastCycle != nil:
+			out += fmt.Sprintf("• %s: o salário de %s cobriu %s do buraco", d.Name, v.LastCycle.SalaryDate.Format("02/01"), format.FormatBRL(v.LastCycle.Amount))
+			if v.Forecast != nil && v.Forecast.CommittedInLimit > 0 {
+				out += fmt.Sprintf(" · previsão %s: %s no limite", v.Forecast.Date.Format("02/01"), format.FormatBRL(v.Forecast.CommittedInLimit))
+			}
+		case v.Forecast != nil && v.Forecast.CommittedInLimit > 0:
+			out += fmt.Sprintf("• %s: previsão %s: %s no limite", d.Name, v.Forecast.Date.Format("02/01"), format.FormatBRL(v.Forecast.CommittedInLimit))
 		default:
 			out += fmt.Sprintf("• %s: coberta", d.Name)
 		}

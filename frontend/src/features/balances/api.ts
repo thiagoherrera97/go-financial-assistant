@@ -141,6 +141,15 @@ export interface Debt {
     daysUsed: number
     months: { month: string; days: number; worst: number }[]
   } | null
+  /** OVERDRAFT: quanto do último salário o buraco engoliu (salary − leftover; leftover = balance + saved). */
+  lastCycle: {
+    salaryDate: string
+    salary: number
+    balance: number
+    saved: number
+    leftover: number
+    amount: number
+  } | null
   forecast: {
     /** Dia do mergulho (ex.: dia 10). */
     date: string

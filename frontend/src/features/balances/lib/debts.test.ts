@@ -23,11 +23,12 @@ describe('toDebtInput', () => {
 })
 
 describe('debtOutstanding', () => {
-  const base = { progress: null, limit: null, forecast: null } as unknown as Debt
+  const base = { progress: null, limit: null, forecast: null, lastCycle: null } as unknown as Debt
   it('usa o que falta, o limite em uso ou a previsão', () => {
     expect(debtOutstanding({ ...base, progress: { remaining: 2880 } } as Debt)).toBe(2880)
     expect(debtOutstanding({ ...base, limit: { inLimit: 900 }, forecast: { inLimit: 1200 } } as Debt)).toBe(900)
     expect(debtOutstanding({ ...base, limit: { inLimit: 0 }, forecast: { inLimit: 1200, committedInLimit: 800 } } as Debt)).toBe(800)
+    expect(debtOutstanding({ ...base, limit: { inLimit: 0 }, lastCycle: { amount: 4877.11 } } as Debt)).toBe(4877.11)
   })
 })
 

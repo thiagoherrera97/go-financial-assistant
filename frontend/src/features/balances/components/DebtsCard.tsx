@@ -177,8 +177,33 @@ function Overdraft({ debt: d, hidden }: { debt: Debt; hidden: boolean }) {
     <div className="bal-debt-body">
       <p className="tile-note">
         Ajuda de <StaticMoney value={d.originalAmount} hidden={hidden} />, coberta pelo limite da conta {d.accountName}. O negativo dessa
-        conta aparece aqui, não no saldo.
+        conta aparece aqui, não no saldo. O salário tapa o buraco todo mês, mas a dívida continua até sobrar salário depois do dia{' '}
+        {d.dueDay}.
       </p>
+      {d.lastCycle && (
+        <div className="bal-debt-cycle">
+          <p>
+            Ciclo passado: o buraco engoliu <strong><StaticMoney value={d.lastCycle.amount} hidden={hidden} /></strong> do salário
+          </p>
+          <ul className="bal-debt-lines">
+            <li>
+              <span>Salário que caiu em {shortDay(d.lastCycle.salaryDate)}</span>
+              <StaticMoney value={d.lastCycle.salary} hidden={hidden} />
+            </li>
+            <li>
+              <span>
+                O que sobrou hoje (conta <StaticMoney value={d.lastCycle.balance} hidden={hidden} /> + guardado{' '}
+                <StaticMoney value={d.lastCycle.saved} hidden={hidden} />)
+              </span>
+              <StaticMoney value={-d.lastCycle.leftover} hidden={hidden} />
+            </li>
+            <li className="is-total">
+              <span>Foi para cobrir a dívida</span>
+              <StaticMoney value={d.lastCycle.amount} hidden={hidden} />
+            </li>
+          </ul>
+        </div>
+      )}
       {l.inLimit > 0 ? (
         <p className={l.daysUsed > d.freeDays ? 'bal-debt-warn' : undefined}>
           {l.daysUsed > d.freeDays ? <AlertTriangle size={16} aria-hidden /> : <CalendarClock size={16} aria-hidden />}{' '}
@@ -187,13 +212,13 @@ function Overdraft({ debt: d, hidden }: { debt: Debt; hidden: boolean }) {
           {l.daysUsed > d.freeDays && ' · já passou dos dias sem juros'}
         </p>
       ) : (
-        <p className="bal-debt-ok"><CircleCheck size={16} aria-hidden /> Coberta agora: a conta está positiva.</p>
+        <p className="tile-note">Hoje a conta não está no limite; o buraco volta quando sair a fatura do dia {d.dueDay}.</p>
       )}
 
       {f && (
         <div className="bal-debt-forecast">
           <p>
-            Previsão para <strong>{shortDay(f.date)}</strong> até a véspera do salário ({shortDay(f.until)}):
+            Próximo ciclo: previsão para <strong>{shortDay(f.date)}</strong> até a véspera do salário ({shortDay(f.until)}):
           </p>
           <ul className="bal-debt-scenarios">
             <li>

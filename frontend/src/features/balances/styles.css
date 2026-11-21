@@ -135,3 +135,5 @@
 .bal-flow p { margin: 2px 0 0; }
 .bal-flow p svg { vertical-align: -2px; }
 .bal-flow-amount { font-weight: 600; color: var(--text-primary); white-space: nowrap; }
+.bal-debt-cycle { border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; }
+.bal-debt-cycle .bal-debt-lines { margin-bottom: 0; }

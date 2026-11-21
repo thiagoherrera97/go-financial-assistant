@@ -258,3 +258,35 @@ func Recurring(last, before []domain.MoneyMovement) []Line {
 	sort.SliceStable(out, func(i, j int) bool { return out[i].Date.Before(*out[j].Date) })
 	return out
 }
+
+// LastCycle é quanto a dívida coberta pelo limite custou no ciclo passado: o último salário caiu com a conta no buraco, e
+// o que ele não deixou de sobra foi engolido. Amount = Salary − Leftover.
+type LastCycle struct {
+	SalaryDate time.Time
+	Salary     float64
+	Balance    float64 // saldo da conta agora
+	Saved      float64 // guardado em outras contas e caixinhas
+	Leftover   float64 // Balance + Saved
+	Amount     float64
+}
+
+// BuildLastCycle usa o crédito de salário mais recente até hoje; nil sem salário recebido ou se o salário sobrou inteiro.
+func BuildLastCycle(credits []domain.SalaryCredit, balance, saved float64, today time.Time) *LastCycle {
+	var last *domain.SalaryCredit
+	for n := range credits {
+		c := credits[n]
+		if !civil(c.Date).After(civil(today)) && (last == nil || !c.Date.Before(last.Date)) {
+			last = &c
+		}
+	}
+	if last == nil {
+		return nil
+	}
+	lc := &LastCycle{SalaryDate: civil(last.Date), Salary: round(last.Amount), Balance: round(balance), Saved: round(saved)}
+	lc.Leftover = round(balance + saved)
+	lc.Amount = round(lc.Salary - lc.Leftover)
+	if lc.Amount <= 0 {
+		return nil
+	}
+	return lc
+}

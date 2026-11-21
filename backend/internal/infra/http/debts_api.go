@@ -88,6 +88,15 @@ type debtJSON struct {
 		} `json:"months"`
 	} `json:"limit"`
 	Forecast *debtForecastJSON `json:"forecast"`
+	// LastCycle (OVERDRAFT): quanto do último salário o buraco engoliu: salary − leftover (balance + saved).
+	LastCycle *struct {
+		SalaryDate string  `json:"salaryDate"`
+		Salary     float64 `json:"salary"`
+		Balance    float64 `json:"balance"`
+		Saved      float64 `json:"saved"`
+		Leftover   float64 `json:"leftover"`
+		Amount     float64 `json:"amount"`
+	} `json:"lastCycle"`
 }
 
 func (a *api) debts(w http.ResponseWriter, r *http.Request) {
@@ -105,6 +114,16 @@ func (a *api) debts(w http.ResponseWriter, r *http.Request) {
 		out[n] = debtToJSON(v.Debt)
 		out[n].AccountName = v.AccountName
 		out[n].Transfers = movementsJSON(v.Transfers)
+		if lc := v.LastCycle; lc != nil {
+			out[n].LastCycle = &struct {
+				SalaryDate string  `json:"salaryDate"`
+				Salary     float64 `json:"salary"`
+				Balance    float64 `json:"balance"`
+				Saved      float64 `json:"saved"`
+				Leftover   float64 `json:"leftover"`
+				Amount     float64 `json:"amount"`
+			}{lc.SalaryDate.Format("2006-01-02"), lc.Salary, lc.Balance, lc.Saved, lc.Leftover, lc.Amount}
+		}
 		if p := v.Installments; p != nil {
 			j := &out[n]
 			j.Progress = &struct {

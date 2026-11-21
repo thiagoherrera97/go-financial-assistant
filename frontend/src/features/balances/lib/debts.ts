@@ -80,6 +80,7 @@ export function toDebtInput(f: DebtForm): { input: DebtInput } | { error: string
 export function debtOutstanding(d: Debt): number {
   if (d.progress) return d.progress.remaining
   if (d.limit && d.limit.inLimit > 0) return d.limit.inLimit
+  if (d.lastCycle) return d.lastCycle.amount
   return d.forecast?.committedInLimit ?? 0
 }
 
