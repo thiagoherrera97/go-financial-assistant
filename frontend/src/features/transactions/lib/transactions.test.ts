@@ -115,8 +115,9 @@ describe('withGroupFilter em Entradas', () => {
 })
 
 describe('formatBankTime', () => {
-  it('mostra a hora e o minuto do banco', () => {
-    expect(formatBankTime('2026-11-17T21:27:58Z')).toMatch(/^\d{2}:\d{2}$/)
+  it('mostra a hora do banco no horário de São Paulo', () => {
+    expect(formatBankTime('2026-11-17T21:27:58Z')).toBe('18:27')
+    expect(formatBankTime('2026-11-14T00:54:48.061Z')).toBe('21:54')
   })
   it('fica vazio sem hora ou com valor inválido', () => {
     expect(formatBankTime(undefined)).toBe('')

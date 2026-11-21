@@ -662,11 +662,27 @@ func TestToExternal_BankTime(t *testing.T) {
 		}
 	}
 
+	// Dia em São Paulo: 00:54 UTC de 14/11 é 21:54 de 13/11 em Brasília.
+	noite := tx("DEBIT", "Transfer - PIX", -50)
+	noite.Date = "2026-11-14T00:54:48.061Z"
+	if got, _ := toExternal(domain.AccountBank, noite); !got.Date.Equal(time.Date(2026, 11, 13, 0, 0, 0, 0, time.UTC)) {
+		t.Errorf("Pix à noite caiu no dia errado: %v", got.Date)
+	}
+	// Só o dia (meia-noite UTC): a data enviada vale como está, sem voltar um dia.
+	if got, _ := toExternal(domain.AccountBank, tx("DEBIT", "Shopping", 5)); !got.Date.Equal(time.Date(2026, 9, 30, 0, 0, 0, 0, time.UTC)) {
+		t.Errorf("data só com o dia mudou: %v", got.Date)
+	}
+
 	parcela := tx("DEBIT", "Shopping", 10)
 	parcela.Date = "2026-08-10T15:04:05.000Z"
 	parcela.CreditCardMetadata = &cardMetadata{InstallmentNumber: 3, TotalInstallments: 5, BillForecastDate: "2026-10"}
 	if got, _ := toExternal(domain.AccountCredit, parcela); got.BankTime != nil {
 		t.Errorf("parcela não deveria ter hora: %v", got.BankTime)
+	}
+	// Parcela comprada à noite: o dia na fatura é o da compra em São Paulo (09/08), não o de UTC (10/08).
+	parcela.Date = "2026-08-10T01:30:00.000Z"
+	if got, _ := toExternal(domain.AccountCredit, parcela); !got.Date.Equal(time.Date(2026, 10, 9, 0, 0, 0, 0, time.UTC)) {
+		t.Errorf("parcela no dia errado: %v", got.Date)
 	}
 }
 

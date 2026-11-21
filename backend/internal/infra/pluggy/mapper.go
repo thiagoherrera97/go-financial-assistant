@@ -119,7 +119,7 @@ func toExternal(accountType domain.AccountType, t transaction) (ports.ExternalTr
 		return ports.ExternalTransaction{}, false
 	}
 	bankTime := bankMoment(date)
-	date = date.UTC().Truncate(24 * time.Hour)
+	date = bankDay(date, bankTime)
 
 	category := strings.ToLower(t.Category)
 	isCard := accountType == domain.AccountCredit
@@ -199,6 +199,28 @@ func bankMoment(t time.Time) *time.Time {
 		return nil
 	}
 	return &u
+}
+
+// saoPaulo é o fuso do dia e da hora das transações: o Open Finance é brasileiro e o Pluggy manda o instante em UTC.
+var saoPaulo = mustLocation("America/Sao_Paulo")
+
+func mustLocation(name string) *time.Location {
+	loc, err := time.LoadLocation(name)
+	if err != nil {
+		panic(err)
+	}
+	return loc
+}
+
+// bankDay é o dia civil da transação (meia-noite UTC, como o resto do app guarda datas). Com hora, é o dia em São Paulo:
+// um Pix às 21h54 de 13/11 chega como 00:54 UTC de 14/11 e deve contar no dia 13. Sem hora (só o dia), vale a data enviada.
+func bankDay(t time.Time, moment *time.Time) time.Time {
+	if moment != nil {
+		t = moment.In(saoPaulo)
+	} else {
+		t = t.UTC()
+	}
+	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
 }
 
 // installmentDate leva a parcela para o mês da fatura em que ela cai (billForecastDate, "AAAA-MM"), mantendo o dia da
