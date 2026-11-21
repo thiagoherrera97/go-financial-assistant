@@ -28,6 +28,8 @@ export interface Debt {
   creditor: string
   progress: { remaining: number; done: boolean } | null
   limit: { inLimit: number } | null
+  /** Cheque especial: previsão do próximo mergulho no limite. */
+  forecast: { inLimit: number } | null
 }
 
 export const useDebts = () =>
