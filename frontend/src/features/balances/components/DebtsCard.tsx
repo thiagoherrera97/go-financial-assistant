@@ -144,7 +144,7 @@ function Overdraft({ debt: d, hidden }: { debt: Debt; hidden: boolean }) {
           <StaticMoney value={d.originalAmount} hidden={hidden} />
         </li>
         <li className="is-total">
-          <span>Agora{known && ` (negativo em ${shortDay(l.dueDate!)})`}</span>
+          <span>Agora</span>
           {known ? <StaticMoney value={l.atDue} hidden={hidden} /> : <span>sem saldo do dia {d.dueDay}</span>}
         </li>
       </ul>
