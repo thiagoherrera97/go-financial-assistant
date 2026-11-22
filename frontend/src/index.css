@@ -301,6 +301,8 @@ input[type='month']::-webkit-calendar-picker-indicator, input[type='date']::-web
 .delta { display: inline-flex; align-items: center; gap: 4px; font-size: 0.8125rem; margin-top: 8px; color: var(--text-secondary); }
 .delta-good { color: var(--good); }
 .delta-bad { color: var(--bad); }
+.tile-value.is-good { color: var(--good); }
+.tile-value.is-bad { color: var(--bad); }
 .tile-link { display: block; color: inherit; text-decoration: none; transition: box-shadow 0.2s ease, transform 0.2s ease; }
 .tile-link:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
 .tile-link:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }

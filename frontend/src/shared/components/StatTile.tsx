@@ -9,13 +9,15 @@ interface Props {
   /** Torna o cartão um link (ex.: "Em conta" leva ao Painel). */
   to?: string
   compare?: { current: number; previous: number; previousMonth: string; upIsGood: boolean }
+  /** Cor do valor: verde (entrou, sobrou) ou vermelho (saiu, faltou); sem tom, a cor normal do texto. */
+  tone?: 'good' | 'bad'
 }
 
-export function StatTile({ label, value, note, to, compare }: Props) {
+export function StatTile({ label, value, note, to, compare, tone }: Props) {
   const body = (
     <>
       <p className="tile-label">{label}</p>
-      <p className="tile-value">{value}</p>
+      <p className={tone ? `tile-value is-${tone}` : 'tile-value'}>{value}</p>
       {note && <p className="tile-note">{note}</p>}
       {compare && <Delta {...compare} />}
     </>

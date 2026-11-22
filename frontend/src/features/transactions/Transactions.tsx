@@ -11,9 +11,11 @@ import { CATEGORIES, KINDS, PAYMENT_METHODS } from '../../shared/lib/labels'
 import { FORECAST_MONTHS_AHEAD, shiftMonth } from '../../shared/lib/months'
 import { formatDayLabel, incomeSources, INCOME_GROUP, investSummary, showsExpectedIncome, withGroupFilter } from './lib/transactions'
 import { useTransactionFilters } from './lib/useTransactionFilters'
-import { useExpectedIncome, useTransactionGroups, useTransactions } from './api'
+import { useTransactionGroups, useTransactions } from './api'
+import { useExpectedIncome } from '../../shared/api/expectedIncome'
 import { useAccounts } from '../../shared/api/accounts'
-import type { ExpectedIncome, TransactionGroup } from './api'
+import type { TransactionGroup } from './api'
+import type { ExpectedIncome } from '../../shared/api/expectedIncome'
 import { Pager } from '../../shared/components/Pager'
 import { useSubcategoryCatalog } from '../../shared/api/subcategories'
 
@@ -126,10 +128,18 @@ function Summary({ groups, expected }: { groups: TransactionGroup[] | undefined;
     }),
     { expense: 0, income: 0, count: 0 },
   )
+  const income = total.income + expected
+  const net = Math.round((income - total.expense) * 100) / 100
   return (
     <div className="tiles section-gap">
-      <StatTile label="Despesas" value={formatBRL(total.expense)} />
-      <StatTile label="Receitas" value={formatBRL(total.income + expected)} note={expected > 0 ? `${formatBRL(expected)} ainda a receber` : undefined} />
+      <StatTile label="Receitas" value={formatBRL(income)} tone="good" note={expected > 0 ? `${formatBRL(expected)} ainda a receber` : undefined} />
+      <StatTile label="Despesas" value={formatBRL(total.expense)} tone="bad" />
+      <StatTile
+        label="Total"
+        value={formatBRL(net)}
+        tone={net > 0 ? 'good' : net < 0 ? 'bad' : undefined}
+        note={expected > 0 ? `contando o que falta receber · hoje: ${formatBRL(total.income - total.expense)}` : 'receitas − despesas'}
+      />
       <StatTile label="Lançamentos" value={String(total.count)} />
     </div>
   )
