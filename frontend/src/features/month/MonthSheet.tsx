@@ -70,6 +70,26 @@ function Rows({ items, empty }: { items: SheetItem[]; empty: string }) {
   )
 }
 
+/** Previstas do ciclo (a receber ou a pagar): ainda não caíram no banco. */
+function PendingRows({ title, items }: { title: string; items: { label: string; date: string; amount: number }[] }) {
+  return (
+    <>
+      <h3 className="sheet-sub">{title}</h3>
+      <ul className="sheet-rows">
+        {items.map((p) => (
+          <li key={`${p.label}-${p.date}`} className="is-pending">
+            <span className="sheet-label">
+              {p.label}
+              <span className="sheet-meta"> · {title === 'A pagar' ? 'sai' : 'cai'} {shortDay(p.date)}</span>
+            </span>
+            <span className="sheet-amount">{formatBRL(p.amount)}</span>
+          </li>
+        ))}
+      </ul>
+    </>
+  )
+}
+
 function Block({ title, total, tone, children }: { title: string; total: number; tone: SignTone; children: ReactNode }) {
   return (
     <section className="card sheet-block">
@@ -98,7 +118,12 @@ export default function MonthSheetPage() {
           <div className={sheet.isPlaceholderData ? 'is-stale' : undefined}>
             <div className="tiles">
               <StatTile label="Entradas" tone="good" value={formatBRL(s.incomeTotal + s.pendingTotal)} note={s.pendingTotal > 0 ? `${formatBRL(s.pendingTotal)} ainda a receber` : undefined} />
-              <StatTile label="Despesas" tone="bad" value={formatBRL(s.expensesTotal)} note={`${formatBRL(s.cardsTotal)} no cartão`} />
+              <StatTile
+                label="Despesas"
+                tone="bad"
+                value={formatBRL(s.expensesTotal + s.toPayTotal)}
+                note={s.toPayTotal > 0 ? `${formatBRL(s.toPayTotal)} ainda a pagar · ${formatBRL(s.cardsTotal)} no cartão` : `${formatBRL(s.cardsTotal)} no cartão`}
+              />
               <StatTile label={leftoverLabel(sheetLeftover(s).value)} tone={signTone(sheetLeftover(s).value)} value={formatBRL(Math.abs(sheetLeftover(s).value))} note={sheetLeftover(s).note} />
             </div>
 
@@ -106,22 +131,7 @@ export default function MonthSheetPage() {
               <div className="sheet-col">
                 <Block title="Entradas" tone="good" total={s.incomeTotal + s.pendingTotal}>
                   <Rows items={s.income} empty="Nenhuma entrada no ciclo." />
-                  {s.pending.length > 0 && (
-                    <>
-                      <h3 className="sheet-sub">A receber</h3>
-                      <ul className="sheet-rows">
-                        {s.pending.map((p) => (
-                          <li key={p.label} className="is-pending">
-                            <span className="sheet-label">
-                              {p.label}
-                              <span className="sheet-meta"> · cai {shortDay(p.date)}</span>
-                            </span>
-                            <span className="sheet-amount">{formatBRL(p.amount)}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </>
-                  )}
+                  {s.pending.length > 0 && <PendingRows title="A receber" items={s.pending} />}
                 </Block>
                 {s.invested !== 0 && (
                   <p className="sheet-aside">
@@ -131,8 +141,9 @@ export default function MonthSheetPage() {
               </div>
 
               <div className="sheet-col">
-                <Block title="Despesas fixas" tone="bad" total={s.fixedTotal}>
-                  <Rows items={s.fixed} empty="Nenhuma conta fixa fora do cartão." />
+                <Block title="Despesas fixas" tone="bad" total={s.fixedTotal + s.toPayTotal}>
+                  {(s.fixed.length > 0 || s.toPay.length === 0) && <Rows items={s.fixed} empty="Nenhuma conta fixa fora do cartão." />}
+                  {s.toPay.length > 0 && <PendingRows title="A pagar" items={s.toPay} />}
                 </Block>
                 {s.cards.map((c) => (
                   <Block key={c.name} title={`Fatura ${c.name}`} tone="bad" total={c.total}>

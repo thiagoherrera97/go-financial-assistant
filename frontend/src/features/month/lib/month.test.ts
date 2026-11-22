@@ -33,6 +33,12 @@ describe('ciclo do salário', () => {
       note: `contando ${formatBRL(731.27)} do ciclo anterior e o que falta receber`,
     })
   })
+  it('diz quando a sobra já desconta o que falta pagar', () => {
+    expect(sheetLeftover({ ...base, toPayTotal: 3827.72, carryover: -1093.89, leftoverWithCarryover: 1 }).note).toBe(
+      `contando ${formatBRL(-1093.89)} do ciclo anterior e o que falta receber e pagar`,
+    )
+    expect(sheetLeftover({ ...base, pendingTotal: 0, toPayTotal: 500, leftoverWithPending: -400 })).toEqual({ value: -400, note: `Com o que já caiu: ${formatBRL(100)}` })
+  })
   it('sem ciclo anterior, fica como antes', () => {
     expect(sheetLeftover(base).value).toBe(400)
     expect(sheetLeftover({ ...base, pendingTotal: 0, leftoverWithPending: 100, leftoverWithCarryover: 100 })).toEqual({ value: 100, note: 'entradas − despesas' })

@@ -59,7 +59,7 @@ export function SpendableCard({ averageFixed }: { averageFixed: number }) {
                 />
               </div>
               <p className="tile-note">
-                Conta: sobra do mês com o salário a cair ({formatBRL(sheet.leftoverWithPending)})
+                Conta: sobra do mês com o que ainda falta receber e pagar ({formatBRL(sheet.leftoverWithPending)})
                 {s.fixedToCome > 0 && <> menos as contas fixas que ainda devem cair ({formatBRL(s.fixedToCome)}, pela média)</>}. Compras no cartão
                 podem entrar só na fatura do mês que vem.
               </p>

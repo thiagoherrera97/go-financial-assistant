@@ -51,6 +51,8 @@ type MonthSheet struct {
 	IncomeTotal         float64
 	Pending             []SheetPending // salário a receber no mês
 	PendingTotal        float64
+	ToPay               []SheetPending // saídas recorrentes (aluguel, seguro, financiamento) que ainda não saíram
+	ToPayTotal          float64
 	Fixed               []SheetItem // fora do cartão: contas fixas e parcelas
 	FixedTotal          float64
 	Other               []SheetItem // fora do cartão: o resto, por categoria (o que está em Outros, pelo nome)
@@ -59,7 +61,7 @@ type MonthSheet struct {
 	CardsTotal          float64
 	ExpensesTotal       float64
 	Leftover            float64 // entradas − despesas, com o que já caiu
-	LeftoverWithPending float64 // contando o salário a receber
+	LeftoverWithPending float64 // contando o que falta receber e o que falta pagar
 	Invested            float64 // aplicado − resgatado no mês (fora da sobra)
 
 	StartsOn, EndsOn      time.Time // primeiro e último dia do ciclo do salário
@@ -76,7 +78,19 @@ func (s *MonthSheet) SetPending(pending []SheetPending) {
 		total += p.Amount
 	}
 	s.PendingTotal = round2(total)
-	s.LeftoverWithPending = round2(s.Leftover + s.PendingTotal)
+	s.LeftoverWithPending = round2(s.Leftover + s.PendingTotal - s.ToPayTotal)
+}
+
+// SetToPay troca as saídas recorrentes que ainda não saíram no ciclo e refaz a sobra descontando elas. Chame antes de
+// SetCarryover.
+func (s *MonthSheet) SetToPay(toPay []SheetPending) {
+	s.ToPay = toPay
+	var total float64
+	for _, p := range toPay {
+		total += p.Amount
+	}
+	s.ToPayTotal = round2(total)
+	s.LeftoverWithPending = round2(s.Leftover + s.PendingTotal - s.ToPayTotal)
 }
 
 // SetCarryover soma a sobra do ciclo anterior (nil = não há ciclo anterior com lançamentos).

@@ -167,6 +167,16 @@ func (i *Insights) MonthSheet(ctx context.Context, month, now time.Time) (planni
 		pending[n] = planning.SheetPending{Label: e.Label, Date: e.Date, Amount: e.Amount}
 	}
 	sheet.SetPending(pending)
+	// A pagar: aluguel, seguro, financiamento... que ainda não saíram, como na tela de Transações.
+	out, err := i.ExpectedExpenses(ctx, month, now)
+	if err != nil {
+		return planning.MonthSheet{}, err
+	}
+	toPay := make([]planning.SheetPending, len(out))
+	for n, e := range out {
+		toPay[n] = planning.SheetPending{Label: e.Label, Date: e.Date, Amount: e.Amount}
+	}
+	sheet.SetToPay(toPay)
 	// O que sobrou do ciclo anterior (entradas − despesas dele) passa para este.
 	prevLines, err := i.reader.MonthLines(ctx, month.AddDate(0, -1, 0))
 	if err != nil {

@@ -39,6 +39,9 @@ export interface MonthSheet {
   incomeTotal: number
   pending: { label: string; date: string; amount: number }[]
   pendingTotal: number
+  /** Saídas recorrentes (aluguel, seguro, financiamento) que ainda não saíram; a sobra já as desconta. */
+  toPay: { label: string; date: string; amount: number }[]
+  toPayTotal: number
   fixed: SheetItem[]
   fixedTotal: number
   other: SheetItem[]

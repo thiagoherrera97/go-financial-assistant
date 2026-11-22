@@ -81,3 +81,17 @@ func TestMonthSheetNoPrevious(t *testing.T) {
 		t.Errorf("sem ciclo anterior: %+v", s)
 	}
 }
+
+func TestMonthSheetToPay(t *testing.T) {
+	s := MonthSheet{Leftover: -421.09}
+	s.SetPending([]SheetPending{{Label: "Salário", Amount: 4366.62}, {Label: "Dívida antiga", Amount: 1000}})
+	s.SetToPay([]SheetPending{{Label: "Aluguel", Amount: 1300}, {Label: "Financiamento", Amount: 2086.68}})
+	// A ordem não importa: a sobra conta o que falta receber e desconta o que falta pagar.
+	if s.PendingTotal != 5366.62 || s.ToPayTotal != 3386.68 || s.LeftoverWithPending != 1558.85 {
+		t.Errorf("a pagar: %+v", s)
+	}
+	s.SetPending(nil)
+	if s.LeftoverWithPending != -3807.77 {
+		t.Errorf("sem a receber: %v", s.LeftoverWithPending)
+	}
+}

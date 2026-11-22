@@ -61,6 +61,10 @@ func (a *api) monthSheet(w http.ResponseWriter, r *http.Request) {
 	for i, p := range s.Pending {
 		pending[i] = pendingJSON{p.Label, p.Date.Format("2006-01-02"), p.Amount}
 	}
+	toPay := make([]pendingJSON, len(s.ToPay))
+	for i, p := range s.ToPay {
+		toPay[i] = pendingJSON{p.Label, p.Date.Format("2006-01-02"), p.Amount}
+	}
 	cards := make([]cardJSON, len(s.Cards))
 	for i, c := range s.Cards {
 		cards[i] = cardJSON{c.Name, c.Total, sheetItems(c.Categories), c.Forecast, c.Adjustment, c.Refunds}
@@ -69,6 +73,7 @@ func (a *api) monthSheet(w http.ResponseWriter, r *http.Request) {
 		"month":  formatMonth(s.Month),
 		"income": sheetItems(s.Income), "incomeTotal": s.IncomeTotal,
 		"pending": pending, "pendingTotal": s.PendingTotal,
+		"toPay": toPay, "toPayTotal": s.ToPayTotal,
 		"fixed": sheetItems(s.Fixed), "fixedTotal": s.FixedTotal,
 		"other": sheetItems(s.Other), "otherTotal": s.OtherTotal,
 		"cards": cards, "cardsTotal": s.CardsTotal,
