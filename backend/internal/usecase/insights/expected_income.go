@@ -50,9 +50,39 @@ func expectedIncomes(salary []domain.SalaryStatus, flows []FlowItem, start, end,
 		}
 		out = append(out, ExpectedIncome{Source: "SALARY", Label: label, Date: s.Expected, Amount: s.Amount, Late: s.Expected.Before(today)})
 	}
+	out = append(out, expectedFlows(flows, true, start, end, today)...)
+	sort.SliceStable(out, func(a, b int) bool { return out[a].Date.Before(out[b].Date) })
+	return out
+}
+
+// ExpectedExpense é uma saída recorrente cadastrada (aluguel, seguro, financiamento) que cai no ciclo e ainda não saiu
+// do banco. Quando o débito real chega na sincronização, ela deixa de ser prevista.
+type ExpectedExpense = ExpectedIncome
+
+// ExpectedExpenses lista as saídas recorrentes previstas do ciclo key que ainda não saíram. Como nas receitas, ciclo
+// encerrado não tem previstas.
+func (i *Insights) ExpectedExpenses(ctx context.Context, key, now time.Time) ([]ExpectedExpense, error) {
+	today := civilDay(now)
+	start, end := i.Cycles().Bounds(key)
+	if end.Before(today) {
+		return nil, nil
+	}
+	flows, err := i.RecurringFlows(ctx, now)
+	if err != nil {
+		return nil, err
+	}
+	out := expectedFlows(flows, false, start, end, today)
+	sort.SliceStable(out, func(a, b int) bool { return out[a].Date.Before(out[b].Date) })
+	return out, nil
+}
+
+// expectedFlows: as ocorrências dos fluxos recorrentes de um sentido (in = entradas) que caem entre start e end e ainda
+// não têm a transação correspondente naquele mês.
+func expectedFlows(flows []FlowItem, in bool, start, end, today time.Time) []ExpectedIncome {
+	var out []ExpectedIncome
 	for _, it := range flows {
 		f := it.Flow
-		if !f.In {
+		if f.In != in {
 			continue
 		}
 		done := map[time.Time]bool{}
@@ -73,7 +103,6 @@ func expectedIncomes(salary []domain.SalaryStatus, flows []FlowItem, start, end,
 			out = append(out, ExpectedIncome{Source: "RECURRING", Label: label, Date: date, Amount: amount, Late: date.Before(today)})
 		}
 	}
-	sort.SliceStable(out, func(a, b int) bool { return out[a].Date.Before(out[b].Date) })
 	return out
 }
 

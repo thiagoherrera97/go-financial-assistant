@@ -10,13 +10,14 @@ import { useSummary, useTimeseries } from '../../shared/api/totals'
 import { Link } from 'react-router'
 import { formatShare, shouldWarnOtherShare } from './lib/otherShare'
 import { signTone } from '../../shared/lib/tone'
-import { useExpectedIncome } from '../../shared/api/expectedIncome'
+import { useExpectedExpenses, useExpectedIncome } from '../../shared/api/expectedIncome'
 
 export default function Overview() {
   const { month, setMonth, now } = useMonth()
   const summary = useSummary(month)
   // Salário e entradas recorrentes do ciclo que ainda não caíram: entram em Receitas e no Saldo.
   const expected = useExpectedIncome(month, true)
+  const toPay = useExpectedExpenses(month, true)
   const series = useTimeseries(shiftMonth(month, -11), month)
 
   return (
@@ -28,7 +29,7 @@ export default function Overview() {
         {(data) => (
           <>
             <OtherShareNotice share={data.otherShare} />
-            <Tiles data={data} stale={summary.isPlaceholderData} partial={month === now} expected={expected.data?.total ?? 0} />
+            <Tiles data={data} stale={summary.isPlaceholderData} partial={month === now} expected={expected.data?.total ?? 0} toPay={toPay.data?.total ?? 0} />
           </>
         )}
       </QueryState>
@@ -53,9 +54,9 @@ function OtherShareNotice({ share }: { share: number | null }) {
   )
 }
 
-function Tiles({ data, stale, partial, expected }: { data: NonNullable<ReturnType<typeof useSummary>['data']>; stale: boolean; partial: boolean; expected: number }) {
+function Tiles({ data, stale, partial, expected, toPay }: { data: NonNullable<ReturnType<typeof useSummary>['data']>; stale: boolean; partial: boolean; expected: number; toPay: number }) {
   const { current: c, previous: p } = data
-  const balance = c.income + expected - c.expense
+  const balance = c.income + expected - c.expense - toPay
   const invested = c.applied - c.redeemed
 
   return (
@@ -70,14 +71,15 @@ function Tiles({ data, stale, partial, expected }: { data: NonNullable<ReturnTyp
       <StatTile
         label="Despesas"
         tone="bad"
-        value={formatBRL(c.expense)}
+        value={formatBRL(c.expense + toPay)}
+        note={toPay > 0 ? `${formatBRL(toPay)} ainda a pagar` : undefined}
         compare={partial ? undefined : { current: c.expense, previous: p.expense, previousMonth: p.month, upIsGood: false }}
       />
       <StatTile
         label="Saldo do mês"
         tone={signTone(balance)}
         value={formatBRL(balance)}
-        note={expected > 0 ? `Com o que já caiu: ${formatBRL(c.income - c.expense)}` : undefined}
+        note={expected > 0 || toPay > 0 ? `Com o que já caiu: ${formatBRL(c.income - c.expense)}` : undefined}
         compare={partial ? undefined : { current: balance, previous: p.income - p.expense, previousMonth: p.month, upIsGood: true }}
       />
       <StatTile

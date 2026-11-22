@@ -58,3 +58,25 @@ func TestExpectedIncomes_SinglePartLabel(t *testing.T) {
 		t.Fatalf("got %+v", got)
 	}
 }
+
+func TestExpectedFlows_Expenses(t *testing.T) {
+	start, end, today := day(2026, 11, 13), day(2026, 12, 14), day(2026, 11, 21)
+	rent := domain.RecurringFlow{Name: "Aluguel", Party: "Irmão", Amount: 1300, Day: 10, StartMonth: day(2026, 3, 1)}
+	car := domain.RecurringFlow{Name: "Financiamento", Amount: 2086.68, Day: 30, StartMonth: day(2026, 10, 1)}
+	paid := domain.RecurringFlow{Name: "Seguro", Amount: 441.04, Day: 15, StartMonth: day(2025, 12, 1)}
+	mom := domain.RecurringFlow{In: true, Name: "Dívida antiga", Amount: 1000, Day: 20, StartMonth: day(2026, 1, 1)}
+	flows := []FlowItem{
+		{Flow: rent},
+		{Flow: car},
+		{Flow: paid, View: debts.FlowView{Matches: []domain.MoneyMovement{{Date: day(2026, 11, 15), Amount: 441.04}}}},
+		{Flow: mom},
+	}
+
+	got := expectedFlows(flows, false, start, end, today)
+
+	// Aluguel de novembro (10/11) cai antes do ciclo, o de dezembro entra; seguro de novembro já saiu e o de dezembro
+	// (15/12) passa do fim; a entrada da mãe não é saída.
+	if len(got) != 2 || got[0].Label != "Aluguel (Irmão)" || got[0].Date != day(2026, 12, 10) || got[1].Label != "Financiamento" || got[1].Amount != 2086.68 {
+		t.Fatalf("got %+v", got)
+	}
+}

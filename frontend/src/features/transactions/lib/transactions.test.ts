@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { describeAmount, investSummary, formatBankTime, formatDay, formatDayLabel, incomeSources, INCOME_GROUP, monthFilter, showsExpectedIncome, toApiQuery, withGroupFilter } from './transactions'
+import { describeAmount, investSummary, formatBankTime, formatDay, formatDayLabel, incomeSources, INCOME_GROUP, monthFilter, showsExpectedExpenses, showsExpectedIncome, toApiQuery, withGroupFilter } from './transactions'
 import type { Transaction } from '../api'
 
 const q = (s: string) => new URLSearchParams(s)
@@ -136,5 +136,17 @@ describe('showsExpectedIncome', () => {
     for (const q of ['mes=todos', 'tipo=EXPENSE', 'categoria=FOOD', 'forma=PIX', 'conta=x', 'q=mae', 'essencial=true']) {
       expect(showsExpectedIncome(p(q), '2026-11')).toBe(false)
     }
+  })
+})
+
+describe('showsExpectedExpenses', () => {
+  const p = (q: string) => new URLSearchParams(q)
+  it('aparece com o ciclo inteiro de despesas à vista', () => {
+    expect(showsExpectedExpenses(p(''), '2026-11')).toBe(true)
+    expect(showsExpectedExpenses(p('mes=2026-12&tipo=EXPENSE'), '2026-11')).toBe(true)
+  })
+  it('some com filtro que as contas fixas não têm', () => {
+    for (const q of ['tipo=INCOME', 'categoria=FOOD', 'forma=PIX', 'q=uber', 'mes=todos'])
+      expect(showsExpectedExpenses(p(q), '2026-11')).toBe(false)
   })
 })

@@ -230,6 +230,7 @@ func (a *api) registerTransactions(rt routes) {
 	rt.mux.Handle("GET /api/transactions", rt.protected(a.transactions))
 	rt.mux.Handle("GET /api/transactions/groups", rt.protected(a.transactionGroups))
 	rt.mux.Handle("GET /api/transactions/expected-income", rt.protected(a.expectedIncome))
+	rt.mux.Handle("GET /api/transactions/expected-expenses", rt.protected(a.expectedExpenses))
 }
 
 type expectedIncomeJSON struct {
@@ -253,6 +254,30 @@ func (a *api) expectedIncome(w http.ResponseWriter, r *http.Request) {
 	list, err := a.insights.ExpectedIncomes(r.Context(), month, a.localNow())
 	if err != nil {
 		a.fail(w, "receitas previstas", err)
+		return
+	}
+	items := make([]expectedIncomeJSON, len(list))
+	var total float64
+	for n, e := range list {
+		items[n] = expectedIncomeJSON{Source: e.Source, Label: e.Label, Date: e.Date.Format(time.DateOnly), Amount: e.Amount, Late: e.Late}
+		total += e.Amount
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": items, "total": cents(total)})
+}
+
+// expectedExpenses: as saídas recorrentes do ciclo (month, padrão o atual) que já se sabe que vão sair e ainda não
+// saíram do banco: aluguel, seguro, financiamento...
+func (a *api) expectedExpenses(w http.ResponseWriter, r *http.Request) {
+	month, ok := a.monthParam(w, r, "month", false)
+	if !ok {
+		return
+	}
+	if month.IsZero() {
+		month = a.monthStart()
+	}
+	list, err := a.insights.ExpectedExpenses(r.Context(), month, a.localNow())
+	if err != nil {
+		a.fail(w, "despesas previstas", err)
 		return
 	}
 	items := make([]expectedIncomeJSON, len(list))

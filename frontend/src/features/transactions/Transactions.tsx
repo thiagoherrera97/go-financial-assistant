@@ -1,4 +1,4 @@
-import { CalendarDays, LayoutGrid, List } from 'lucide-react'
+import { CalendarClock, CalendarDays, LayoutGrid, List } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { CategoryChip } from '../../shared/components/CategoryChip'
 import { GroupCard } from './components/GroupCard'
@@ -9,10 +9,10 @@ import { categoryVisual } from '../../shared/lib/categoryVisual'
 import { formatBRL, formatMonthTitle } from '../../shared/lib/format'
 import { CATEGORIES, KINDS, PAYMENT_METHODS } from '../../shared/lib/labels'
 import { FORECAST_MONTHS_AHEAD, shiftMonth } from '../../shared/lib/months'
-import { formatDayLabel, incomeSources, INCOME_GROUP, investSummary, showsExpectedIncome, withGroupFilter } from './lib/transactions'
+import { formatDayLabel, incomeSources, INCOME_GROUP, investSummary, showsExpectedExpenses, showsExpectedIncome, withGroupFilter } from './lib/transactions'
 import { useTransactionFilters } from './lib/useTransactionFilters'
 import { useTransactionGroups, useTransactions } from './api'
-import { useExpectedIncome } from '../../shared/api/expectedIncome'
+import { useExpectedExpenses, useExpectedIncome } from '../../shared/api/expectedIncome'
 import { useAccounts } from '../../shared/api/accounts'
 import type { TransactionGroup } from './api'
 import type { ExpectedIncome } from '../../shared/api/expectedIncome'
@@ -34,6 +34,9 @@ export default function Transactions() {
   // Salário e entradas recorrentes que ainda não caíram: somem sozinhas quando o crédito chega na sincronização.
   const expected = useExpectedIncome(month, showsExpectedIncome(params, now))
   const pending = expected.isSuccess && showsExpectedIncome(params, now) ? expected.data : { items: [], total: 0 }
+  // E o mesmo para as saídas recorrentes (aluguel, seguro, financiamento): sem elas o Total pareceria sobra.
+  const expectedOut = useExpectedExpenses(month, showsExpectedExpenses(params, now))
+  const toPay = expectedOut.isSuccess && showsExpectedExpenses(params, now) ? expectedOut.data : { items: [], total: 0 }
   // Dá para olhar até FORECAST_MONTHS_AHEAD meses à frente: as parcelas previstas dos cartões vão até lá.
   const maxMonth = shiftMonth(now, FORECAST_MONTHS_AHEAD)
 
@@ -90,7 +93,7 @@ export default function Transactions() {
         <SearchBox value={params.get('q') ?? ''} onCommit={(q) => update({ q })} />
       </div>
 
-      <Summary groups={categories.data} expected={pending.total} />
+      <Summary groups={categories.data} expected={pending.total} toPay={toPay.total} />
 
       <div className="view-toggle" role="group" aria-label="Forma de exibir">
         {VIEWS.map(({ key, label, Icon }) => (
@@ -103,7 +106,7 @@ export default function Transactions() {
       {view === 'lista' && <ListView query={query} onPage={(n) => update({ pagina: n > 1 ? String(n) : '' })} />}
       {view === 'categoria' && (
         <QueryState query={categories}>
-          {(groups) => <CategoryCards groups={groups} query={query} stale={categories.isPlaceholderData} expected={pending.items} />}
+          {(groups) => <CategoryCards groups={groups} query={query} stale={categories.isPlaceholderData} expected={pending.items} toPay={toPay.items} />}
         </QueryState>
       )}
       {view === 'dia' && <DayCards query={query} />}
@@ -119,7 +122,7 @@ const VIEWS = [
 
 /** Totais do que está filtrado: despesas e receitas. Movimento de caixinhas e investimentos fica de fora: não é dinheiro
  * a mais, só troca de lugar (o rendimento já entra em Receitas). */
-function Summary({ groups, expected }: { groups: TransactionGroup[] | undefined; expected: number }) {
+function Summary({ groups, expected, toPay }: { groups: TransactionGroup[] | undefined; expected: number; toPay: number }) {
   if (!groups) return null
   const total = groups.reduce(
     (acc, g) => ({
@@ -130,23 +133,25 @@ function Summary({ groups, expected }: { groups: TransactionGroup[] | undefined;
     { expense: 0, income: 0, count: 0 },
   )
   const income = total.income + expected
-  const net = Math.round((income - total.expense) * 100) / 100
+  const expense = total.expense + toPay
+  const net = Math.round((income - expense) * 100) / 100
+  const forecast = expected > 0 || toPay > 0
   return (
     <div className="tiles section-gap">
       <StatTile label="Receitas" value={formatBRL(income)} tone="good" note={expected > 0 ? `${formatBRL(expected)} ainda a receber` : undefined} />
-      <StatTile label="Despesas" value={formatBRL(total.expense)} tone="bad" />
+      <StatTile label="Despesas" value={formatBRL(expense)} tone="bad" note={toPay > 0 ? `${formatBRL(toPay)} ainda a pagar` : undefined} />
       <StatTile
         label="Total"
         value={formatBRL(net)}
         tone={signTone(net)}
-        note={expected > 0 ? `Com o que já caiu: ${formatBRL(total.income - total.expense)}` : 'receitas − despesas'}
+        note={forecast ? `Com o que já caiu: ${formatBRL(total.income - total.expense)}` : 'receitas − despesas'}
       />
       <StatTile label="Lançamentos" value={String(total.count)} />
     </div>
   )
 }
 
-function CategoryCards({ groups: all, query, stale, expected }: { groups: TransactionGroup[]; query: string; stale: boolean; expected: ExpectedIncome[] }) {
+function CategoryCards({ groups: all, query, stale, expected, toPay }: { groups: TransactionGroup[]; query: string; stale: boolean; expected: ExpectedIncome[]; toPay: ExpectedIncome[] }) {
   // Caixinha não aparece: só troca dinheiro de lugar (o rendimento já está em Entradas).
   const groups = all.filter((g) => g.key !== 'RESERVE')
   const expectedTotal = expected.reduce((sum, e) => sum + e.amount, 0)
@@ -154,10 +159,25 @@ function CategoryCards({ groups: all, query, stale, expected }: { groups: Transa
   if (expected.length > 0 && !groups.some((g) => g.key === INCOME_GROUP)) {
     groups.unshift({ key: INCOME_GROUP, label: 'Entradas', count: 0, expense: 0, income: 0, transfer: 0, applied: 0, redeemed: 0 })
   }
-  if (groups.length === 0) return <p className="state">Nenhuma transação encontrada.</p>
-  const max = Math.max(...groups.map((g) => Math.max(g.expense, g.income + (g.key === INCOME_GROUP ? expectedTotal : 0), Math.abs(g.applied - g.redeemed))), 1)
+  const toPayTotal = toPay.reduce((sum, e) => sum + e.amount, 0)
+  if (groups.length === 0 && toPay.length === 0) return <p className="state">Nenhuma transação encontrada.</p>
+  const max = Math.max(...groups.map((g) => Math.max(g.expense, g.income + (g.key === INCOME_GROUP ? expectedTotal : 0), Math.abs(g.applied - g.redeemed))), toPayTotal, 1)
   return (
     <div className={`group-grid chart-body ${stale ? 'is-stale' : ''}`}>
+      {toPay.length > 0 && (
+        <GroupCard
+          color="var(--text-muted)"
+          icon={<span className="chip chip-day"><CalendarClock size={20} aria-hidden="true" /></span>}
+          title="A pagar"
+          subtitle={`${toPay.length} ${toPay.length === 1 ? 'conta fixa' : 'contas fixas'} ainda por sair`}
+          amount={`-${formatBRL(toPayTotal)}`}
+          extras={['Ainda não saiu da conta']}
+          tone="bad"
+          share={toPayTotal / max}
+        >
+          {() => <ExpectedList items={toPay} out />}
+        </GroupCard>
+      )}
       {groups.map((g) => {
         const { color } = categoryVisual(g.key)
         return (
@@ -262,22 +282,25 @@ function IncomeDetails({ query, expected, hasReceived }: { query: string; expect
   )
 }
 
-/** Previstas: tracejadas e apagadas, porque ainda não são dinheiro na conta. */
-function ExpectedList({ items }: { items: ExpectedIncome[] }) {
+/** Previstas: tracejadas e apagadas, porque ainda não são dinheiro na conta. out = saídas (contas fixas a pagar). */
+function ExpectedList({ items, out = false }: { items: ExpectedIncome[]; out?: boolean }) {
+  const title = out ? 'A pagar' : 'A receber'
   return (
-    <section className="expected-income" aria-label="A receber">
-      <p className="expected-title">A receber</p>
+    <section className="expected-income" aria-label={title}>
+      <p className="expected-title">{title}</p>
       <ul>
         {items.map((e) => (
           <li key={`${e.source}-${e.label}-${e.date}`} className="expected-row">
-            <CategoryChip category={e.source === 'SALARY' ? 'SALARY' : INCOME_GROUP} size={16} />
+            {out ? <CalendarClock size={16} aria-hidden="true" /> : <CategoryChip category={e.source === 'SALARY' ? 'SALARY' : INCOME_GROUP} size={16} />}
             <span className="expected-label">
               <strong>{e.label}</strong>
               <span className="group-sub">
-                {e.late ? `Era para ${formatDayLabel(e.date)} · ainda não chegou` : `Previsto para ${formatDayLabel(e.date)}`}
+                {e.late
+                  ? `Era para ${formatDayLabel(e.date)} · ${out ? 'ainda não saiu' : 'ainda não chegou'}`
+                  : `Previsto para ${formatDayLabel(e.date)}`}
               </span>
             </span>
-            <span className="expected-amount">+{formatBRL(e.amount)}</span>
+            <span className="expected-amount">{out ? '-' : '+'}{formatBRL(e.amount)}</span>
           </li>
         ))}
       </ul>

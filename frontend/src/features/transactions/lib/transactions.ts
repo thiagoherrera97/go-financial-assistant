@@ -50,6 +50,17 @@ export function showsExpectedIncome(params: URLSearchParams, now = currentMonth(
 }
 
 /**
+ * As despesas previstas (saídas recorrentes que ainda não saíram: aluguel, seguro, financiamento) seguem a mesma regra das
+ * receitas: mês escolhido, tipo vazio ou Despesa e nenhum outro filtro (não têm categoria, conta nem descrição do banco).
+ */
+export function showsExpectedExpenses(params: URLSearchParams, now = currentMonth()): boolean {
+  if (!monthFilter(params, now)) return false
+  const kind = params.get('tipo')?.trim()
+  if (kind && kind !== 'EXPENSE') return false
+  return (['categoria', 'sub', 'essencial', 'forma', 'conta', 'q'] as const).every((k) => !params.get(k)?.trim())
+}
+
+/**
  * Valor com sinal e o que ele significa. Investimento e caixinha não são gasto nem ganho: ficam neutros, mas com o sinal do
  * ponto de vista da reserva — o que foi para ela é "+", o que saiu dela (resgate) é "-".
  */

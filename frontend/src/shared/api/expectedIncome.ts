@@ -19,3 +19,13 @@ export const useExpectedIncome = (month: string | null, enabled: boolean) =>
     enabled: enabled && !!month,
     placeholderData: keepPreviousData,
   })
+
+/** Saídas recorrentes do ciclo (aluguel, seguro, financiamento...) que ainda não saíram da conta (somem quando o débito real
+ * sincroniza). Mesmo formato das receitas previstas. */
+export const useExpectedExpenses = (month: string | null, enabled: boolean) =>
+  useQuery({
+    queryKey: ['expected-expenses', month],
+    queryFn: () => request<{ items: ExpectedIncome[]; total: number }>(`/api/transactions/expected-expenses?month=${month}`),
+    enabled: enabled && !!month,
+    placeholderData: keepPreviousData,
+  })
