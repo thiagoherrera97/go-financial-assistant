@@ -13,7 +13,7 @@ const debtColumns = `id, kind, name, creditor, note, original_amount, due_day, a
 	COALESCE(installment_amount, 0), COALESCE(installments, 0), COALESCE(first_due, '0001-01-01'), payee_match, paid_manual, created_at`
 
 func (r *DebtsRepo) Debts(ctx context.Context) ([]domain.Debt, error) {
-	rows, err := r.db.Pool.Query(ctx, `SELECT `+debtColumns+` FROM debts ORDER BY created_at`)
+	rows, err := r.db.Pool.Query(ctx, `SELECT `+debtColumns+` FROM debts ORDER BY kind = 'OVERDRAFT' DESC, created_at`)
 	if err != nil {
 		return nil, fmt.Errorf("erro ao ler dívidas: %w", err)
 	}
