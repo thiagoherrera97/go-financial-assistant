@@ -129,7 +129,7 @@ function Summary({ groups, expected }: { groups: TransactionGroup[] | undefined;
   return (
     <div className="tiles section-gap">
       <StatTile label="Despesas" value={formatBRL(total.expense)} />
-      <StatTile label="Receitas" value={formatBRL(total.income)} note={expected > 0 ? `+ ${formatBRL(expected)} a receber` : undefined} />
+      <StatTile label="Receitas" value={formatBRL(total.income + expected)} note={expected > 0 ? `${formatBRL(expected)} ainda a receber` : undefined} />
       <StatTile label="Lançamentos" value={String(total.count)} />
     </div>
   )
@@ -144,7 +144,7 @@ function CategoryCards({ groups: all, query, stale, expected }: { groups: Transa
     groups.unshift({ key: INCOME_GROUP, label: 'Entradas', count: 0, expense: 0, income: 0, transfer: 0, applied: 0, redeemed: 0 })
   }
   if (groups.length === 0) return <p className="state">Nenhuma transação encontrada.</p>
-  const max = Math.max(...groups.map((g) => Math.max(g.expense, g.income, Math.abs(g.applied - g.redeemed))), 1)
+  const max = Math.max(...groups.map((g) => Math.max(g.expense, g.income + (g.key === INCOME_GROUP ? expectedTotal : 0), Math.abs(g.applied - g.redeemed))), 1)
   return (
     <div className={`group-grid chart-body ${stale ? 'is-stale' : ''}`}>
       {groups.map((g) => {
@@ -156,8 +156,8 @@ function CategoryCards({ groups: all, query, stale, expected }: { groups: Transa
             icon={<CategoryChip category={g.key} size={20} />}
             title={g.label}
             subtitle={`${g.count} ${g.count === 1 ? 'lançamento' : 'lançamentos'}`}
-            {...withExpected(amounts(g), g.key === INCOME_GROUP ? expectedTotal : 0)}
-            share={Math.max(g.expense, g.income, Math.abs(g.applied - g.redeemed)) / max}
+            {...withExpected(g, g.key === INCOME_GROUP ? expectedTotal : 0)}
+            share={Math.max(g.expense, g.income + (g.key === INCOME_GROUP ? expectedTotal : 0), Math.abs(g.applied - g.redeemed)) / max}
           >
             {() =>
               g.key === INCOME_GROUP ? (
@@ -215,11 +215,12 @@ function amounts(g: TransactionGroup) {
   return { amount: formatBRL(0), extras: [] }
 }
 
-/** Card de Entradas: o que falta receber entra como legenda, sem somar no valor (que é só o que já caiu). */
-function withExpected(a: ReturnType<typeof amounts>, expected: number) {
-  if (expected <= 0) return a
+/** Card de Entradas: o valor já soma o que falta receber no ciclo, e a legenda diz quanto disso ainda não caiu. */
+function withExpected(g: TransactionGroup, expected: number) {
+  const a = amounts(g)
+  if (expected <= 0 || g.expense > 0) return a
   const extras = a.extras.filter((e) => e !== 'Receitas')
-  return { ...a, extras: [...extras, `+ ${formatBRL(expected)} a receber`] }
+  return { amount: `+${formatBRL(g.income + expected)}`, extras: [...extras, `${formatBRL(expected)} ainda a receber`] }
 }
 
 /** Lançamentos de um grupo aberto; busca só quando o card é expandido. */
