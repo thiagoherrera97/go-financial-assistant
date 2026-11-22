@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { AlertTriangle, ArrowDownLeft, ArrowUpRight, CalendarClock, CircleCheck, HandCoins, Pencil, Plus, Trash2 } from 'lucide-react'
-import { formatMonthShort, shortDay } from '../../../shared/lib/format'
+import { shortDay } from '../../../shared/lib/format'
 import { createDebt, deleteDebt, updateDebt, useDebts, type Debt, type DebtInput } from '../api'
-import { debtOutstanding, debtToForm, emptyDebtForm, nextDay, nextDueDate, salaryFallsShort } from '../lib/debts'
+import { debtOutstanding, debtToForm, emptyDebtForm, nextDueDate } from '../lib/debts'
 import { DebtForm } from './DebtForm'
 import { StaticMoney } from './Money'
 
@@ -168,123 +168,23 @@ function Transfers({ debt: d, hidden }: { debt: Debt; hidden: boolean }) {
 
 function Overdraft({ debt: d, hidden }: { debt: Debt; hidden: boolean }) {
   const l = d.limit
-  const f = d.forecast
   if (!l) {
     return <p className="tile-note">A conta ligada a esta dívida não está mais sincronizada. Edite e escolha outra.</p>
   }
-  const months = l.months.filter((m) => m.days > 0).slice(0, 3)
+  const known = l.dueDate !== null
   return (
     <div className="bal-debt-body">
-      <p className="tile-note">
-        Ajuda de <StaticMoney value={d.originalAmount} hidden={hidden} />, coberta pelo limite da conta {d.accountName}. O negativo dessa
-        conta aparece aqui, não no saldo. O salário tapa o buraco todo mês, mas a dívida continua até sobrar salário depois do dia{' '}
-        {d.dueDay}.
-      </p>
-      {d.lastCycle && (
-        <div className="bal-debt-cycle">
-          <p>
-            Ciclo passado: o buraco engoliu <strong><StaticMoney value={d.lastCycle.amount} hidden={hidden} /></strong> do salário
-          </p>
-          <ul className="bal-debt-lines">
-            <li>
-              <span>Salário que caiu em {shortDay(d.lastCycle.salaryDate)}</span>
-              <StaticMoney value={d.lastCycle.salary} hidden={hidden} />
-            </li>
-            <li>
-              <span>
-                O que sobrou hoje (conta <StaticMoney value={d.lastCycle.balance} hidden={hidden} /> + guardado{' '}
-                <StaticMoney value={d.lastCycle.saved} hidden={hidden} />)
-              </span>
-              <StaticMoney value={-d.lastCycle.leftover} hidden={hidden} />
-            </li>
-            <li className="is-total">
-              <span>Foi para cobrir a dívida</span>
-              <StaticMoney value={d.lastCycle.amount} hidden={hidden} />
-            </li>
-          </ul>
-        </div>
-      )}
-      {l.inLimit > 0 ? (
-        <p className={l.daysUsed > d.freeDays ? 'bal-debt-warn' : undefined}>
-          {l.daysUsed > d.freeDays ? <AlertTriangle size={16} aria-hidden /> : <CalendarClock size={16} aria-hidden />}{' '}
-          <strong><StaticMoney value={l.inLimit} hidden={hidden} /></strong> no limite agora · dia {l.daysUsed} de {d.freeDays} sem juros
-          {l.since && ` (desde ${shortDay(l.since)})`}
-          {l.daysUsed > d.freeDays && ' · já passou dos dias sem juros'}
-        </p>
-      ) : (
-        <p className="tile-note">Hoje a conta não está no limite; o buraco volta quando sair a fatura do dia {d.dueDay}.</p>
-      )}
-
-      {f && (
-        <div className="bal-debt-forecast">
-          <p>
-            Próximo ciclo: previsão para <strong>{shortDay(f.date)}</strong> até a véspera do salário ({shortDay(f.until)}):
-          </p>
-          <ul className="bal-debt-scenarios">
-            <li>
-              <span>Sem compras novas no cartão</span>
-              <strong>{f.committedInLimit > 0 ? <><StaticMoney value={f.committedInLimit} hidden={hidden} /> no limite</> : 'fora do limite'}</strong>
-            </li>
-            <li>
-              <span>Gastando no cartão como no mês passado</span>
-              <strong>{f.inLimit > 0 ? <><StaticMoney value={f.inLimit} hidden={hidden} /> no limite</> : 'fora do limite'}</strong>
-            </li>
-          </ul>
-          {f.inLimit > 0 &&
-            (f.exitDate ? (
-              <p className={!f.withinFree || salaryFallsShort(f) ? 'bal-debt-warn' : undefined}>
-                {!f.withinFree || salaryFallsShort(f) ? <AlertTriangle size={16} aria-hidden /> : <CalendarClock size={16} aria-hidden />}{' '}
-                {salaryFallsShort(f) && <>O salário de {shortDay(nextDay(f.until))} não cobre o buraco. </>}
-                Sai do limite com o {f.exitLabel.toLowerCase()} ({shortDay(f.exitDate)}), {f.days} {f.days === 1 ? 'dia' : 'dias'} depois.{' '}
-                {f.withinFree ? 'Dentro dos dias sem juros (só IOF).' : <strong>Passa dos {d.freeDays} dias sem juros.</strong>}
-              </p>
-            ) : (
-              <p className="bal-debt-warn">
-                <AlertTriangle size={16} aria-hidden /> Nenhum salário do mês seguinte tira a conta do limite. Confira as partes do salário em
-                Configurações.
-              </p>
-            ))}
-          <details>
-            <summary>Como chegamos nesse número</summary>
-            <ul className="bal-debt-lines">
-              <li>
-                <span>Saldo da conta hoje</span>
-                <StaticMoney value={f.balance - f.lines.reduce((s, x) => s + x.amount, 0)} hidden={hidden} />
-              </li>
-              {f.lines.map((x, n) => (
-                <li key={`${x.label}-${n}`} className={x.estimate ? 'is-estimate' : undefined}>
-                  <span>
-                    {x.label}
-                    {x.date && ` · ${shortDay(x.date)}`}
-                  </span>
-                  <StaticMoney value={x.amount} hidden={hidden} />
-                </li>
-              ))}
-              <li className="is-total">
-                <span>Saldo previsto até {shortDay(f.until)}</span>
-                <StaticMoney value={f.balance} hidden={hidden} />
-              </li>
-            </ul>
-            <p className="tile-note">
-              A fatura conta o que já entrou nela; a estimativa (em itálico) repete as compras à vista no cartão do mesmo período do mês
-              passado. Entradas e saídas das contas só entram quando se repetem todo mês (mesmo nome e valor parecido nos dois meses
-              anteriores); Pix avulsos ficam de fora. O guardado em outras contas e caixinhas conta como dinheiro disponível.
-            </p>
-          </details>
-        </div>
-      )}
-
-      {months.length > 0 && (
-        <p className="tile-note">
-          Histórico no limite:{' '}
-          {months.map((m) => `${formatMonthShort(m.month)} ${m.days} ${m.days === 1 ? 'dia' : 'dias'}`).join(' · ')}
-          {months[0] && (
-            <>
-              {' '}(pior: <StaticMoney value={months[0].worst} hidden={hidden} /> em {formatMonthShort(months[0].month)})
-            </>
-          )}
-        </p>
-      )}
+      <ul className="bal-debt-lines">
+        <li>
+          <span>Era</span>
+          <StaticMoney value={d.originalAmount} hidden={hidden} />
+        </li>
+        <li className="is-total">
+          <span>Agora{known && ` (negativo em ${shortDay(l.dueDate!)})`}</span>
+          {known ? <StaticMoney value={l.atDue} hidden={hidden} /> : <span>sem saldo do dia {d.dueDay}</span>}
+        </li>
+      </ul>
+      {known && l.atDue === 0 && <p className="bal-debt-ok"><CircleCheck size={16} aria-hidden /> Quitada</p>}
     </div>
   )
 }

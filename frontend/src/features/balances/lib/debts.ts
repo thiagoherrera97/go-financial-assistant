@@ -79,9 +79,8 @@ export function toDebtInput(f: DebtForm): { input: DebtInput } | { error: string
 /** Quanto ainda falta da dívida, para o total do card. */
 export function debtOutstanding(d: Debt): number {
   if (d.progress) return d.progress.remaining
-  if (d.limit && d.limit.inLimit > 0) return d.limit.inLimit
-  if (d.lastCycle) return d.lastCycle.amount
-  return d.forecast?.committedInLimit ?? 0
+  if (d.limit?.dueDate) return d.limit.atDue
+  return d.originalAmount
 }
 
 /** O primeiro dia do próximo mês com o dia dueDay, em AAAA-MM-DD (sugestão para a primeira parcela). */

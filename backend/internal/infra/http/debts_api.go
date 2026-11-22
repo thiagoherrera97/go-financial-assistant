@@ -81,6 +81,8 @@ type debtJSON struct {
 		InLimit  float64 `json:"inLimit"`
 		Since    *string `json:"since"`
 		DaysUsed int     `json:"daysUsed"`
+		AtDue    float64 `json:"atDue"`
+		DueDate  *string `json:"dueDate"`
 		Months   []struct {
 			Month string  `json:"month"`
 			Days  int     `json:"days"`
@@ -142,12 +144,14 @@ func (a *api) debts(w http.ResponseWriter, r *http.Request) {
 				InLimit  float64 `json:"inLimit"`
 				Since    *string `json:"since"`
 				DaysUsed int     `json:"daysUsed"`
+				AtDue    float64 `json:"atDue"`
+				DueDate  *string `json:"dueDate"`
 				Months   []struct {
 					Month string  `json:"month"`
 					Days  int     `json:"days"`
 					Worst float64 `json:"worst"`
 				} `json:"months"`
-			}{InLimit: l.InLimit, Since: dayString(l.Since), DaysUsed: l.DaysUsed}
+			}{InLimit: l.InLimit, Since: dayString(l.Since), DaysUsed: l.DaysUsed, AtDue: cents(l.AtDue), DueDate: dayString(l.DueDate)}
 			lj.Months = make([]struct {
 				Month string  `json:"month"`
 				Days  int     `json:"days"`

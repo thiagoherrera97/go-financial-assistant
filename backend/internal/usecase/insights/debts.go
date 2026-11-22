@@ -3,6 +3,7 @@ package insights
 import (
 	"context"
 	"fmt"
+	"math"
 	"sort"
 	"strings"
 	"time"
@@ -149,6 +150,9 @@ func (i *Insights) overdraftView(ctx context.Context, v *DebtView, all []domain.
 		return err
 	}
 	use := debts.Usage(acc.Balance, days, today)
+	if due, last, ok := debts.DueBalance(acc.Balance, days, today, d.DueDay); ok {
+		use.AtDue, use.DueDate = math.Round(max(0, -last)*100)/100, &due
+	}
 	v.Limit = &use
 
 	dip := debts.NextDip(today, d.DueDay)

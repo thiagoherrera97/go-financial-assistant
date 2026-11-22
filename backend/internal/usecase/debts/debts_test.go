@@ -185,3 +185,24 @@ func TestBuildLastCycle(t *testing.T) {
 		t.Fatal("sem salário")
 	}
 }
+
+func TestDueBalance(t *testing.T) {
+	days := []domain.BalanceDay{
+		{Day: day(2026, 11, 9), Min: -10, Last: -10},
+		{Day: day(2026, 11, 10), Min: -5000, Last: -4877.11},
+		{Day: day(2026, 11, 11), Min: -4800, Last: -4800},
+	}
+	due, last, ok := DueBalance(322.89, days, day(2026, 11, 21), 10)
+	if !ok || !due.Equal(day(2026, 11, 10)) || last != -4877.11 {
+		t.Fatalf("got %v %v %v", due, last, ok)
+	}
+	if _, last, _ := DueBalance(-50, days, day(2026, 11, 10), 10); last != -50 {
+		t.Fatalf("hoje é o dia: quer o saldo atual, veio %v", last)
+	}
+	if due, last, ok := DueBalance(0, days, day(2026, 12, 5), 10); !ok || !due.Equal(day(2026, 11, 10)) || last != -4877.11 {
+		t.Fatalf("antes do dia 10 usa o mês passado: %v %v %v", due, last, ok)
+	}
+	if _, _, ok := DueBalance(0, nil, day(2026, 11, 21), 10); ok {
+		t.Fatal("sem registro não deveria achar saldo")
+	}
+}

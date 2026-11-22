@@ -139,6 +139,10 @@ export interface Debt {
     inLimit: number
     since: string | null
     daysUsed: number
+    /** Quanto a conta ficou negativa no último dia de vencimento (0 = quitada). */
+    atDue: number
+    /** AAAA-MM-DD do último dia de vencimento com saldo registrado; null sem registro. */
+    dueDate: string | null
     months: { month: string; days: number; worst: number }[]
   } | null
   /** OVERDRAFT: quanto do último salário o buraco engoliu (salary − leftover; leftover = balance + saved). */

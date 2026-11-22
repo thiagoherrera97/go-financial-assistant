@@ -72,6 +72,32 @@ type LimitUse struct {
 	Since    *time.Time // primeiro dia da sequência atual no limite; nil se não está no limite
 	DaysUsed int        // dias seguidos no limite contando hoje
 	Months   []MonthUse // do mais recente ao mais antigo; só meses com registro
+	// AtDue é quanto a conta ficou negativa no último dia de vencimento (ex.: dia 10) até hoje: o tamanho atual da dívida.
+	// 0 quando a conta fechou positiva nesse dia (dívida quitada). DueDate é esse dia; nil sem saldo registrado nele.
+	AtDue   float64
+	DueDate *time.Time
+}
+
+// DueBalance devolve o saldo da conta no último dia dueDay até hoje: o saldo atual se hoje é o dia, senão o saldo do fim
+// do dia registrado (ou o último registro até 3 dias antes, se faltou o do dia). ok=false sem registro.
+func DueBalance(balance float64, days []domain.BalanceDay, today time.Time, dueDay int) (due time.Time, last float64, ok bool) {
+	today = civil(today)
+	due = domain.DebtDueIn(today, dueDay)
+	if due.After(today) {
+		due = domain.DebtDueIn(today.AddDate(0, 0, 1-today.Day()).AddDate(0, -1, 0), dueDay)
+	}
+	if due.Equal(today) {
+		return due, balance, true
+	}
+	var best time.Time
+	for _, d := range days {
+		day := civil(d.Day)
+		if day.After(due) || day.Before(due.AddDate(0, 0, -3)) || day.Before(best) {
+			continue
+		}
+		best, last, ok = day, d.Last, true
+	}
+	return due, last, ok
 }
 
 // Usage lê o uso do limite a partir do saldo atual e dos saldos registrados por dia.

@@ -24,11 +24,11 @@ describe('toDebtInput', () => {
 
 describe('debtOutstanding', () => {
   const base = { progress: null, limit: null, forecast: null, lastCycle: null } as unknown as Debt
-  it('usa o que falta, o limite em uso ou a previsão', () => {
+  it('usa o que falta ou o negativo do último dia de vencimento', () => {
     expect(debtOutstanding({ ...base, progress: { remaining: 2880 } } as Debt)).toBe(2880)
-    expect(debtOutstanding({ ...base, limit: { inLimit: 900 }, forecast: { inLimit: 1200 } } as Debt)).toBe(900)
-    expect(debtOutstanding({ ...base, limit: { inLimit: 0 }, forecast: { inLimit: 1200, committedInLimit: 800 } } as Debt)).toBe(800)
-    expect(debtOutstanding({ ...base, limit: { inLimit: 0 }, lastCycle: { amount: 4877.11 } } as Debt)).toBe(4877.11)
+    expect(debtOutstanding({ ...base, originalAmount: 6000, limit: { atDue: 4877.11, dueDate: '2026-11-10' } } as Debt)).toBe(4877.11)
+    expect(debtOutstanding({ ...base, originalAmount: 6000, limit: { atDue: 0, dueDate: '2026-11-10' } } as Debt)).toBe(0)
+    expect(debtOutstanding({ ...base, originalAmount: 6000, limit: { atDue: 0, dueDate: null } } as Debt)).toBe(6000)
   })
 })
 
