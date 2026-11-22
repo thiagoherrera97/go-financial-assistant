@@ -67,6 +67,18 @@ type MonthSheet struct {
 	LeftoverWithCarryover float64   // sobra contando o salário a receber e o que veio do ciclo anterior
 }
 
+// SetPending troca o que falta receber no ciclo (salário e entradas recorrentes que ainda não caíram) e refaz a sobra
+// contando com elas. Chame antes de SetCarryover.
+func (s *MonthSheet) SetPending(pending []SheetPending) {
+	s.Pending = pending
+	var total float64
+	for _, p := range pending {
+		total += p.Amount
+	}
+	s.PendingTotal = round2(total)
+	s.LeftoverWithPending = round2(s.Leftover + s.PendingTotal)
+}
+
 // SetCarryover soma a sobra do ciclo anterior (nil = não há ciclo anterior com lançamentos).
 func (s *MonthSheet) SetCarryover(prev *float64) {
 	s.Carryover = prev

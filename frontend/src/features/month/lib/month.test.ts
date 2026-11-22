@@ -30,7 +30,7 @@ describe('ciclo do salário', () => {
   it('a sobra soma o que veio do ciclo anterior', () => {
     expect(sheetLeftover({ ...base, carryover: 731.27, leftoverWithCarryover: 1131.27 })).toEqual({
       value: 1131.27,
-      note: `contando ${formatBRL(731.27)} do ciclo anterior e o salário a receber`,
+      note: `contando ${formatBRL(731.27)} do ciclo anterior e o que falta receber`,
     })
   })
   it('sem ciclo anterior, fica como antes', () => {

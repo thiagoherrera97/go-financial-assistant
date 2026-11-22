@@ -250,11 +250,7 @@ func (a *api) expectedIncome(w http.ResponseWriter, r *http.Request) {
 	if month.IsZero() {
 		month = a.monthStart()
 	}
-	now := a.now()
-	if a.settings != nil {
-		now = now.In(a.settings.Service.Location())
-	}
-	list, err := a.insights.ExpectedIncomes(r.Context(), month, now)
+	list, err := a.insights.ExpectedIncomes(r.Context(), month, a.localNow())
 	if err != nil {
 		a.fail(w, "receitas previstas", err)
 		return

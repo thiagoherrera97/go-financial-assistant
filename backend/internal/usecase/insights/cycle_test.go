@@ -44,7 +44,7 @@ func cycleInsights(credits []domain.SalaryCredit) *Insights {
 // Ciclo de novembro em 21/nov: a 1ª parte já caiu (13/nov), a de 30/nov ainda está a receber.
 func TestMonthSheetUsesTheCyclesOwnSalary(t *testing.T) {
 	i := cycleInsights([]domain.SalaryCredit{{Date: d(2026, 10, 15), Amount: 5200}, {Date: d(2026, 10, 30), Amount: 4366.62}, {Date: d(2026, 11, 13), Amount: 5200}})
-	s, err := i.MonthSheet(context.Background(), d(2026, 11, 1))
+	s, err := i.MonthSheet(context.Background(), d(2026, 11, 1), d(2026, 11, 21))
 	if err != nil {
 		t.Fatal(err)
 	}

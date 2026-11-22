@@ -247,6 +247,15 @@ func (a *api) salary(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// localNow é agora no fuso do dono (configuração); sem configuração, o relógio como veio.
+func (a *api) localNow() time.Time {
+	now := a.now()
+	if a.settings != nil {
+		now = now.In(a.settings.Service.Location())
+	}
+	return now
+}
+
 // cents arredonda somas de valores em reais para centavos (evita 9566.619999 na resposta).
 func cents(v float64) float64 { return math.Round(v*100) / 100 }
 

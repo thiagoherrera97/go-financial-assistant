@@ -39,7 +39,7 @@ func (a *api) monthSheet(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	s, err := a.insights.MonthSheet(r.Context(), month)
+	s, err := a.insights.MonthSheet(r.Context(), month, a.localNow())
 	if err != nil {
 		a.fail(w, "mês", err)
 		return

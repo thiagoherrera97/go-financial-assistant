@@ -136,7 +136,7 @@ func (i *Insights) Projection(ctx context.Context, start time.Time, months int) 
 
 // MonthSheet monta a tela do mês (primeiro dia do mês): os lançamentos, a classe de cada conta como no orçamento (12
 // meses até o mês) e o salário do mês conferido com o banco.
-func (i *Insights) MonthSheet(ctx context.Context, month time.Time) (planning.MonthSheet, error) {
+func (i *Insights) MonthSheet(ctx context.Context, month, now time.Time) (planning.MonthSheet, error) {
 	lines, err := i.reader.MonthLines(ctx, month)
 	if err != nil {
 		return planning.MonthSheet{}, err
@@ -157,6 +157,16 @@ func (i *Insights) MonthSheet(ctx context.Context, month time.Time) (planning.Mo
 	classes := planning.BuildBudget(rows, rules, from, month).Classes
 	sheet := planning.BuildMonthSheet(month, lines, classes, salary.Parts)
 	sheet.StartsOn, sheet.EndsOn = i.Cycles().Bounds(month)
+	// A receber: as mesmas previstas da tela de Transações (salário e entradas recorrentes), não só o salário.
+	expected, err := i.ExpectedIncomes(ctx, month, now)
+	if err != nil {
+		return planning.MonthSheet{}, err
+	}
+	pending := make([]planning.SheetPending, len(expected))
+	for n, e := range expected {
+		pending[n] = planning.SheetPending{Label: e.Label, Date: e.Date, Amount: e.Amount}
+	}
+	sheet.SetPending(pending)
 	// O que sobrou do ciclo anterior (entradas − despesas dele) passa para este.
 	prevLines, err := i.reader.MonthLines(ctx, month.AddDate(0, -1, 0))
 	if err != nil {

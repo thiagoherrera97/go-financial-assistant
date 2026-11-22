@@ -96,14 +96,14 @@ export default function MonthSheetPage() {
         {(s) => (
           <div className={sheet.isPlaceholderData ? 'is-stale' : undefined}>
             <div className="tiles">
-              <StatTile label="Entradas" value={formatBRL(s.incomeTotal)} note={s.pendingTotal > 0 ? `+ ${formatBRL(s.pendingTotal)} a receber` : undefined} />
+              <StatTile label="Entradas" value={formatBRL(s.incomeTotal + s.pendingTotal)} note={s.pendingTotal > 0 ? `${formatBRL(s.pendingTotal)} ainda a receber` : undefined} />
               <StatTile label="Despesas" value={formatBRL(s.expensesTotal)} note={`${formatBRL(s.cardsTotal)} no cartão`} />
               <StatTile label={leftoverLabel(sheetLeftover(s).value)} value={formatBRL(Math.abs(sheetLeftover(s).value))} note={sheetLeftover(s).note} />
             </div>
 
             <div className="sheet-grid section-gap">
               <div className="sheet-col">
-                <Block title="Entradas" total={s.incomeTotal}>
+                <Block title="Entradas" total={s.incomeTotal + s.pendingTotal}>
                   <Rows items={s.income} empty="Nenhuma entrada no ciclo." />
                   {s.pending.length > 0 && (
                     <>

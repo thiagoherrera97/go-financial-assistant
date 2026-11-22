@@ -26,15 +26,15 @@ const shortDay = (iso: string) => {
 /** Período do ciclo do salário, ex.: "13/nov – 14/dez". */
 export const formatCycle = (startsOn: string, endsOn: string) => `${shortDay(startsOn)} – ${shortDay(endsOn)}`
 
-/** A sobra do ciclo: soma o salário a receber e o que veio do ciclo anterior, quando há. */
+/** A sobra do ciclo: soma o que falta receber (salário e entradas recorrentes) e o que veio do ciclo anterior, quando há. */
 export function sheetLeftover(
   s: Pick<MonthSheet, 'leftover' | 'leftoverWithPending' | 'pendingTotal' | 'carryover' | 'leftoverWithCarryover'>,
 ): { value: number; note: string } {
   const pending = s.pendingTotal > 0
   if (s.carryover != null) {
     const what = `contando ${formatBRL(s.carryover)} do ciclo anterior`
-    return { value: s.leftoverWithCarryover, note: pending ? `${what} e o salário a receber` : what }
+    return { value: s.leftoverWithCarryover, note: pending ? `${what} e o que falta receber` : what }
   }
-  if (pending) return { value: s.leftoverWithPending, note: `contando o salário a receber · hoje: ${formatBRL(s.leftover)}` }
+  if (pending) return { value: s.leftoverWithPending, note: `contando o que falta receber · hoje: ${formatBRL(s.leftover)}` }
   return { value: s.leftover, note: 'entradas − despesas' }
 }

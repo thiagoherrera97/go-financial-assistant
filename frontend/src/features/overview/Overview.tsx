@@ -9,10 +9,13 @@ import { useMonth } from '../../shared/lib/useMonth'
 import { useSummary, useTimeseries } from '../../shared/api/totals'
 import { Link } from 'react-router'
 import { formatShare, shouldWarnOtherShare } from './lib/otherShare'
+import { useExpectedIncome } from '../../shared/api/expectedIncome'
 
 export default function Overview() {
   const { month, setMonth, now } = useMonth()
   const summary = useSummary(month)
+  // Salário e entradas recorrentes do ciclo que ainda não caíram: entram em Receitas e no Saldo.
+  const expected = useExpectedIncome(month, true)
   const series = useTimeseries(shiftMonth(month, -11), month)
 
   return (
@@ -24,7 +27,7 @@ export default function Overview() {
         {(data) => (
           <>
             <OtherShareNotice share={data.otherShare} />
-            <Tiles data={data} stale={summary.isPlaceholderData} partial={month === now} />
+            <Tiles data={data} stale={summary.isPlaceholderData} partial={month === now} expected={expected.data?.total ?? 0} />
           </>
         )}
       </QueryState>
@@ -49,16 +52,17 @@ function OtherShareNotice({ share }: { share: number | null }) {
   )
 }
 
-function Tiles({ data, stale, partial }: { data: NonNullable<ReturnType<typeof useSummary>['data']>; stale: boolean; partial: boolean }) {
+function Tiles({ data, stale, partial, expected }: { data: NonNullable<ReturnType<typeof useSummary>['data']>; stale: boolean; partial: boolean; expected: number }) {
   const { current: c, previous: p } = data
-  const balance = c.income - c.expense
+  const balance = c.income + expected - c.expense
   const invested = c.applied - c.redeemed
 
   return (
     <div className={`tiles chart-body ${stale ? 'is-stale' : ''}`}>
       <StatTile
         label="Receitas"
-        value={formatBRL(c.income)}
+        value={formatBRL(c.income + expected)}
+        note={expected > 0 ? `${formatBRL(expected)} ainda a receber` : undefined}
         compare={partial ? undefined : { current: c.income, previous: p.income, previousMonth: p.month, upIsGood: true }}
       />
       <StatTile
@@ -69,6 +73,7 @@ function Tiles({ data, stale, partial }: { data: NonNullable<ReturnType<typeof u
       <StatTile
         label="Saldo do mês"
         value={formatBRL(balance)}
+        note={expected > 0 ? `contando o que falta receber · hoje: ${formatBRL(c.income - c.expense)}` : undefined}
         compare={partial ? undefined : { current: balance, previous: p.income - p.expense, previousMonth: p.month, upIsGood: true }}
       />
       <StatTile
