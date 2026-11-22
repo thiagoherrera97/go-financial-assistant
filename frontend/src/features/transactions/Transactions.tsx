@@ -9,11 +9,11 @@ import { categoryVisual } from '../../shared/lib/categoryVisual'
 import { formatBRL, formatMonthTitle } from '../../shared/lib/format'
 import { CATEGORIES, KINDS, PAYMENT_METHODS } from '../../shared/lib/labels'
 import { FORECAST_MONTHS_AHEAD, shiftMonth } from '../../shared/lib/months'
-import { formatDayLabel, incomeSources, INCOME_GROUP, investSummary, withGroupFilter } from './lib/transactions'
+import { formatDayLabel, incomeSources, INCOME_GROUP, investSummary, showsExpectedIncome, withGroupFilter } from './lib/transactions'
 import { useTransactionFilters } from './lib/useTransactionFilters'
-import { useTransactionGroups, useTransactions } from './api'
+import { useExpectedIncome, useTransactionGroups, useTransactions } from './api'
 import { useAccounts } from '../../shared/api/accounts'
-import type { TransactionGroup } from './api'
+import type { ExpectedIncome, TransactionGroup } from './api'
 import { Pager } from '../../shared/components/Pager'
 import { useSubcategoryCatalog } from '../../shared/api/subcategories'
 
@@ -28,6 +28,9 @@ export default function Transactions() {
   const accounts = useAccounts()
   // Os totais do topo vêm dos grupos por categoria, agregados no SQL, qualquer que seja a visão.
   const categories = useTransactionGroups(query, 'category')
+  // Salário e entradas recorrentes que ainda não caíram: somem sozinhas quando o crédito chega na sincronização.
+  const expected = useExpectedIncome(month, showsExpectedIncome(params, now))
+  const pending = expected.isSuccess && showsExpectedIncome(params, now) ? expected.data : { items: [], total: 0 }
   // Dá para olhar até FORECAST_MONTHS_AHEAD meses à frente: as parcelas previstas dos cartões vão até lá.
   const maxMonth = shiftMonth(now, FORECAST_MONTHS_AHEAD)
 
@@ -84,7 +87,7 @@ export default function Transactions() {
         <SearchBox value={params.get('q') ?? ''} onCommit={(q) => update({ q })} />
       </div>
 
-      <Summary groups={categories.data} />
+      <Summary groups={categories.data} expected={pending.total} />
 
       <div className="view-toggle" role="group" aria-label="Forma de exibir">
         {VIEWS.map(({ key, label, Icon }) => (
@@ -97,7 +100,7 @@ export default function Transactions() {
       {view === 'lista' && <ListView query={query} onPage={(n) => update({ pagina: n > 1 ? String(n) : '' })} />}
       {view === 'categoria' && (
         <QueryState query={categories}>
-          {(groups) => <CategoryCards groups={groups} query={query} stale={categories.isPlaceholderData} />}
+          {(groups) => <CategoryCards groups={groups} query={query} stale={categories.isPlaceholderData} expected={pending.items} />}
         </QueryState>
       )}
       {view === 'dia' && <DayCards query={query} />}
@@ -113,7 +116,7 @@ const VIEWS = [
 
 /** Totais do que está filtrado: despesas e receitas. Movimento de caixinhas e investimentos fica de fora: não é dinheiro
  * a mais, só troca de lugar (o rendimento já entra em Receitas). */
-function Summary({ groups }: { groups: TransactionGroup[] | undefined }) {
+function Summary({ groups, expected }: { groups: TransactionGroup[] | undefined; expected: number }) {
   if (!groups) return null
   const total = groups.reduce(
     (acc, g) => ({
@@ -126,15 +129,20 @@ function Summary({ groups }: { groups: TransactionGroup[] | undefined }) {
   return (
     <div className="tiles section-gap">
       <StatTile label="Despesas" value={formatBRL(total.expense)} />
-      <StatTile label="Receitas" value={formatBRL(total.income)} />
+      <StatTile label="Receitas" value={formatBRL(total.income)} note={expected > 0 ? `+ ${formatBRL(expected)} a receber` : undefined} />
       <StatTile label="Lançamentos" value={String(total.count)} />
     </div>
   )
 }
 
-function CategoryCards({ groups: all, query, stale }: { groups: TransactionGroup[]; query: string; stale: boolean }) {
+function CategoryCards({ groups: all, query, stale, expected }: { groups: TransactionGroup[]; query: string; stale: boolean; expected: ExpectedIncome[] }) {
   // Caixinha não aparece: só troca dinheiro de lugar (o rendimento já está em Entradas).
   const groups = all.filter((g) => g.key !== 'RESERVE')
+  const expectedTotal = expected.reduce((sum, e) => sum + e.amount, 0)
+  // Ciclo sem nenhuma entrada ainda (ex.: o próximo): o card de Entradas aparece só com as previstas.
+  if (expected.length > 0 && !groups.some((g) => g.key === INCOME_GROUP)) {
+    groups.unshift({ key: INCOME_GROUP, label: 'Entradas', count: 0, expense: 0, income: 0, transfer: 0, applied: 0, redeemed: 0 })
+  }
   if (groups.length === 0) return <p className="state">Nenhuma transação encontrada.</p>
   const max = Math.max(...groups.map((g) => Math.max(g.expense, g.income, Math.abs(g.applied - g.redeemed))), 1)
   return (
@@ -147,13 +155,13 @@ function CategoryCards({ groups: all, query, stale }: { groups: TransactionGroup
             color={color}
             icon={<CategoryChip category={g.key} size={20} />}
             title={g.label}
-            subtitle={`${g.count} ${g.count === 1 ? 'lançamento' : 'lançamentos'}`}
-            {...amounts(g)}
+            subtitle={groupSubtitle(g, g.key === INCOME_GROUP ? expected.length : 0)}
+            {...withExpected(amounts(g), g.key === INCOME_GROUP ? expectedTotal : 0)}
             share={Math.max(g.expense, g.income, Math.abs(g.applied - g.redeemed)) / max}
           >
             {() =>
               g.key === INCOME_GROUP ? (
-                <IncomeDetails query={withGroupFilter(query, 'category', g.key)} />
+                <IncomeDetails query={withGroupFilter(query, 'category', g.key)} expected={expected} hasReceived={g.count > 0} />
               ) : (
                 <GroupDetails query={withGroupFilter(query, 'category', g.key)} hideCategory />
               )
@@ -207,6 +215,19 @@ function amounts(g: TransactionGroup) {
   return { amount: formatBRL(0), extras: [] }
 }
 
+function groupSubtitle(g: TransactionGroup, expected: number) {
+  const parts = [`${g.count} ${g.count === 1 ? 'lançamento' : 'lançamentos'}`]
+  if (expected > 0) parts.push(`${expected} a receber`)
+  return parts.join(' · ')
+}
+
+/** Card de Entradas: o que falta receber entra como legenda, sem somar no valor (que é só o que já caiu). */
+function withExpected(a: ReturnType<typeof amounts>, expected: number) {
+  if (expected <= 0) return a
+  const extras = a.extras.filter((e) => e !== 'Receitas')
+  return { ...a, extras: [...extras, `+ ${formatBRL(expected)} a receber`] }
+}
+
 /** Lançamentos de um grupo aberto; busca só quando o card é expandido. */
 function GroupDetails({ query, hideCategory = false }: { query: string; hideCategory?: boolean }) {
   const result = useTransactions(query)
@@ -224,8 +245,41 @@ function GroupDetails({ query, hideCategory = false }: { query: string; hideCate
   )
 }
 
-/** Entradas abertas: as receitas separadas por fonte (salário, Pix de cada pessoa, rendimentos...). */
-function IncomeDetails({ query }: { query: string }) {
+/** Entradas abertas: primeiro o que ainda vai cair, depois as receitas separadas por fonte (salário, Pix de cada pessoa,
+ * rendimentos...). */
+function IncomeDetails({ query, expected, hasReceived }: { query: string; expected: ExpectedIncome[]; hasReceived: boolean }) {
+  return (
+    <>
+      {expected.length > 0 && <ExpectedList items={expected} />}
+      {hasReceived && <ReceivedIncome query={query} />}
+    </>
+  )
+}
+
+/** Previstas: tracejadas e apagadas, porque ainda não são dinheiro na conta. */
+function ExpectedList({ items }: { items: ExpectedIncome[] }) {
+  return (
+    <section className="expected-income" aria-label="A receber">
+      <p className="expected-title">A receber</p>
+      <ul>
+        {items.map((e) => (
+          <li key={`${e.source}-${e.label}-${e.date}`} className="expected-row">
+            <CategoryChip category={e.source === 'SALARY' ? 'SALARY' : INCOME_GROUP} size={16} />
+            <span className="expected-label">
+              <strong>{e.label}</strong>
+              <span className="group-sub">
+                {e.late ? `Era para ${formatDayLabel(e.date)} · ainda não chegou` : `Previsto para ${formatDayLabel(e.date)}`}
+              </span>
+            </span>
+            <span className="expected-amount">+{formatBRL(e.amount)}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+function ReceivedIncome({ query }: { query: string }) {
   const result = useTransactions(query)
   return (
     <QueryState query={result}>

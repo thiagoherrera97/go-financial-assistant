@@ -36,6 +36,20 @@ export function toApiQuery(params: URLSearchParams, now = currentMonth()): strin
 }
 
 /**
+ * As receitas previstas (salário e entradas recorrentes que ainda não caíram) só aparecem quando o filtro deixa ver as
+ * receitas do ciclo inteiro: com mês escolhido, tipo vazio ou Receita e nenhum outro filtro (elas não têm conta, forma de
+ * pagamento nem descrição do banco para filtrar).
+ */
+export function showsExpectedIncome(params: URLSearchParams, now = currentMonth()): boolean {
+  if (!monthFilter(params, now)) return false
+  const kind = params.get('tipo')?.trim()
+  if (kind && kind !== 'INCOME') return false
+  const category = params.get('categoria')?.trim()
+  if (category && category !== INCOME_GROUP) return false
+  return (['sub', 'essencial', 'forma', 'conta', 'q'] as const).every((k) => !params.get(k)?.trim())
+}
+
+/**
  * Valor com sinal e o que ele significa. Investimento e caixinha não são gasto nem ganho: ficam neutros, mas com o sinal do
  * ponto de vista da reserva — o que foi para ela é "+", o que saiu dela (resgate) é "-".
  */

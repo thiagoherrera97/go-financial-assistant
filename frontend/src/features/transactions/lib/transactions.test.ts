@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { describeAmount, investSummary, formatBankTime, formatDay, formatDayLabel, incomeSources, INCOME_GROUP, monthFilter, toApiQuery, withGroupFilter } from './transactions'
+import { describeAmount, investSummary, formatBankTime, formatDay, formatDayLabel, incomeSources, INCOME_GROUP, monthFilter, showsExpectedIncome, toApiQuery, withGroupFilter } from './transactions'
 import type { Transaction } from '../api'
 
 const q = (s: string) => new URLSearchParams(s)
@@ -122,5 +122,19 @@ describe('formatBankTime', () => {
   it('fica vazio sem hora ou com valor inválido', () => {
     expect(formatBankTime(undefined)).toBe('')
     expect(formatBankTime('ontem')).toBe('')
+  })
+})
+
+describe('showsExpectedIncome', () => {
+  const p = (q: string) => new URLSearchParams(q)
+  it('aparece no ciclo sem filtro, ou filtrando só receitas', () => {
+    expect(showsExpectedIncome(p(''), '2026-11')).toBe(true)
+    expect(showsExpectedIncome(p('mes=2026-12&tipo=INCOME'), '2026-11')).toBe(true)
+    expect(showsExpectedIncome(p(`categoria=${INCOME_GROUP}`), '2026-11')).toBe(true)
+  })
+  it('some com todos os meses ou filtros que excluem as previstas', () => {
+    for (const q of ['mes=todos', 'tipo=EXPENSE', 'categoria=FOOD', 'forma=PIX', 'conta=x', 'q=mae', 'essencial=true']) {
+      expect(showsExpectedIncome(p(q), '2026-11')).toBe(false)
+    }
   })
 })

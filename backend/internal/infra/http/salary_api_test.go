@@ -86,3 +86,38 @@ func TestAPI_SalaryNotConfigured(t *testing.T) {
 		t.Errorf("%d %s", rec.Code, rec.Body.String())
 	}
 }
+
+func TestAPI_ExpectedIncome(t *testing.T) {
+	r := &fakeReader{salaryCredits: []domain.SalaryCredit{{Date: time.Date(2026, 11, 13, 0, 0, 0, 0, time.UTC), Amount: 5200}}}
+	s := newSalaryAPI(t, "15=5200; 30=4366,62", r, time.Date(2026, 11, 20, 15, 0, 0, 0, time.UTC))
+	c := login(t, s)
+
+	rec := do(s, "GET", "/api/transactions/expected-income?month=2026-11", "", nil, c)
+	if rec.Code != 200 {
+		t.Fatalf("%d %s", rec.Code, rec.Body.String())
+	}
+	var got struct {
+		Total float64 `json:"total"`
+		Items []struct {
+			Source string  `json:"source"`
+			Label  string  `json:"label"`
+			Date   string  `json:"date"`
+			Amount float64 `json:"amount"`
+			Late   bool    `json:"late"`
+		} `json:"items"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.Total != 4366.62 || len(got.Items) != 1 || got.Items[0].Date != "2026-11-30" || got.Items[0].Source != "SALARY" || got.Items[0].Late {
+		t.Errorf("got %+v", got)
+	}
+
+	// Ciclo passado não tem previstas.
+	if body := do(s, "GET", "/api/transactions/expected-income?month=2026-09", "", nil, c).Body.String(); body != `{"items":[],"total":0}`+"\n" {
+		t.Errorf("passado: %q", body)
+	}
+	if code := do(s, "GET", "/api/transactions/expected-income?month=x", "", nil, c).Code; code != 400 {
+		t.Errorf("mês inválido: %d", code)
+	}
+}

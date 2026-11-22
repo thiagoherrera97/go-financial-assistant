@@ -229,4 +229,41 @@ func (a *api) registerTransactions(rt routes) {
 	rt.mux.Handle("PUT /api/transactions/{id}/note", rt.protected(jsonOnly(a.setTransactionNote)))
 	rt.mux.Handle("GET /api/transactions", rt.protected(a.transactions))
 	rt.mux.Handle("GET /api/transactions/groups", rt.protected(a.transactionGroups))
+	rt.mux.Handle("GET /api/transactions/expected-income", rt.protected(a.expectedIncome))
+}
+
+type expectedIncomeJSON struct {
+	Source string  `json:"source"`
+	Label  string  `json:"label"`
+	Date   string  `json:"date"`
+	Amount float64 `json:"amount"`
+	Late   bool    `json:"late"`
+}
+
+// expectedIncome: as receitas do ciclo (month, padrão o atual) que já se sabe que vão cair e ainda não chegaram do
+// banco: partes do salário e entradas recorrentes.
+func (a *api) expectedIncome(w http.ResponseWriter, r *http.Request) {
+	month, ok := a.monthParam(w, r, "month", false)
+	if !ok {
+		return
+	}
+	if month.IsZero() {
+		month = a.monthStart()
+	}
+	now := a.now()
+	if a.settings != nil {
+		now = now.In(a.settings.Service.Location())
+	}
+	list, err := a.insights.ExpectedIncomes(r.Context(), month, now)
+	if err != nil {
+		a.fail(w, "receitas previstas", err)
+		return
+	}
+	items := make([]expectedIncomeJSON, len(list))
+	var total float64
+	for n, e := range list {
+		items[n] = expectedIncomeJSON{Source: e.Source, Label: e.Label, Date: e.Date.Format(time.DateOnly), Amount: e.Amount, Late: e.Late}
+		total += e.Amount
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": items, "total": cents(total)})
 }
