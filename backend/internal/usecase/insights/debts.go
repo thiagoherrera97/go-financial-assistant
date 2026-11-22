@@ -150,9 +150,6 @@ func (i *Insights) overdraftView(ctx context.Context, v *DebtView, all []domain.
 		return err
 	}
 	use := debts.Usage(acc.Balance, days, today)
-	if due, last, ok := debts.DueBalance(acc.Balance, days, today, d.DueDay); ok {
-		use.AtDue, use.DueDate = math.Round(max(0, -last)*100)/100, &due
-	}
 	v.Limit = &use
 
 	dip := debts.NextDip(today, d.DueDay)
@@ -197,6 +194,23 @@ func (i *Insights) overdraftView(ctx context.Context, v *DebtView, all []domain.
 		return err
 	}
 	v.LastCycle = debts.BuildLastCycle(credits, acc.Balance, saved, today)
+	// A dívida agora é o negativo do último dia de vencimento: o salário que caiu depois dele menos o que sobrou hoje
+	// (conta + guardado). Sem salário depois do vencimento, vale o saldo registrado no próprio dia.
+	due, last, ok := debts.DueBalance(acc.Balance, days, today, d.DueDay)
+	paidAfterDue := false
+	for _, c := range credits {
+		if !c.Date.Before(due) && !c.Date.After(today) {
+			paidAfterDue = true
+		}
+	}
+	switch {
+	case v.LastCycle != nil && !v.LastCycle.SalaryDate.Before(due):
+		use.AtDue, use.DueDate = v.LastCycle.Amount, &due
+	case paidAfterDue:
+		use.AtDue, use.DueDate = 0, &due // o salário sobrou inteiro: a dívida acabou
+	case ok:
+		use.AtDue, use.DueDate = math.Round(max(0, -last)*100)/100, &due
+	}
 	// Faturas dos cartões do mesmo banco: saem desta conta. Até o fechamento ainda entram compras: estimadas pelo que se
 	// gastou à vista no cartão no mesmo período do mês passado.
 	for _, c := range accounts {
