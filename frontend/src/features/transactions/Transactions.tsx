@@ -139,7 +139,7 @@ function Summary({ groups, expected }: { groups: TransactionGroup[] | undefined;
         label="Total"
         value={formatBRL(net)}
         tone={signTone(net)}
-        note={expected > 0 ? `contando o que falta receber · hoje: ${formatBRL(total.income - total.expense)}` : 'receitas − despesas'}
+        note={expected > 0 ? `Com o que já caiu: ${formatBRL(total.income - total.expense)}` : 'receitas − despesas'}
       />
       <StatTile label="Lançamentos" value={String(total.count)} />
     </div>

@@ -35,6 +35,6 @@ export function sheetLeftover(
     const what = `contando ${formatBRL(s.carryover)} do ciclo anterior`
     return { value: s.leftoverWithCarryover, note: pending ? `${what} e o que falta receber` : what }
   }
-  if (pending) return { value: s.leftoverWithPending, note: `contando o que falta receber · hoje: ${formatBRL(s.leftover)}` }
+  if (pending) return { value: s.leftoverWithPending, note: `Com o que já caiu: ${formatBRL(s.leftover)}` }
   return { value: s.leftover, note: 'entradas − despesas' }
 }

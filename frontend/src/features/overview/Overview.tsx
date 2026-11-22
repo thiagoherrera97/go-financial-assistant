@@ -77,7 +77,7 @@ function Tiles({ data, stale, partial, expected }: { data: NonNullable<ReturnTyp
         label="Saldo do mês"
         tone={signTone(balance)}
         value={formatBRL(balance)}
-        note={expected > 0 ? `contando o que falta receber · hoje: ${formatBRL(c.income - c.expense)}` : undefined}
+        note={expected > 0 ? `Com o que já caiu: ${formatBRL(c.income - c.expense)}` : undefined}
         compare={partial ? undefined : { current: balance, previous: p.income - p.expense, previousMonth: p.month, upIsGood: true }}
       />
       <StatTile
