@@ -129,10 +129,14 @@ func (r *LedgerRepo) ApplyPendingNotes(ctx context.Context) (int, error) {
 	return applied, nil
 }
 
+// learnedNoteShare é a parte mínima (%) das notas de um comércio e valor que precisa ser a mesma para ela ser herdada.
+const learnedNoteShare = 60
+
 // inheritNotes dá nota a quem nunca teve (nota nula; apagada pela pessoa fica vazia e é respeitada): a transação herda a
-// nota das outras do mesmo tipo, comércio (expenseKey: some número e parcela) e valor, quando todas as que têm nota ali
-// usam a mesma (o estacionamento do trabalho, sempre igual; as parcelas que chegam depois). Nota diferente em alguma
-// deixa a dúvida, e nada é herdado. key vazia olha todos os comércios. Devolve quantas ganharam nota.
+// nota mais usada nas outras do mesmo tipo, comércio (expenseKey: some número e parcela) e valor, quando ela (sem
+// diferenciar maiúsculas) é pelo menos learnedNoteShare% das notas dali (o estacionamento do trabalho, com uma ou outra
+// nota diferente; as parcelas que chegam depois). Abaixo disso há dúvida, e nada é herdado. key vazia olha todos os
+// comércios. Devolve quantas ganharam nota.
 func inheritNotes(ctx context.Context, q interface {
 	Exec(context.Context, string, ...any) (pgconn.CommandTag, error)
 }, key string) (int64, error) {
@@ -141,10 +145,16 @@ func inheritNotes(ctx context.Context, q interface {
 			SELECT pay.id, pay.note, p.kind, ROUND(ABS(pay.amount)::numeric, 2) AS amount, `+expenseKey+` AS key
 			FROM payments pay JOIN purchases p ON p.id = pay.purchase_id
 			WHERE pay.status != 'CANCELLED'
+		), noted AS (
+			SELECT kind, key, amount, note,
+			       COUNT(*) OVER (PARTITION BY kind, key, amount, LOWER(note)) AS same,
+			       COUNT(*) OVER (PARTITION BY kind, key, amount, note) AS exact,
+			       COUNT(*) OVER (PARTITION BY kind, key, amount) AS total
+			FROM tx WHERE note <> '' AND key <> '' AND ($1 = '' OR key = $1)
 		), learned AS (
-			SELECT kind, key, amount, MIN(note) AS note FROM tx
-			WHERE note <> '' AND key <> '' AND ($1 = '' OR key = $1)
-			GROUP BY 1, 2, 3 HAVING COUNT(DISTINCT note) = 1
+			SELECT DISTINCT ON (kind, key, amount) kind, key, amount, note FROM noted
+			WHERE same * 100 >= total * `+fmt.Sprint(learnedNoteShare)+`
+			ORDER BY kind, key, amount, same DESC, exact DESC, note
 		)
 		UPDATE payments pay SET note = l.note
 		FROM tx JOIN learned l ON l.kind = tx.kind AND l.key = tx.key AND l.amount = tx.amount

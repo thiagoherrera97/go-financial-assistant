@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -158,7 +159,21 @@ func TestNotesSpreadAndLearned(t *testing.T) {
 	if noteOf(e4) != "" {
 		t.Errorf("apagada voltou: %q", noteOf(e4))
 	}
-	// Notas diferentes no mesmo comércio e valor: dúvida, nada é herdado.
+	// Uma nota diferente no meio não atrapalha: a mais usada (3 de 4, sem diferenciar maiúsculas) é herdada.
+	for i, n := range []string{"ESTACIONAMENTO TRABALHO", "Estacionamento 18/02"} {
+		e := cardExpense(t, repo, pg, card, fmt.Sprintf("nl-m%d", i), "NLTESTE ESTAPAR MONO SEDE", 25, d.AddDate(0, 0, 10+i))
+		if _, err := notes.SetTransactionNote(ctx, payOf(e), n); err != nil {
+			t.Fatal(err)
+		}
+	}
+	e6 := cardExpense(t, repo, pg, card, "nl-9", "NLTESTE ESTAPAR MONO SEDE", 25, d.AddDate(0, 0, 20))
+	repo.ApplyPendingNotes(ctx) //nolint:errcheck
+	if noteOf(e6) != "Estacionamento trabalho" {
+		t.Errorf("maioria: %q", noteOf(e6))
+	}
+	pg.Pool.Exec(ctx, `UPDATE payments SET note = '' WHERE purchase_id = $1`, e6.ID) //nolint:errcheck
+
+	// Notas divididas no mesmo comércio e valor: dúvida, nada é herdado.
 	if _, err := notes.SetTransactionNote(ctx, payOf(e2), "Médico"); err != nil {
 		t.Fatal(err)
 	}
