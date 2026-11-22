@@ -4,8 +4,11 @@ import type { SubcategorySpend, SubcategorySpendItem } from '../../../shared/api
 export interface CutItem extends SubcategorySpendItem {
   /** Variação contra a média dos 3 meses anteriores; null sem histórico. */
   delta: number | null
-  /** Quanto sobraria em um ano cortando metade, no ritmo deste mês. */
+  /** Quanto sobraria em um ano cortando metade, no ritmo deste mês. Parcela de compra já feita não conta: não dá para
+   * cortar, e ela acaba sozinha. */
   halfPerYear: number
+  /** O grupo no mês é só parcela de compra já feita. */
+  onlyInstallments: boolean
   /** Transações deste grupo no mês. */
   link: string
 }
@@ -21,7 +24,8 @@ export function groupLink(month: string, item: Pick<SubcategorySpendItem, 'categ
 const withMeta = (month: string, i: SubcategorySpendItem): CutItem => ({
   ...i,
   delta: deltaPercent(i.total, i.prevAverage),
-  halfPerYear: Math.max(i.total, 0) * 6,
+  halfPerYear: Math.max(i.total - (i.installments ?? 0), 0) * 6,
+  onlyInstallments: i.total > 0 && (i.installments ?? 0) >= i.total - 0.005,
   link: groupLink(month, i),
 })
 

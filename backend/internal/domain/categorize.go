@@ -36,4 +36,6 @@ type SubcategorySpend struct {
 	Count       int
 	Total       float64
 	PrevAverage float64
+	// Installments é a parte de Total que é parcela de compra já feita: cortar o gasto não a tira dos próximos meses.
+	Installments float64
 }

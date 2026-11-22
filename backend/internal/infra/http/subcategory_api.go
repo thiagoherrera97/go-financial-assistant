@@ -98,6 +98,7 @@ func (a *api) subcategorySpend(w http.ResponseWriter, r *http.Request) {
 		Count            int     `json:"count"`
 		Total            float64 `json:"total"`
 		PrevAverage      float64 `json:"prevAverage"`
+		Installments     float64 `json:"installments"`
 	}
 	var essential, superfluous, unknown float64
 	out := make([]item, len(items))
@@ -106,7 +107,7 @@ func (a *api) subcategorySpend(w http.ResponseWriter, r *http.Request) {
 		if label == "" {
 			label = s.Category.Label()
 		}
-		out[i] = item{string(s.Category), s.Category.Label(), string(s.Subcategory), label, s.Essential, s.Count, s.Total, s.PrevAverage}
+		out[i] = item{string(s.Category), s.Category.Label(), string(s.Subcategory), label, s.Essential, s.Count, s.Total, s.PrevAverage, s.Installments}
 		switch {
 		case s.Essential == nil:
 			unknown += s.Total

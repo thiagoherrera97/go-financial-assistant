@@ -77,6 +77,7 @@ function CutList({ items, showSaving = false }: { items: CutItem[]; showSaving?:
                 {i.subcategory ? `${i.categoryLabel} · ` : ''}
                 {i.count} {i.count === 1 ? 'compra' : 'compras'}
                 {showSaving && i.halfPerYear > 0 && ` · cortar metade: ${formatBRL(i.halfPerYear)}/ano`}
+                {showSaving && i.onlyInstallments && ' · parcelas de compra já feita'}
               </span>
             </span>
             <span className="cut-value">

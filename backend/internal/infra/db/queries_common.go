@@ -48,3 +48,7 @@ const expenseKey = `(CASE WHEN ` + expenseKeyBase + ` ~ '^` + debitPrefix + ` ' 
 
 // cleanDescription tira o prefixo e a data das compras no débito do Itaú, para o nome mostrado ser o do comércio.
 const cleanDescription = `REGEXP_REPLACE(p.description, '^DEBITO VISA ELECTRON BRASIL +[0-9]{2}/[0-9]{2} +', '', 'i')`
+
+// isInstallment: o pagamento é parcela de uma compra parcelada. O banco manda as do cartão como compra avulsa, com o
+// "(n/m)" ou "parc n/m" na descrição.
+const isInstallment = `(p.type = 'INSTALLMENT' OR COALESCE(p.description, '') ~* '(\(\s*\d+\s*/\s*\d+\s*\)|parc[a-z.]*\s*\d+\s*/\s*\d+)')`

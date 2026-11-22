@@ -36,6 +36,8 @@ export interface SubcategorySpendItem {
   total: number
   /** Média por mês dos 3 meses anteriores, no mesmo grupo. */
   prevAverage: number
+  /** Parte do total que é parcela de compra já feita (cortar o gasto não a tira dos próximos meses). */
+  installments: number
 }
 
 export interface SubcategorySpend {

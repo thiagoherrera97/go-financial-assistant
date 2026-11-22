@@ -171,7 +171,8 @@ func (r *ClassifyRepo) SetClassification(ctx context.Context, id uuid.UUID, c do
 func (r *ClassifyRepo) SpendBySubcategory(ctx context.Context, month time.Time) ([]domain.SubcategorySpend, error) {
 	rows, err := r.db.Pool.Query(ctx, `
 		WITH e AS (
-			SELECT `+paymentMonth+` AS month, p.category, COALESCE(p.subcategory, '') AS sub, p.essential, pay.amount
+			SELECT `+paymentMonth+` AS month, p.category, COALESCE(p.subcategory, '') AS sub, p.essential, pay.amount,
+			       `+isInstallment+` AS installment
 			FROM payments pay
 			JOIN purchases p ON p.id = pay.purchase_id
 			WHERE pay.status != 'CANCELLED' AND p.kind = 'EXPENSE'
@@ -180,7 +181,8 @@ func (r *ClassifyRepo) SpendBySubcategory(ctx context.Context, month time.Time) 
 		SELECT category, sub, essential,
 		       COUNT(*) FILTER (WHERE month = $1::date),
 		       COALESCE(SUM(amount) FILTER (WHERE month = $1::date), 0),
-		       COALESCE(SUM(amount) FILTER (WHERE month < $1::date), 0) / 3
+		       COALESCE(SUM(amount) FILTER (WHERE month < $1::date), 0) / 3,
+		       COALESCE(SUM(amount) FILTER (WHERE month = $1::date AND installment), 0)
 		FROM e
 		GROUP BY 1, 2, 3
 		HAVING COUNT(*) FILTER (WHERE month = $1::date) > 0
@@ -193,7 +195,7 @@ func (r *ClassifyRepo) SpendBySubcategory(ctx context.Context, month time.Time) 
 	var out []domain.SubcategorySpend
 	for rows.Next() {
 		var s domain.SubcategorySpend
-		if err := rows.Scan(&s.Category, &s.Subcategory, &s.Essential, &s.Count, &s.Total, &s.PrevAverage); err != nil {
+		if err := rows.Scan(&s.Category, &s.Subcategory, &s.Essential, &s.Count, &s.Total, &s.PrevAverage, &s.Installments); err != nil {
 			return nil, fmt.Errorf("erro ao escanear despesas por subcategoria: %w", err)
 		}
 		out = append(out, s)

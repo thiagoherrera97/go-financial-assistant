@@ -11,6 +11,7 @@ const item = (over: Partial<SubcategorySpend['items'][number]>) => ({
   count: 1,
   total: 100,
   prevAverage: 0,
+  installments: 0,
   ...over,
 })
 
@@ -34,6 +35,19 @@ describe('superfluousRanking', () => {
     expect(r[0].delta).toBeCloseTo(1)
     expect(r[1].delta).toBeCloseTo(-0.5)
     expect(r[0].halfPerYear).toBe(1200)
+  })
+  it('parcela de compra já feita não entra na economia de cortar metade', () => {
+    const r = superfluousRanking({
+      ...data,
+      items: [
+        item({ subcategory: 'SHOPPING_BEAUTY', total: 1338, installments: 1338 }),
+        item({ subcategory: 'FOOD_RESTAURANT', total: 698.43, installments: 7.76 }),
+      ],
+    })
+    expect(r[0].halfPerYear).toBe(0)
+    expect(r[0].onlyInstallments).toBe(true)
+    expect(r[1].halfPerYear).toBeCloseTo(4144.02)
+    expect(r[1].onlyInstallments).toBe(false)
   })
   it('sem histórico a variação é nula', () => {
     expect(superfluousRanking({ ...data, items: [item({ prevAverage: 0 })] })[0].delta).toBeNull()
