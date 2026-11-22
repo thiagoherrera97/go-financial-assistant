@@ -75,7 +75,7 @@ function Block({ title, total, tone, children }: { title: string; total: number;
     <section className="card sheet-block">
       <div className="sheet-head">
         <h2>{title}</h2>
-        <strong className={`is-${tone}`}>{formatBRL(total)}</strong>
+        <strong className={Math.abs(total) >= 0.005 ? `is-${tone}` : undefined}>{formatBRL(total)}</strong>
       </div>
       {children}
     </section>
