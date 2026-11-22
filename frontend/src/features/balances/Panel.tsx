@@ -6,7 +6,6 @@ import { InstitutionCard } from './components/InstitutionCard'
 import { useHideValues } from './lib/useHideValues'
 import { SalaryCard } from './components/SalaryCard'
 import { DebtsCard } from './components/DebtsCard'
-import { RecurringCard } from './components/RecurringCard'
 import { useBalances, useSalary } from './api'
 
 export default function Panel() {
@@ -39,7 +38,6 @@ export default function Panel() {
                 i.accounts.map((a) => ({ id: a.id, label: `${i.name} · ${a.name}${a.last4 ? ` final ${a.last4}` : ''}` })),
               )}
             />
-            <RecurringCard hidden={hidden} />
             <div className="bal-grid">
               {data.institutions.map((i) => (
                 <InstitutionCard key={i.id} institution={i} hidden={hidden} now={now} />
