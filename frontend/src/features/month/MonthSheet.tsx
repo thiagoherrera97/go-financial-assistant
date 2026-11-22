@@ -8,6 +8,7 @@ import { formatBRL, formatMonthTitle, shortDay } from '../../shared/lib/format'
 import { useMonth } from '../../shared/lib/useMonth'
 import { cardNotes, formatCycle, leftoverLabel, sheetLeftover } from './lib/month'
 import { useMonthSheet } from './api'
+import { signTone, type SignTone } from '../../shared/lib/tone'
 import type { SheetItem } from './api'
 
 function Head({ it }: { it: SheetItem }) {
@@ -69,12 +70,12 @@ function Rows({ items, empty }: { items: SheetItem[]; empty: string }) {
   )
 }
 
-function Block({ title, total, children }: { title: string; total: number; children: ReactNode }) {
+function Block({ title, total, tone, children }: { title: string; total: number; tone: SignTone; children: ReactNode }) {
   return (
     <section className="card sheet-block">
       <div className="sheet-head">
         <h2>{title}</h2>
-        <strong>{formatBRL(total)}</strong>
+        <strong className={`is-${tone}`}>{formatBRL(total)}</strong>
       </div>
       {children}
     </section>
@@ -96,14 +97,14 @@ export default function MonthSheetPage() {
         {(s) => (
           <div className={sheet.isPlaceholderData ? 'is-stale' : undefined}>
             <div className="tiles">
-              <StatTile label="Entradas" value={formatBRL(s.incomeTotal + s.pendingTotal)} note={s.pendingTotal > 0 ? `${formatBRL(s.pendingTotal)} ainda a receber` : undefined} />
-              <StatTile label="Despesas" value={formatBRL(s.expensesTotal)} note={`${formatBRL(s.cardsTotal)} no cartão`} />
-              <StatTile label={leftoverLabel(sheetLeftover(s).value)} value={formatBRL(Math.abs(sheetLeftover(s).value))} note={sheetLeftover(s).note} />
+              <StatTile label="Entradas" tone="good" value={formatBRL(s.incomeTotal + s.pendingTotal)} note={s.pendingTotal > 0 ? `${formatBRL(s.pendingTotal)} ainda a receber` : undefined} />
+              <StatTile label="Despesas" tone="bad" value={formatBRL(s.expensesTotal)} note={`${formatBRL(s.cardsTotal)} no cartão`} />
+              <StatTile label={leftoverLabel(sheetLeftover(s).value)} tone={signTone(sheetLeftover(s).value)} value={formatBRL(Math.abs(sheetLeftover(s).value))} note={sheetLeftover(s).note} />
             </div>
 
             <div className="sheet-grid section-gap">
               <div className="sheet-col">
-                <Block title="Entradas" total={s.incomeTotal + s.pendingTotal}>
+                <Block title="Entradas" tone="good" total={s.incomeTotal + s.pendingTotal}>
                   <Rows items={s.income} empty="Nenhuma entrada no ciclo." />
                   {s.pending.length > 0 && (
                     <>
@@ -130,11 +131,11 @@ export default function MonthSheetPage() {
               </div>
 
               <div className="sheet-col">
-                <Block title="Despesas fixas" total={s.fixedTotal}>
+                <Block title="Despesas fixas" tone="bad" total={s.fixedTotal}>
                   <Rows items={s.fixed} empty="Nenhuma conta fixa fora do cartão." />
                 </Block>
                 {s.cards.map((c) => (
-                  <Block key={c.name} title={`Fatura ${c.name}`} total={c.total}>
+                  <Block key={c.name} title={`Fatura ${c.name}`} tone="bad" total={c.total}>
                     <Rows items={c.categories} empty="Nenhuma compra no cartão." />
                     {cardNotes(c).length > 0 && (
                       <ul className="sheet-rows sheet-notes">
@@ -153,7 +154,7 @@ export default function MonthSheetPage() {
                     )}
                   </Block>
                 ))}
-                <Block title="Outras despesas" total={s.otherTotal}>
+                <Block title="Outras despesas" tone="bad" total={s.otherTotal}>
                   <Rows items={s.other} empty="Nada além das fixas e do cartão." />
                 </Block>
               </div>

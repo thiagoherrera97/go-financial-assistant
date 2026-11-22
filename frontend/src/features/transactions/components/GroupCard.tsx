@@ -1,5 +1,6 @@
 import { ChevronDown } from 'lucide-react'
 import { useId, useState, type CSSProperties, type ReactNode } from 'react'
+import type { SignTone } from '../../../shared/lib/tone'
 
 interface Props {
   icon: ReactNode
@@ -9,6 +10,8 @@ interface Props {
   amount: string
   /** Linhas menores abaixo do valor (ex.: receitas, investimentos). */
   extras?: string[]
+  /** Cor do valor: verde para o que entra, vermelho para o que sai; sem tom, neutro (investimento, caixinha). */
+  tone?: SignTone
   /** Participação no maior grupo, de 0 a 1, desenhada como barra. */
   share: number
   color: string
@@ -16,7 +19,7 @@ interface Props {
   children: () => ReactNode
 }
 
-export function GroupCard({ icon, title, subtitle, amount, extras = [], share, color, children }: Props) {
+export function GroupCard({ icon, title, subtitle, amount, extras = [], tone, share, color, children }: Props) {
   const [open, setOpen] = useState(false)
   const panelId = useId()
 
@@ -29,7 +32,7 @@ export function GroupCard({ icon, title, subtitle, amount, extras = [], share, c
           <span className="group-sub">{subtitle}</span>
         </span>
         <span className="group-amount">
-          <strong>{amount}</strong>
+          <strong className={tone ? `is-${tone}` : undefined}>{amount}</strong>
           {extras.map((e) => (
             <span key={e} className="group-sub">
               {e}

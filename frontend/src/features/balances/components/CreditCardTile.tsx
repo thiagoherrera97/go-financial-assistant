@@ -38,7 +38,7 @@ export function CreditCardTile({ card, color, hidden }: { card: BalanceCard; col
       </div>
       <div>
         <p className="bal-card-invoice">
-          <StaticMoney value={card.invoice} hidden={hidden} />
+          <StaticMoney value={card.invoice} hidden={hidden} bad />
         </p>
         <p className="bal-card-sub">saldo devedor · inclui parcelas futuras</p>
         {due && (

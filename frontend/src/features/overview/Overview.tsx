@@ -9,6 +9,7 @@ import { useMonth } from '../../shared/lib/useMonth'
 import { useSummary, useTimeseries } from '../../shared/api/totals'
 import { Link } from 'react-router'
 import { formatShare, shouldWarnOtherShare } from './lib/otherShare'
+import { signTone } from '../../shared/lib/tone'
 import { useExpectedIncome } from '../../shared/api/expectedIncome'
 
 export default function Overview() {
@@ -61,23 +62,27 @@ function Tiles({ data, stale, partial, expected }: { data: NonNullable<ReturnTyp
     <div className={`tiles chart-body ${stale ? 'is-stale' : ''}`}>
       <StatTile
         label="Receitas"
+        tone="good"
         value={formatBRL(c.income + expected)}
         note={expected > 0 ? `${formatBRL(expected)} ainda a receber` : undefined}
         compare={partial ? undefined : { current: c.income, previous: p.income, previousMonth: p.month, upIsGood: true }}
       />
       <StatTile
         label="Despesas"
+        tone="bad"
         value={formatBRL(c.expense)}
         compare={partial ? undefined : { current: c.expense, previous: p.expense, previousMonth: p.month, upIsGood: false }}
       />
       <StatTile
         label="Saldo do mês"
+        tone={signTone(balance)}
         value={formatBRL(balance)}
         note={expected > 0 ? `contando o que falta receber · hoje: ${formatBRL(c.income - c.expense)}` : undefined}
         compare={partial ? undefined : { current: balance, previous: p.income - p.expense, previousMonth: p.month, upIsGood: true }}
       />
       <StatTile
         label="Em conta"
+        tone={data.bankBalance === null ? undefined : signTone(data.bankBalance)}
         to="/"
         value={data.bankBalance === null ? '—' : formatBRL(data.bankBalance)}
         note={data.bankBalance === null ? 'Sem contas do Open Finance' : 'Contas correntes, hoje'}

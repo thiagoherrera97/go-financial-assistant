@@ -10,6 +10,7 @@ import { formatBRL, formatMonthLong, formatMonthShort, formatPercent } from '../
 import { currentMonth } from '../../shared/lib/months'
 import { costOf, defaultStart, simulate, verdict, type Premises, type Row, type Scenario } from './lib/simulation'
 import { RANGES, useProjectionState } from './lib/useProjectionState'
+import { signTone } from '../../shared/lib/tone'
 import { useProjection } from './api'
 
 const COMPOSITION: Series[] = [...BUDGET, { key: 'scenario', name: 'Simulado', color: 'var(--series-4)' }]
@@ -127,10 +128,11 @@ export default function Projection() {
                 <div className="tiles section-gap">
                   <StatTile
                     label="Pior mês"
+                    tone={signTone(v.worst.balance)}
                     value={formatBRL(v.worst.balance)}
                     note={`${formatMonthLong(v.worst.month)} · ${v.worst.balance < 0 ? 'fica no vermelho' : 'ainda sobra'}`}
                   />
-                  <StatTile label="Sobra média por mês" value={formatBRL(v.averageLeft)} note={active.length ? 'Com os financiamentos ativos' : 'Sem simulação'} />
+                  <StatTile label="Sobra média por mês" tone={signTone(v.averageLeft)} value={formatBRL(v.averageLeft)} note={active.length ? 'Com os financiamentos ativos' : 'Sem simulação'} />
                   <StatTile
                     label="Meses no vermelho"
                     value={String(v.negativeMonths)}

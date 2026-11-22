@@ -17,6 +17,7 @@ import { useAccounts } from '../../shared/api/accounts'
 import type { TransactionGroup } from './api'
 import type { ExpectedIncome } from '../../shared/api/expectedIncome'
 import { Pager } from '../../shared/components/Pager'
+import { signTone } from '../../shared/lib/tone'
 import { useSubcategoryCatalog } from '../../shared/api/subcategories'
 
 const ESSENTIAL_FILTERS = [
@@ -137,7 +138,7 @@ function Summary({ groups, expected }: { groups: TransactionGroup[] | undefined;
       <StatTile
         label="Total"
         value={formatBRL(net)}
-        tone={net > 0 ? 'good' : net < 0 ? 'bad' : undefined}
+        tone={signTone(net)}
         note={expected > 0 ? `contando o que falta receber · hoje: ${formatBRL(total.income - total.expense)}` : 'receitas − despesas'}
       />
       <StatTile label="Lançamentos" value={String(total.count)} />
@@ -219,8 +220,8 @@ function DayCards({ query }: { query: string }) {
 function amounts(g: TransactionGroup) {
   const invest = g.transfer > 0 ? investSummary(g.applied, g.redeemed, g.key === 'RESERVE') : null
   const extras = [g.income > 0 && `Receitas ${formatBRL(g.income)}`, invest && invest.headline].filter((e): e is string => !!e)
-  if (g.expense > 0) return { amount: `-${formatBRL(g.expense)}`, extras }
-  if (g.income > 0) return { amount: `+${formatBRL(g.income)}`, extras: ['Receitas', ...(invest ? [invest.headline] : [])] }
+  if (g.expense > 0) return { amount: `-${formatBRL(g.expense)}`, extras, tone: 'bad' as const }
+  if (g.income > 0) return { amount: `+${formatBRL(g.income)}`, extras: ['Receitas', ...(invest ? [invest.headline] : [])], tone: 'good' as const }
   if (invest) return { amount: invest.signed, extras: [invest.headline, invest.detail] }
   return { amount: formatBRL(0), extras: [] }
 }
@@ -230,7 +231,7 @@ function withExpected(g: TransactionGroup, expected: number) {
   const a = amounts(g)
   if (expected <= 0 || g.expense > 0) return a
   const extras = a.extras.filter((e) => e !== 'Receitas')
-  return { amount: `+${formatBRL(g.income + expected)}`, extras: [...extras, `${formatBRL(expected)} ainda a receber`] }
+  return { amount: `+${formatBRL(g.income + expected)}`, extras: [...extras, `${formatBRL(expected)} ainda a receber`], tone: 'good' as const }
 }
 
 /** Lançamentos de um grupo aberto; busca só quando o card é expandido. */
@@ -301,6 +302,7 @@ function ReceivedIncome({ query }: { query: string }) {
                 title={s.label}
                 subtitle={`${s.items.length} ${s.items.length === 1 ? 'entrada' : 'entradas'}`}
                 amount={`+${formatBRL(s.total)}`}
+                tone="good"
                 share={s.total / max}
               >
                 {() => <TransactionTable items={s.items} />}

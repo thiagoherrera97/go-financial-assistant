@@ -40,7 +40,7 @@ export function DebtsCard({ hidden, accounts }: Props) {
         <h2 id="bal-debts-title">Dívidas</h2>
         {debts.length > 0 && (
           <p>
-            Em aberto <strong><StaticMoney value={total} hidden={hidden} /></strong>
+            Em aberto <strong><StaticMoney value={total} hidden={hidden} bad /></strong>
           </p>
         )}
       </div>
@@ -107,7 +107,7 @@ function Installments({ debt: d, hidden }: { debt: Debt; hidden: boolean }) {
       </div>
       <p>
         <strong>{p.paid} de {p.total}</strong> parcelas de <StaticMoney value={d.installmentAmount} hidden={hidden} /> pagas · falta{' '}
-        <strong><StaticMoney value={p.remaining} hidden={hidden} /></strong>
+        <strong><StaticMoney value={p.remaining} hidden={hidden} bad /></strong>
       </p>
       {p.done ? (
         <p className="bal-debt-ok"><CircleCheck size={16} aria-hidden /> Quitada</p>
@@ -145,7 +145,7 @@ function Overdraft({ debt: d, hidden }: { debt: Debt; hidden: boolean }) {
         </li>
         <li className="is-total">
           <span>Agora</span>
-          {known ? <StaticMoney value={l.atDue} hidden={hidden} /> : <span>sem saldo do dia {d.dueDay}</span>}
+          {known ? <StaticMoney value={l.atDue} hidden={hidden} bad /> : <span>sem saldo do dia {d.dueDay}</span>}
         </li>
       </ul>
       {known && l.atDue === 0 && <p className="bal-debt-ok"><CircleCheck size={16} aria-hidden /> Quitada</p>}

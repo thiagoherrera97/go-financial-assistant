@@ -1,5 +1,6 @@
 import { Link } from 'react-router'
 import { deltaPercent, formatMonthShort, formatPercent } from '../lib/format'
+import type { SignTone } from '../lib/tone'
 
 interface Props {
   label: string
@@ -10,7 +11,7 @@ interface Props {
   to?: string
   compare?: { current: number; previous: number; previousMonth: string; upIsGood: boolean }
   /** Cor do valor: verde (entrou, sobrou) ou vermelho (saiu, faltou); sem tom, a cor normal do texto. */
-  tone?: 'good' | 'bad'
+  tone?: SignTone
 }
 
 export function StatTile({ label, value, note, to, compare, tone }: Props) {

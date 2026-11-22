@@ -25,7 +25,7 @@ export function BalanceHero({ data, hidden, now }: { data: Balances; hidden: boo
           <p className="bal-aside">
             Saldo devedor dos cartões, à parte (não subtraído do total):{' '}
             <strong>
-              <StaticMoney value={data.openInvoices} hidden={hidden} />
+              <StaticMoney value={data.openInvoices} hidden={hidden} bad />
             </strong>
           </p>
         )}
