@@ -155,7 +155,7 @@ function CategoryCards({ groups: all, query, stale, expected }: { groups: Transa
             color={color}
             icon={<CategoryChip category={g.key} size={20} />}
             title={g.label}
-            subtitle={groupSubtitle(g, g.key === INCOME_GROUP ? expected.length : 0)}
+            subtitle={`${g.count} ${g.count === 1 ? 'lançamento' : 'lançamentos'}`}
             {...withExpected(amounts(g), g.key === INCOME_GROUP ? expectedTotal : 0)}
             share={Math.max(g.expense, g.income, Math.abs(g.applied - g.redeemed)) / max}
           >
@@ -213,12 +213,6 @@ function amounts(g: TransactionGroup) {
   if (g.income > 0) return { amount: `+${formatBRL(g.income)}`, extras: ['Receitas', ...(invest ? [invest.headline] : [])] }
   if (invest) return { amount: invest.signed, extras: [invest.headline, invest.detail] }
   return { amount: formatBRL(0), extras: [] }
-}
-
-function groupSubtitle(g: TransactionGroup, expected: number) {
-  const parts = [`${g.count} ${g.count === 1 ? 'lançamento' : 'lançamentos'}`]
-  if (expected > 0) parts.push(`${expected} a receber`)
-  return parts.join(' · ')
 }
 
 /** Card de Entradas: o que falta receber entra como legenda, sem somar no valor (que é só o que já caiu). */

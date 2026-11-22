@@ -447,6 +447,7 @@ table.tx td { vertical-align: top; }
 .group-title strong { font-weight: 600; overflow-wrap: anywhere; }
 .group-amount { align-items: flex-end; white-space: nowrap; }
 .group-amount strong { font-weight: 650; }
+@media (max-width: 480px) { .group-amount .group-sub { white-space: normal; text-align: right; max-width: 14ch; } }
 .group-sub { font-size: 0.75rem; color: var(--text-muted); }
 .group-chevron { color: var(--text-muted); transition: transform 0.2s ease; flex: none; }
 .is-open .group-chevron { transform: rotate(180deg); }
