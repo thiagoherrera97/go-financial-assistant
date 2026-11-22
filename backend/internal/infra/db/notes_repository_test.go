@@ -89,3 +89,82 @@ func TestDeleteManualTransaction(t *testing.T) {
 		t.Error("a compra manual continuou no banco")
 	}
 }
+
+func TestNotesSpreadAndLearned(t *testing.T) {
+	repo, pg := newTestRepo(t)
+	ctx := context.Background()
+	notes := NewNotesRepo(pg)
+	card, err := repo.UpsertAccount(ctx, ports.ExternalAccount{ID: "nl-card", ItemID: "nl", Type: "CREDIT", Name: "Cartão NL"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { pg.Pool.Exec(context.Background(), `DELETE FROM accounts WHERE id = $1`, card) })
+	noteOf := func(p *domain.Purchase) string {
+		var n *string
+		pg.Pool.QueryRow(ctx, `SELECT note FROM payments WHERE purchase_id = $1`, p.ID).Scan(&n) //nolint:errcheck
+		if n == nil {
+			return "<nula>"
+		}
+		return *n
+	}
+	payOf := func(p *domain.Purchase) uuid.UUID {
+		var id uuid.UUID
+		pg.Pool.QueryRow(ctx, `SELECT id FROM payments WHERE purchase_id = $1`, p.ID).Scan(&id) //nolint:errcheck
+		return id
+	}
+	d := time.Date(2026, 12, 10, 0, 0, 0, 0, time.UTC)
+
+	// Parcelas: a nota de uma vale para as outras da mesma compra (mesmo valor e total), não para outra compra.
+	p3 := cardExpense(t, repo, pg, card, "nl-1", "NLTESTE*Canaa Filmes (3/10)", 153, d)
+	p4 := cardExpense(t, repo, pg, card, "nl-2", "NLTESTE*Canaa Filmes (4/10)", 153, d.AddDate(0, 1, 0))
+	other := cardExpense(t, repo, pg, card, "nl-3", "NLTESTE*Canaa Filmes (2/5)", 80, d)
+	if ok, err := notes.SetTransactionNote(ctx, payOf(p3), "Insufilm"); err != nil || !ok {
+		t.Fatal(ok, err)
+	}
+	if noteOf(p4) != "Insufilm" || noteOf(other) != "<nula>" {
+		t.Errorf("parcelas: 4/10 = %q, outra compra = %q", noteOf(p4), noteOf(other))
+	}
+	// Mudar a nota numa parcela muda nas outras.
+	if _, err := notes.SetTransactionNote(ctx, payOf(p4), "Insulfilm do carro"); err != nil {
+		t.Fatal(err)
+	}
+	if noteOf(p3) != "Insulfilm do carro" {
+		t.Errorf("parcela 3/10 = %q", noteOf(p3))
+	}
+
+	// Mesmo comércio e valor: as sem nota herdam; valor diferente, não.
+	e1 := cardExpense(t, repo, pg, card, "nl-4", "NLTESTE ESTAPAR MONO SEDE", 25, d)
+	e2 := cardExpense(t, repo, pg, card, "nl-5", "NLTESTE ESTAPAR MONO SEDE", 25, d.AddDate(0, 0, 1))
+	e3 := cardExpense(t, repo, pg, card, "nl-6", "NLTESTE ESTAPAR MONO SEDE", 40, d.AddDate(0, 0, 2))
+	if _, err := notes.SetTransactionNote(ctx, payOf(e1), "Estacionamento trabalho"); err != nil {
+		t.Fatal(err)
+	}
+	if noteOf(e2) != "Estacionamento trabalho" || noteOf(e3) != "<nula>" {
+		t.Errorf("aprendida: e2 = %q, e3 = %q", noteOf(e2), noteOf(e3))
+	}
+	// A que chega depois herda na sincronização.
+	e4 := cardExpense(t, repo, pg, card, "nl-7", "NLTESTE ESTAPAR MONO SEDE", 25, d.AddDate(0, 0, 3))
+	if _, err := repo.ApplyPendingNotes(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if noteOf(e4) != "Estacionamento trabalho" {
+		t.Errorf("nova = %q", noteOf(e4))
+	}
+	// Apagada pela pessoa continua apagada.
+	if _, err := notes.SetTransactionNote(ctx, payOf(e4), ""); err != nil {
+		t.Fatal(err)
+	}
+	repo.ApplyPendingNotes(ctx) //nolint:errcheck
+	if noteOf(e4) != "" {
+		t.Errorf("apagada voltou: %q", noteOf(e4))
+	}
+	// Notas diferentes no mesmo comércio e valor: dúvida, nada é herdado.
+	if _, err := notes.SetTransactionNote(ctx, payOf(e2), "Médico"); err != nil {
+		t.Fatal(err)
+	}
+	e5 := cardExpense(t, repo, pg, card, "nl-8", "NLTESTE ESTAPAR MONO SEDE", 25, d.AddDate(0, 0, 4))
+	repo.ApplyPendingNotes(ctx) //nolint:errcheck
+	if noteOf(e5) != "<nula>" {
+		t.Errorf("com dúvida herdou: %q", noteOf(e5))
+	}
+}

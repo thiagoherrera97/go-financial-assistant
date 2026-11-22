@@ -7,6 +7,7 @@ import (
 
 	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/domain"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 // NotesRepo acha transações pelo valor e pelo dia, para a nota mandada pelo chat, e guarda a nota que chegou antes da
@@ -70,7 +71,7 @@ func (r *LedgerRepo) ApplyPendingNotes(ctx context.Context) (int, error) {
 	rows, err := r.db.Pool.Query(ctx, `
 		SELECT n.id, n.note, (
 			SELECT ARRAY_AGG(pay.id) FROM payments pay
-			WHERE pay.status != 'CANCELLED' AND `+notSynthetic+` AND pay.note IS NULL
+			WHERE pay.status != 'CANCELLED' AND `+notSynthetic+` AND COALESCE(pay.note, '') = ''
 			  AND ABS(ABS(pay.amount) - n.amount) < 0.005
 			  AND ABS(`+txDate+`::date - n.day) <= $1
 		)
@@ -107,7 +108,7 @@ func (r *LedgerRepo) ApplyPendingNotes(ctx context.Context) (int, error) {
 		if err != nil {
 			return applied, fmt.Errorf("erro ao aplicar nota pendente: %w", err)
 		}
-		tag, err := tx.Exec(ctx, `UPDATE payments SET note = $2 WHERE id = $1 AND note IS NULL`, h.payment, h.text)
+		tag, err := tx.Exec(ctx, `UPDATE payments SET note = $2 WHERE id = $1 AND COALESCE(note, '') = ''`, h.payment, h.text)
 		if err == nil && tag.RowsAffected() == 1 {
 			_, err = tx.Exec(ctx, `DELETE FROM pending_notes WHERE id = $1`, h.note)
 			if err == nil {
@@ -122,5 +123,35 @@ func (r *LedgerRepo) ApplyPendingNotes(ctx context.Context) (int, error) {
 			return applied, fmt.Errorf("erro ao aplicar nota pendente: %w", err)
 		}
 	}
+	if _, err := inheritNotes(ctx, r.db.Pool, ""); err != nil {
+		return applied, err
+	}
 	return applied, nil
+}
+
+// inheritNotes dá nota a quem nunca teve (nota nula; apagada pela pessoa fica vazia e é respeitada): a transação herda a
+// nota das outras do mesmo tipo, comércio (expenseKey: some número e parcela) e valor, quando todas as que têm nota ali
+// usam a mesma (o estacionamento do trabalho, sempre igual; as parcelas que chegam depois). Nota diferente em alguma
+// deixa a dúvida, e nada é herdado. key vazia olha todos os comércios. Devolve quantas ganharam nota.
+func inheritNotes(ctx context.Context, q interface {
+	Exec(context.Context, string, ...any) (pgconn.CommandTag, error)
+}, key string) (int64, error) {
+	tag, err := q.Exec(ctx, `
+		WITH tx AS (
+			SELECT pay.id, pay.note, p.kind, ROUND(ABS(pay.amount)::numeric, 2) AS amount, `+expenseKey+` AS key
+			FROM payments pay JOIN purchases p ON p.id = pay.purchase_id
+			WHERE pay.status != 'CANCELLED'
+		), learned AS (
+			SELECT kind, key, amount, MIN(note) AS note FROM tx
+			WHERE note <> '' AND key <> '' AND ($1 = '' OR key = $1)
+			GROUP BY 1, 2, 3 HAVING COUNT(DISTINCT note) = 1
+		)
+		UPDATE payments pay SET note = l.note
+		FROM tx JOIN learned l ON l.kind = tx.kind AND l.key = tx.key AND l.amount = tx.amount
+		WHERE pay.id = tx.id AND tx.note IS NULL
+	`, key)
+	if err != nil {
+		return 0, fmt.Errorf("erro ao repetir as notas aprendidas: %w", err)
+	}
+	return tag.RowsAffected(), nil
 }

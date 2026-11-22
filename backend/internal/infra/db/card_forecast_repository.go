@@ -90,6 +90,9 @@ func (r *LedgerRepo) RebuildCardForecasts(ctx context.Context, closeDaysBefore i
 	if _, err := tx.Exec(ctx, `UPDATE payments pay SET note = s.note FROM synthetic_notes s WHERE pay.external_id = s.external_id`); err != nil {
 		return 0, 0, fmt.Errorf("erro ao devolver as notas das previsões: %w", err)
 	}
+	if _, err := inheritNotes(ctx, tx, ""); err != nil {
+		return 0, 0, err
+	}
 	if err := tx.Commit(ctx); err != nil {
 		return 0, 0, fmt.Errorf("erro ao gravar previsões: %w", err)
 	}

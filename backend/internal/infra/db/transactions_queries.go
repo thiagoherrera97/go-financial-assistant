@@ -2,11 +2,13 @@ package db
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/domain"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
 
 // transactionWhere monta a cláusula WHERE (e os argumentos) do filtro, compartilhada pela lista e
@@ -150,12 +152,44 @@ func (r *TransactionsRepo) TransactionGroups(ctx context.Context, f domain.Trans
 	return result, rows.Err()
 }
 
+// SetTransactionNote grava a nota da transação. Nota apagada fica vazia (não nula), para a nota aprendida não voltar
+// nela. Numa parcela ("(3/10)"), a nota vale para as outras parcelas da mesma compra; e as transações sem nota do mesmo
+// comércio e valor herdam a nota quando ela é a única já usada ali (ver inheritNotes).
 func (r *TransactionsRepo) SetTransactionNote(ctx context.Context, id uuid.UUID, note string) (bool, error) {
-	tag, err := r.db.Pool.Exec(ctx, `UPDATE payments SET note = NULLIF($2, '') WHERE id = $1`, id, note)
+	tx, err := r.db.Pool.Begin(ctx)
 	if err != nil {
 		return false, fmt.Errorf("erro ao gravar a nota: %w", err)
 	}
-	return tag.RowsAffected() > 0, nil
+	defer tx.Rollback(ctx) //nolint:errcheck
+	var key string
+	err = tx.QueryRow(ctx, `
+		UPDATE payments pay SET note = $2 FROM purchases p
+		WHERE pay.id = $1 AND p.id = pay.purchase_id
+		RETURNING `+expenseKey, id, note).Scan(&key)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("erro ao gravar a nota: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `
+		UPDATE payments pay SET note = $2
+		FROM purchases p, payments src JOIN purchases sp ON sp.id = src.purchase_id
+		WHERE src.id = $1 AND p.id = pay.purchase_id AND pay.id <> src.id AND pay.status != 'CANCELLED'
+		  AND sp.description ~ '\(\d+/\d+\)\s*$'
+		  AND SUBSTRING(p.description FROM '/(\d+)\)\s*$') = SUBSTRING(sp.description FROM '/(\d+)\)\s*$')
+		  AND `+expenseKey+` = `+strings.ReplaceAll(expenseKey, "p.description", "sp.description")+`
+		  AND ABS(pay.amount - src.amount) < 0.005
+	`, id, note); err != nil {
+		return false, fmt.Errorf("erro ao gravar a nota nas outras parcelas: %w", err)
+	}
+	if _, err := inheritNotes(ctx, tx, key); err != nil {
+		return false, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return false, fmt.Errorf("erro ao gravar a nota: %w", err)
+	}
+	return true, nil
 }
 
 func (r *TransactionsRepo) DeleteManualTransaction(ctx context.Context, id uuid.UUID) (bool, error) {
