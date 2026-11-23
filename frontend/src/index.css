@@ -400,17 +400,21 @@ table.tx td { vertical-align: top; }
 .tx-delete { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 0.8125rem; margin-top: 4px; }
 .tx-delete .btn-small { margin-left: 0; }
 @media (max-width: 720px) {
+  .card { padding: 16px; border-radius: var(--r-md); }
+  .card:has(> .table-scroll > table.tx) { padding-top: 4px; padding-bottom: 4px; }
+}
+/* A tabela reage à largura do próprio card, não da janela: num card estreito vira lista
+   (data em cima, descrição e valor lado a lado) mesmo com a janela larga. */
+.table-scroll:has(> table.tx) { container-type: inline-size; }
+@container (max-width: 760px) {
   .col-wide { display: none; }
   .tx-meta { display: block; }
-  .card { padding: 16px; border-radius: var(--r-md); }
-  /* No celular a tabela vira lista: data em cima, descrição e valor lado a lado, ações numa linha. */
   table.tx thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
   table.tx, table.tx tbody { display: block; }
   table.tx tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'date date' 'desc amount'; gap: 2px 12px; padding: 14px 0; border-bottom: 1px solid var(--grid); }
   table.tx tbody tr:last-child { border-bottom: 0; }
   table.tx td { display: block; padding: 0; border: 0; text-align: left; }
   table.tx td.col-wide { display: none; }
-  .card:has(> .table-scroll > table.tx) { padding-top: 4px; padding-bottom: 4px; }
   table.tx td:first-child { grid-area: date; font-size: 0.75rem; color: var(--text-muted); }
   table.tx td:first-child .amount-caption { display: inline; margin-left: 6px; }
   table.tx td.left:not(.col-wide) { grid-area: desc; font-weight: 500; overflow-wrap: anywhere; }
