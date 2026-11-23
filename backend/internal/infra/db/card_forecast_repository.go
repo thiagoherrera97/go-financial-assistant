@@ -106,6 +106,9 @@ func (r *LedgerRepo) RebuildCardForecasts(ctx context.Context, closeDaysBefore i
 		WHERE p.id = pay.purchase_id AND pay.status != 'CANCELLED' AND `+replacedInstallment); err != nil {
 		return 0, 0, fmt.Errorf("erro ao ocultar parcelas trocadas: %w", err)
 	}
+	if err := insertReplacementEntries(ctx, tx, closeDaysBefore, today); err != nil {
+		return 0, 0, err
+	}
 	if _, err := tx.Exec(ctx, `UPDATE payments pay SET note = s.note FROM synthetic_notes s WHERE pay.external_id = s.external_id`); err != nil {
 		return 0, 0, fmt.Errorf("erro ao devolver as notas das previsões: %w", err)
 	}
@@ -267,6 +270,87 @@ func insertSynthetic(ctx context.Context, tx pgx.Tx, desc string, category domai
 		VALUES ($1, $2, $3, $4, $5, $5, $6, $7, $8, NOW())
 	`, uuid.New(), p.ID, amount, status, billDue, paidAt, externalID, account); err != nil {
 		return fmt.Errorf("erro ao salvar lançamento do cartão: %w", err)
+	}
+	return nil
+}
+
+// insertReplacementEntries lança o gasto que substitui cada série trocada (installment_replacements com description,
+// category, amount e day): um por fatura, só até a fatura já aberta (domain.ReplacementDates), para os meses seguintes não
+// aparecerem antes da hora. Não é sintético (não é apagado ao refazer): a chave em raw_input impede repetir o mês. O do
+// dia que já passou fica pago.
+func insertReplacementEntries(ctx context.Context, tx pgx.Tx, closeDaysBefore int, today time.Time) error {
+	rows, err := tx.Query(ctx, `
+		SELECT r.id, r.installments, r.first_bill, r.from_bill, r.description, r.category, r.amount, r.day,
+		       EXTRACT(DAY FROM a.due_date)::int,
+		       CASE WHEN a.close_date IS NOT NULL AND a.close_date < a.due_date THEN (a.due_date - a.close_date) END
+		FROM installment_replacements r
+		JOIN accounts a ON a.id = r.account_id
+		WHERE a.due_date IS NOT NULL AND r.description IS NOT NULL AND r.category IS NOT NULL
+		  AND r.amount IS NOT NULL AND r.day IS NOT NULL
+	`)
+	if err != nil {
+		return fmt.Errorf("erro ao ler parcelas trocadas: %w", err)
+	}
+	type entry struct {
+		key, desc string
+		category  domain.Category
+		amount    float64
+		day       time.Time
+	}
+	var entries []entry
+	for rows.Next() {
+		var (
+			id                        uuid.UUID
+			installments, day, dueDay int
+			firstBill, fromBill       time.Time
+			desc                      string
+			category                  domain.Category
+			amount                    float64
+			bankClose                 *int
+		)
+		if err := rows.Scan(&id, &installments, &firstBill, &fromBill, &desc, &category, &amount, &day, &dueDay, &bankClose); err != nil {
+			rows.Close()
+			return fmt.Errorf("erro ao ler parcela trocada: %w", err)
+		}
+		days := closeDaysBefore
+		if bankClose != nil && *bankClose > 0 && *bankClose < 28 {
+			days = *bankClose
+		}
+		open := domain.CardBillDue(today, dueDay, days)
+		for _, d := range domain.ReplacementDates(firstBill, fromBill, open, installments, day) {
+			key := fmt.Sprintf("[troca de parcelas do cartão: %s %s]", id, d.Format("2006-01"))
+			entries = append(entries, entry{key: key, desc: desc, category: category, amount: amount, day: d})
+		}
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("erro ao ler parcelas trocadas: %w", err)
+	}
+	for _, e := range entries {
+		var exists bool
+		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM purchases WHERE raw_input = $1)`, e.key).Scan(&exists); err != nil {
+			return fmt.Errorf("erro ao ler gasto da troca: %w", err)
+		}
+		if exists {
+			continue
+		}
+		p, err := domain.NewPurchase(e.amount, &e.desc, e.category, domain.PaymentMethodOther, domain.PurchaseTypeSingle, e.key)
+		if err != nil {
+			return fmt.Errorf("gasto da troca inválido: %w", err)
+		}
+		if err := insertPurchase(ctx, tx, p); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(ctx, `INSERT INTO payments (id, purchase_id, amount, status, due_date, created_at)
+			VALUES ($1, $2, $3, 'PENDING', $4, NOW())`, uuid.New(), p.ID, e.amount, e.day); err != nil {
+			return fmt.Errorf("erro ao salvar gasto da troca: %w", err)
+		}
+	}
+	// O do dia que já chegou conta como pago.
+	if _, err := tx.Exec(ctx, `UPDATE payments pay SET status = 'PAID', paid_at = pay.due_date
+		FROM purchases p WHERE p.id = pay.purchase_id AND pay.status = 'PENDING' AND pay.due_date <= $1
+		  AND p.raw_input LIKE '[troca de parcelas do cartão: %'`, today); err != nil {
+		return fmt.Errorf("erro ao quitar gasto da troca: %w", err)
 	}
 	return nil
 }

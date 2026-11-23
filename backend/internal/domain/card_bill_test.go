@@ -67,3 +67,33 @@ func TestCardForecastHorizon(t *testing.T) {
 		t.Errorf("horizonte inesperado: %s", got)
 	}
 }
+
+func TestReplacementDates(t *testing.T) {
+	day := func(s string) time.Time { v, _ := time.Parse("2006-01-02", s); return v }
+	fmtAll := func(ts []time.Time) []string {
+		out := make([]string, len(ts))
+		for i, v := range ts {
+			out[i] = v.Format("2006-01-02")
+		}
+		return out
+	}
+	// Série 18x que começou na fatura de maio, trocada a partir de dezembro; a fatura aberta é a de dezembro: só dezembro.
+	if got := fmtAll(ReplacementDates(day("2026-05-10"), day("2026-12-10"), day("2026-12-10"), 18, 6)); len(got) != 1 || got[0] != "2026-12-06" {
+		t.Errorf("só a fatura aberta deveria entrar, got %v", got)
+	}
+	// Abriu a de fevereiro: dezembro, janeiro e fevereiro.
+	if got := fmtAll(ReplacementDates(day("2026-05-10"), day("2026-12-10"), day("2027-02-10"), 18, 6)); len(got) != 3 || got[2] != "2027-02-06" {
+		t.Errorf("esperava dez, jan e fev, got %v", got)
+	}
+	// Depois da última parcela (outubro/2027) não entra mais nada.
+	if got := fmtAll(ReplacementDates(day("2026-05-10"), day("2026-12-10"), day("2028-01-10"), 18, 6)); len(got) != 11 || got[10] != "2027-10-06" {
+		t.Errorf("esperava 11 meses até outubro/2027, got %v", got)
+	}
+	// Antes de from_bill abrir, nada; dia 31 vira o último dia do mês.
+	if got := ReplacementDates(day("2026-05-10"), day("2026-12-10"), day("2026-11-10"), 18, 6); len(got) != 0 {
+		t.Errorf("fatura de from_bill ainda não abriu: nada, got %v", fmtAll(got))
+	}
+	if got := fmtAll(ReplacementDates(day("2026-01-10"), day("2027-02-10"), day("2027-02-10"), 18, 31)); len(got) != 1 || got[0] != "2027-02-28" {
+		t.Errorf("dia 31 em fevereiro deveria ser 28/02, got %v", got)
+	}
+}

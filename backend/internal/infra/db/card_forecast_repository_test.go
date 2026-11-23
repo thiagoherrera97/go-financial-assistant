@@ -211,6 +211,7 @@ func TestRebuildCardForecasts_ReplacedInstallmentsAreHidden(t *testing.T) {
 	}
 	t.Cleanup(func() {
 		pg.Pool.Exec(context.Background(), `DELETE FROM purchases WHERE id IN (SELECT purchase_id FROM payments WHERE account_id = $1)`, card)
+		pg.Pool.Exec(context.Background(), `DELETE FROM purchases WHERE description = 'fc-r Mercado'`)
 		pg.Pool.Exec(context.Background(), `DELETE FROM accounts WHERE id = $1`, card)
 	})
 
@@ -226,8 +227,8 @@ func TestRebuildCardForecasts_ReplacedInstallmentsAreHidden(t *testing.T) {
 	if err := repo.SaveCardBills(ctx, card, []ports.ExternalBill{{ID: "fc-repl-nov", DueDate: day("2026-11-10"), Total: 70}}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := pg.Pool.Exec(ctx, `INSERT INTO installment_replacements (account_id, installments, first_bill, from_bill)
-		VALUES ($1, 5, '2026-09-10', '2026-11-10')`, card); err != nil {
+	if _, err := pg.Pool.Exec(ctx, `INSERT INTO installment_replacements (account_id, installments, first_bill, from_bill, description, category, amount, day)
+		VALUES ($1, 5, '2026-09-10', '2026-11-10', 'fc-r Mercado', 'MARKET', 50, 6)`, card); err != nil {
 		t.Fatal(err)
 	}
 
@@ -268,5 +269,24 @@ func TestRebuildCardForecasts_ReplacedInstallmentsAreHidden(t *testing.T) {
 		if got := status[d]; len(got) != 1 || got[0] != s {
 			t.Errorf("%s: esperava um lançamento %s, got %v", d, s, got)
 		}
+	}
+
+	// O substituto entra só até a fatura aberta (10/12): 06/11 (já passou: pago) e 06/12; janeiro ainda não.
+	var got []string
+	rows, err = pg.Pool.Query(ctx, `SELECT pay.due_date::text || ' ' || pay.status FROM payments pay
+		JOIN purchases p ON p.id = pay.purchase_id WHERE p.description = 'fc-r Mercado' ORDER BY pay.due_date`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for rows.Next() {
+		var s string
+		if err := rows.Scan(&s); err != nil {
+			t.Fatal(err)
+		}
+		got = append(got, s)
+	}
+	rows.Close()
+	if len(got) != 2 || got[0] != "2026-11-06 PAID" || got[1] != "2026-12-06 PENDING" {
+		t.Errorf("esperava o substituto de 06/11 (pago) e 06/12, sem repetir ao refazer, got %v", got)
 	}
 }
