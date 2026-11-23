@@ -227,8 +227,8 @@ func TestRebuildCardForecasts_ReplacedInstallmentsAreHidden(t *testing.T) {
 	if err := repo.SaveCardBills(ctx, card, []ports.ExternalBill{{ID: "fc-repl-nov", DueDate: day("2026-11-10"), Total: 70}}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := pg.Pool.Exec(ctx, `INSERT INTO installment_replacements (account_id, installments, first_bill, from_bill, description, category, amount, day)
-		VALUES ($1, 5, '2026-09-10', '2026-11-10', 'fc-r Mercado', 'MARKET', 50, 6)`, card); err != nil {
+	if _, err := pg.Pool.Exec(ctx, `INSERT INTO installment_replacements (account_id, installments, first_bill, from_bill, description, category, amount, day, entry_note)
+		VALUES ($1, 5, '2026-09-10', '2026-11-10', 'fc-r Mercado', 'MARKET', 50, 6, 'Compras Semar')`, card); err != nil {
 		t.Fatal(err)
 	}
 
@@ -271,9 +271,9 @@ func TestRebuildCardForecasts_ReplacedInstallmentsAreHidden(t *testing.T) {
 		}
 	}
 
-	// O substituto entra só até a fatura aberta (10/12): 06/11 (já passou: pago) e 06/12; janeiro ainda não.
+	// O substituto entra só quando o dia chega: hoje 20/11, só o de 06/11 (pago, com a nota); 06/12 ainda não.
 	var got []string
-	rows, err = pg.Pool.Query(ctx, `SELECT pay.due_date::text || ' ' || pay.status FROM payments pay
+	rows, err = pg.Pool.Query(ctx, `SELECT pay.due_date::text || ' ' || pay.status || ' ' || COALESCE(pay.note, '') FROM payments pay
 		JOIN purchases p ON p.id = pay.purchase_id WHERE p.description = 'fc-r Mercado' ORDER BY pay.due_date`)
 	if err != nil {
 		t.Fatal(err)
@@ -286,7 +286,7 @@ func TestRebuildCardForecasts_ReplacedInstallmentsAreHidden(t *testing.T) {
 		got = append(got, s)
 	}
 	rows.Close()
-	if len(got) != 2 || got[0] != "2026-11-06 PAID" || got[1] != "2026-12-06 PENDING" {
-		t.Errorf("esperava o substituto de 06/11 (pago) e 06/12, sem repetir ao refazer, got %v", got)
+	if len(got) != 1 || got[0] != "2026-11-06 PAID Compras Semar" {
+		t.Errorf("esperava só o substituto de 06/11, pago e com a nota, sem repetir ao refazer, got %v", got)
 	}
 }

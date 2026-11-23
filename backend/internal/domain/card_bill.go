@@ -37,18 +37,20 @@ func CardCloseEstimate(due time.Time, closeDaysBefore int) time.Time {
 	return due.AddDate(0, 0, -closeDaysBefore)
 }
 
-// ReplacementDates devolve os dias em que entra o lançamento que substitui uma série de parcelas no cartão: um por fatura,
-// de fromBill até a da última parcela (firstBill + installments-1 meses), mas só até a fatura aberta (openBill), para não
-// aparecer nos meses seguintes antes da hora. Cada um cai no dia day do mês da fatura (o último dia nos meses mais curtos).
-func ReplacementDates(firstBill, fromBill, openBill time.Time, installments, day int) []time.Time {
+// ReplacementDates devolve os dias em que entra o lançamento que substitui uma série de parcelas no cartão: um por mês,
+// do mês de fromBill até o da última parcela (firstBill + installments-1 meses), no dia day (o último dia nos meses mais
+// curtos). Só os que já chegaram (até today): os meses seguintes não aparecem antes da hora.
+func ReplacementDates(firstBill, fromBill, today time.Time, installments, day int) []time.Time {
 	month := func(t time.Time) time.Time { return time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, time.UTC) }
 	last := month(firstBill).AddDate(0, installments-1, 0)
-	if o := month(openBill); o.Before(last) {
-		last = o
-	}
+	today = time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, time.UTC)
 	var out []time.Time
 	for m := month(fromBill); !m.After(last); m = m.AddDate(0, 1, 0) {
-		out = append(out, cardDueIn(m, day))
+		d := cardDueIn(m, day)
+		if d.After(today) {
+			break
+		}
+		out = append(out, d)
 	}
 	return out
 }

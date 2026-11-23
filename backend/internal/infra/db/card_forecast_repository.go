@@ -106,7 +106,7 @@ func (r *LedgerRepo) RebuildCardForecasts(ctx context.Context, closeDaysBefore i
 		WHERE p.id = pay.purchase_id AND pay.status != 'CANCELLED' AND `+replacedInstallment); err != nil {
 		return 0, 0, fmt.Errorf("erro ao ocultar parcelas trocadas: %w", err)
 	}
-	if err := insertReplacementEntries(ctx, tx, closeDaysBefore, today); err != nil {
+	if err := insertReplacementEntries(ctx, tx, today); err != nil {
 		return 0, 0, err
 	}
 	if _, err := tx.Exec(ctx, `UPDATE payments pay SET note = s.note FROM synthetic_notes s WHERE pay.external_id = s.external_id`); err != nil {
@@ -275,17 +275,14 @@ func insertSynthetic(ctx context.Context, tx pgx.Tx, desc string, category domai
 }
 
 // insertReplacementEntries lança o gasto que substitui cada série trocada (installment_replacements com description,
-// category, amount e day): um por fatura, só até a fatura já aberta (domain.ReplacementDates), para os meses seguintes não
-// aparecerem antes da hora. Não é sintético (não é apagado ao refazer): a chave em raw_input impede repetir o mês. O do
-// dia que já passou fica pago.
-func insertReplacementEntries(ctx context.Context, tx pgx.Tx, closeDaysBefore int, today time.Time) error {
+// category, amount e day, e a nota entry_note): um por mês, só quando o dia chega (domain.ReplacementDates), para os meses
+// seguintes não aparecerem antes da hora. Entra pago. Não é sintético (não é apagado ao refazer): a chave em raw_input
+// impede repetir o mês.
+func insertReplacementEntries(ctx context.Context, tx pgx.Tx, today time.Time) error {
 	rows, err := tx.Query(ctx, `
-		SELECT r.id, r.installments, r.first_bill, r.from_bill, r.description, r.category, r.amount, r.day,
-		       EXTRACT(DAY FROM a.due_date)::int,
-		       CASE WHEN a.close_date IS NOT NULL AND a.close_date < a.due_date THEN (a.due_date - a.close_date) END
+		SELECT r.id, r.installments, r.first_bill, r.from_bill, r.description, r.category, r.amount, r.day, NULLIF(r.entry_note, '')
 		FROM installment_replacements r
-		JOIN accounts a ON a.id = r.account_id
-		WHERE a.due_date IS NOT NULL AND r.description IS NOT NULL AND r.category IS NOT NULL
+		WHERE r.description IS NOT NULL AND r.category IS NOT NULL
 		  AND r.amount IS NOT NULL AND r.day IS NOT NULL
 	`)
 	if err != nil {
@@ -296,30 +293,26 @@ func insertReplacementEntries(ctx context.Context, tx pgx.Tx, closeDaysBefore in
 		category  domain.Category
 		amount    float64
 		day       time.Time
+		note      *string
 	}
 	var entries []entry
 	for rows.Next() {
 		var (
-			id                        uuid.UUID
-			installments, day, dueDay int
-			firstBill, fromBill       time.Time
-			desc                      string
-			category                  domain.Category
-			amount                    float64
-			bankClose                 *int
+			id                  uuid.UUID
+			installments, day   int
+			firstBill, fromBill time.Time
+			desc                string
+			category            domain.Category
+			amount              float64
+			note                *string
 		)
-		if err := rows.Scan(&id, &installments, &firstBill, &fromBill, &desc, &category, &amount, &day, &dueDay, &bankClose); err != nil {
+		if err := rows.Scan(&id, &installments, &firstBill, &fromBill, &desc, &category, &amount, &day, &note); err != nil {
 			rows.Close()
 			return fmt.Errorf("erro ao ler parcela trocada: %w", err)
 		}
-		days := closeDaysBefore
-		if bankClose != nil && *bankClose > 0 && *bankClose < 28 {
-			days = *bankClose
-		}
-		open := domain.CardBillDue(today, dueDay, days)
-		for _, d := range domain.ReplacementDates(firstBill, fromBill, open, installments, day) {
+		for _, d := range domain.ReplacementDates(firstBill, fromBill, today, installments, day) {
 			key := fmt.Sprintf("[troca de parcelas do cartão: %s %s]", id, d.Format("2006-01"))
-			entries = append(entries, entry{key: key, desc: desc, category: category, amount: amount, day: d})
+			entries = append(entries, entry{key: key, desc: desc, category: category, amount: amount, day: d, note: note})
 		}
 	}
 	rows.Close()
@@ -341,16 +334,10 @@ func insertReplacementEntries(ctx context.Context, tx pgx.Tx, closeDaysBefore in
 		if err := insertPurchase(ctx, tx, p); err != nil {
 			return err
 		}
-		if _, err := tx.Exec(ctx, `INSERT INTO payments (id, purchase_id, amount, status, due_date, created_at)
-			VALUES ($1, $2, $3, 'PENDING', $4, NOW())`, uuid.New(), p.ID, e.amount, e.day); err != nil {
+		if _, err := tx.Exec(ctx, `INSERT INTO payments (id, purchase_id, amount, status, due_date, paid_at, note, created_at)
+			VALUES ($1, $2, $3, 'PAID', $4::date, $4::timestamptz, $5, NOW())`, uuid.New(), p.ID, e.amount, e.day, e.note); err != nil {
 			return fmt.Errorf("erro ao salvar gasto da troca: %w", err)
 		}
-	}
-	// O do dia que já chegou conta como pago.
-	if _, err := tx.Exec(ctx, `UPDATE payments pay SET status = 'PAID', paid_at = pay.due_date
-		FROM purchases p WHERE p.id = pay.purchase_id AND pay.status = 'PENDING' AND pay.due_date <= $1
-		  AND p.raw_input LIKE '[troca de parcelas do cartão: %'`, today); err != nil {
-		return fmt.Errorf("erro ao quitar gasto da troca: %w", err)
 	}
 	return nil
 }
