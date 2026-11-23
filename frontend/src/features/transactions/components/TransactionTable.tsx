@@ -8,7 +8,7 @@ import type { Transaction } from '../api'
 
 const categoryText = (t: Transaction) => (t.subcategoryLabel ? `${t.categoryLabel} › ${t.subcategoryLabel}` : t.categoryLabel)
 
-/** Tabela de lançamentos. Em telas estreitas categoria e conta descem para baixo da descrição. */
+/** Tabela de lançamentos: data, descrição e valor primeiro. Em cards estreitas categoria e conta descem para baixo da descrição. */
 export function TransactionTable({ items, hideCategory = false }: { items: Transaction[]; hideCategory?: boolean }) {
   return (
     <div className="table-scroll">
@@ -17,6 +17,9 @@ export function TransactionTable({ items, hideCategory = false }: { items: Trans
           <tr>
             <th scope="col">Data</th>
             <th scope="col">Descrição</th>
+            <th scope="col" className="amount-col">
+              Valor
+            </th>
             {!hideCategory && (
               <th scope="col" className="col-wide">
                 Categoria
@@ -28,7 +31,6 @@ export function TransactionTable({ items, hideCategory = false }: { items: Trans
             <th scope="col" className="col-wide">
               Conta
             </th>
-            <th scope="col">Valor</th>
           </tr>
         </thead>
         <tbody>
@@ -65,6 +67,10 @@ export function TransactionTable({ items, hideCategory = false }: { items: Trans
                     {t.source === 'MANUAL' && t.type === 'SINGLE' && <DeleteManual id={t.id} />}
                   </span>
                 </td>
+                <td className={`amount amount-${a.tone}`}>
+                  {a.text}
+                  <span className="amount-caption">{a.caption}</span>
+                </td>
                 {!hideCategory && (
                   <td className="left col-wide">
                     <span className="cat-cell">
@@ -76,10 +82,6 @@ export function TransactionTable({ items, hideCategory = false }: { items: Trans
                 )}
                 <td className="left col-wide">{t.paymentMethodLabel}</td>
                 <td className="left col-wide">{t.accountName || '—'}</td>
-                <td className={`amount amount-${a.tone}`}>
-                  {a.text}
-                  <span className="amount-caption">{a.caption}</span>
-                </td>
               </tr>
             )
           })}

@@ -375,7 +375,9 @@ table.data tbody tr:hover { background: color-mix(in srgb, var(--surface-2) 60%,
 .check { display: inline-flex; align-items: center; gap: 8px; font-size: 0.875rem; color: var(--text-secondary); cursor: pointer; min-height: 32px; }
 .table-scroll { overflow-x: auto; }
 table.tx td.left, table.tx th.left { text-align: left; }
-table.tx th:nth-child(2), table.tx th:nth-child(3), table.tx th:nth-child(4), table.tx th:nth-child(5) { text-align: left; }
+table.tx th:not(:first-child) { text-align: left; }
+table.tx th.amount-col { text-align: right; }
+@container (min-width: 761px) { table.tx td.amount:not(:last-child), table.tx th.amount-col:not(:last-child) { padding-right: 24px; } }
 table.tx td { vertical-align: top; }
 .badge { display: inline-flex; align-items: center; gap: 3px; margin-left: 6px; padding: 1px 8px; border-radius: 999px; font-size: 0.6875rem; font-weight: 500; color: var(--text-secondary); background: var(--surface-2); white-space: nowrap; }
 .amount { white-space: nowrap; font-weight: 500; }
