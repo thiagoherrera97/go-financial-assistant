@@ -276,19 +276,23 @@ func insertSynthetic(ctx context.Context, tx pgx.Tx, desc string, category domai
 
 // insertReplacementEntries lança o gasto que substitui cada série trocada (installment_replacements com description,
 // category, amount e day, e a nota entry_note): um por mês, só quando o dia chega (domain.ReplacementDates), para os meses
-// seguintes não aparecerem antes da hora. Entra pago. Não é sintético (não é apagado ao refazer): a chave em raw_input
-// impede repetir o mês.
+// seguintes não aparecerem antes da hora. Entra pago. Não é sintético (não é apagado ao refazer). A regra guarda o último
+// mês lançado (last_entry_month): cada mês entra uma vez só, sem consultar os já lançados, e a regra que já lançou a
+// última parcela da série nem é lida.
 func insertReplacementEntries(ctx context.Context, tx pgx.Tx, today time.Time) error {
 	rows, err := tx.Query(ctx, `
-		SELECT r.id, r.installments, r.first_bill, r.from_bill, r.description, r.category, r.amount, r.day, NULLIF(r.entry_note, '')
+		SELECT r.id, r.installments, r.first_bill, r.from_bill, r.description, r.category, r.amount, r.day,
+		       NULLIF(r.entry_note, ''), r.last_entry_month
 		FROM installment_replacements r
-		WHERE r.description IS NOT NULL AND r.category IS NOT NULL
-		  AND r.amount IS NOT NULL AND r.day IS NOT NULL
+		WHERE r.description IS NOT NULL AND r.category IS NOT NULL AND r.amount IS NOT NULL AND r.day IS NOT NULL
+		  AND (r.last_entry_month IS NULL
+		       OR r.last_entry_month < DATE_TRUNC('month', r.first_bill) + (r.installments - 1) * INTERVAL '1 month')
 	`)
 	if err != nil {
 		return fmt.Errorf("erro ao ler parcelas trocadas: %w", err)
 	}
 	type entry struct {
+		rule      uuid.UUID
 		key, desc string
 		category  domain.Category
 		amount    float64
@@ -305,14 +309,18 @@ func insertReplacementEntries(ctx context.Context, tx pgx.Tx, today time.Time) e
 			category            domain.Category
 			amount              float64
 			note                *string
+			last                *time.Time
 		)
-		if err := rows.Scan(&id, &installments, &firstBill, &fromBill, &desc, &category, &amount, &day, &note); err != nil {
+		if err := rows.Scan(&id, &installments, &firstBill, &fromBill, &desc, &category, &amount, &day, &note, &last); err != nil {
 			rows.Close()
 			return fmt.Errorf("erro ao ler parcela trocada: %w", err)
 		}
 		for _, d := range domain.ReplacementDates(firstBill, fromBill, today, installments, day) {
+			if last != nil && d.Before(last.AddDate(0, 1, 0)) {
+				continue // mês já lançado
+			}
 			key := fmt.Sprintf("[troca de parcelas do cartão: %s %s]", id, d.Format("2006-01"))
-			entries = append(entries, entry{key: key, desc: desc, category: category, amount: amount, day: d, note: note})
+			entries = append(entries, entry{rule: id, key: key, desc: desc, category: category, amount: amount, day: d, note: note})
 		}
 	}
 	rows.Close()
@@ -320,13 +328,6 @@ func insertReplacementEntries(ctx context.Context, tx pgx.Tx, today time.Time) e
 		return fmt.Errorf("erro ao ler parcelas trocadas: %w", err)
 	}
 	for _, e := range entries {
-		var exists bool
-		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM purchases WHERE raw_input = $1)`, e.key).Scan(&exists); err != nil {
-			return fmt.Errorf("erro ao ler gasto da troca: %w", err)
-		}
-		if exists {
-			continue
-		}
 		p, err := domain.NewPurchase(e.amount, &e.desc, e.category, domain.PaymentMethodOther, domain.PurchaseTypeSingle, e.key)
 		if err != nil {
 			return fmt.Errorf("gasto da troca inválido: %w", err)
@@ -337,6 +338,10 @@ func insertReplacementEntries(ctx context.Context, tx pgx.Tx, today time.Time) e
 		if _, err := tx.Exec(ctx, `INSERT INTO payments (id, purchase_id, amount, status, due_date, paid_at, note, created_at)
 			VALUES ($1, $2, $3, 'PAID', $4::date, $4::timestamptz, $5, NOW())`, uuid.New(), p.ID, e.amount, e.day, e.note); err != nil {
 			return fmt.Errorf("erro ao salvar gasto da troca: %w", err)
+		}
+		if _, err := tx.Exec(ctx, `UPDATE installment_replacements SET last_entry_month = DATE_TRUNC('month', $2::date)
+			WHERE id = $1`, e.rule, e.day); err != nil {
+			return fmt.Errorf("erro ao marcar o mês da troca: %w", err)
 		}
 	}
 	return nil

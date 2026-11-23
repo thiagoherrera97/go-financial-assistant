@@ -289,4 +289,38 @@ func TestRebuildCardForecasts_ReplacedInstallmentsAreHidden(t *testing.T) {
 	if len(got) != 1 || got[0] != "2026-11-06 PAID Compras Semar" {
 		t.Errorf("esperava só o substituto de 06/11, pago e com a nota, sem repetir ao refazer, got %v", got)
 	}
+
+	var last string
+	if err := pg.Pool.QueryRow(ctx, `SELECT last_entry_month::text FROM installment_replacements WHERE account_id = $1`, card).Scan(&last); err != nil {
+		t.Fatal(err)
+	}
+	if last != "2026-11-01" {
+		t.Errorf("a regra deveria marcar novembro como lançado, got %s", last)
+	}
+
+	// Com o mês marcado, apagar o lançado não o faz voltar: a regra não reconfere os meses já lançados.
+	if _, err := pg.Pool.Exec(ctx, `DELETE FROM purchases WHERE description = 'fc-r Mercado'`); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := repo.RebuildCardForecasts(ctx, 6, day("2026-11-25")); err != nil {
+		t.Fatal(err)
+	}
+	var n int
+	if err := pg.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM purchases WHERE description = 'fc-r Mercado'`).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	if n != 0 {
+		t.Errorf("mês já marcado não deveria ser relançado, got %d", n)
+	}
+	// Chegou 06/12: entra dezembro, e a marca avança.
+	if _, _, err := repo.RebuildCardForecasts(ctx, 6, day("2026-12-06")); err != nil {
+		t.Fatal(err)
+	}
+	if err := pg.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM purchases p JOIN payments pay ON pay.purchase_id = p.id
+		WHERE p.description = 'fc-r Mercado' AND pay.due_date = '2026-12-06'`).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	if n != 1 {
+		t.Errorf("dezembro deveria entrar no dia 06/12, got %d", n)
+	}
 }
