@@ -197,3 +197,76 @@ func TestRebuildCardForecasts_IdleCardGetsNoForecast(t *testing.T) {
 		t.Errorf("cartão parado não deveria ganhar previsões, got %d", n)
 	}
 }
+
+// Série trocada por lançamento manual: a partir de from_bill some da tela (real e prevista), sem virar ajuste da fatura
+// nem previsão repetida; as faturas anteriores e as outras séries do cartão ficam como estão.
+func TestRebuildCardForecasts_ReplacedInstallmentsAreHidden(t *testing.T) {
+	repo, pg := newTestRepo(t)
+	ctx := context.Background()
+	day := func(s string) time.Time { v, _ := time.Parse("2006-01-02", s); return v }
+	due := day("2026-11-10")
+	card, err := repo.UpsertAccount(ctx, ports.ExternalAccount{ID: "fc-repl-card", ItemID: "fc-repl", Type: "CREDIT", Name: "TROCADO", Last4: "4242", DueDate: &due})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		pg.Pool.Exec(context.Background(), `DELETE FROM purchases WHERE id IN (SELECT purchase_id FROM payments WHERE account_id = $1)`, card)
+		pg.Pool.Exec(context.Background(), `DELETE FROM accounts WHERE id = $1`, card)
+	})
+
+	// Série trocada: 1/5 na fatura de setembro; até a 3/5 (novembro). Outra série 5x começou em outubro: fica.
+	cardExpense(t, repo, pg, card, "fc-r1", "fc-r FATURA (1/5)", 50, day("2026-09-15"))
+	cardExpense(t, repo, pg, card, "fc-r2", "fc-r FATURA (2/5)", 50, day("2026-10-15"))
+	cardExpense(t, repo, pg, card, "fc-r3", "fc-r FATURA (3/5)", 50, day("2026-11-15"))
+	cardExpense(t, repo, pg, card, "fc-r4", "fc-r OUTRA (2/5)", 20, day("2026-11-15"))
+	cardExpense(t, repo, pg, card, "fc-r5", "fc-r padaria", 12, day("2026-11-18"))
+	if _, err := repo.RecomputeCardBills(ctx, 6); err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.SaveCardBills(ctx, card, []ports.ExternalBill{{ID: "fc-repl-nov", DueDate: day("2026-11-10"), Total: 70}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pg.Pool.Exec(ctx, `INSERT INTO installment_replacements (account_id, installments, first_bill, from_bill)
+		VALUES ($1, 5, '2026-09-10', '2026-11-10')`, card); err != nil {
+		t.Fatal(err)
+	}
+
+	for range 2 { // refazer não muda nada
+		_, adj, err := repo.RebuildCardForecasts(ctx, 6, day("2026-11-20"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if adj != 0 {
+			t.Errorf("a parcela trocada foi cobrada pelo banco: não deveria gerar ajuste, got %d", adj)
+		}
+	}
+
+	status := map[string][]string{}
+	rows, err := pg.Pool.Query(ctx, `SELECT p.description, pay.status FROM payments pay JOIN purchases p ON p.id = pay.purchase_id
+		WHERE pay.account_id = $1 ORDER BY pay.bill_due_date`, card)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for rows.Next() {
+		var d, s string
+		if err := rows.Scan(&d, &s); err != nil {
+			t.Fatal(err)
+		}
+		status[d] = append(status[d], s)
+	}
+	rows.Close()
+	want := map[string]string{
+		"fc-r FATURA (2/5)": "PAID",      // antes de from_bill: fica
+		"fc-r FATURA (3/5)": "CANCELLED", // real, a partir de from_bill
+		"fc-r FATURA (4/5)": "CANCELLED", // prevista
+		"fc-r FATURA (5/5)": "CANCELLED", // prevista
+		"fc-r OUTRA (2/5)":  "PAID",
+		"fc-r OUTRA (3/5)":  "PENDING",
+		"fc-r OUTRA (5/5)":  "PENDING",
+	}
+	for d, s := range want {
+		if got := status[d]; len(got) != 1 || got[0] != s {
+			t.Errorf("%s: esperava um lançamento %s, got %v", d, s, got)
+		}
+	}
+}

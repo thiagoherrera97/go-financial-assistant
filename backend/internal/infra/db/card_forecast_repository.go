@@ -24,6 +24,20 @@ const (
 // notSynthetic filtra os lançamentos que vieram do banco ou foram anotados (fora os criados pelo app).
 const notSynthetic = `(pay.external_id IS NULL OR pay.external_id NOT LIKE '` + syntheticPrefix + `%')`
 
+// replacedInstallment diz se a parcela (aliases pay e p) é de uma série trocada por lançamento manual
+// (installment_replacements): mesmo cartão, mesmo total de parcelas, série que começou na fatura first_bill (a parcela n
+// cai n-1 meses depois dela) e fatura a partir de from_bill. Vale para a real do banco e para a prevista pelo app.
+const replacedInstallment = `EXISTS (SELECT 1 FROM installment_replacements r
+	WHERE r.account_id = pay.account_id AND pay.bill_due_date >= r.from_bill
+	  AND p.description ~ ('\(\d+/' || r.installments || '\)$')
+	  AND DATE_TRUNC('month', pay.bill_due_date)
+	      - (SUBSTRING(p.description FROM '\((\d+)/\d+\)$')::int - 1) * INTERVAL '1 month'
+	      = DATE_TRUNC('month', r.first_bill))`
+
+// activeOrReplaced conta a parcela trocada como se estivesse ativa: ela foi cobrada pelo banco (não pode virar ajuste da
+// fatura) e já chegou (não pode ser prevista de novo); só some da tela.
+const activeOrReplaced = `(pay.status != 'CANCELLED' OR ` + replacedInstallment + `)`
+
 var installmentDesc = regexp.MustCompile(`^(.*?)\s*\((\d+)/(\d+)\)$`)
 
 // SaveCardBills grava (ou atualiza) as faturas fechadas do cartão informadas pelo banco.
@@ -87,6 +101,11 @@ func (r *LedgerRepo) RebuildCardForecasts(ctx context.Context, closeDaysBefore i
 	if err != nil {
 		return 0, 0, err
 	}
+	// Por último, some com as parcelas trocadas por lançamento manual (reais e previstas): já entraram nas contas acima.
+	if _, err := tx.Exec(ctx, `UPDATE payments pay SET status = 'CANCELLED' FROM purchases p
+		WHERE p.id = pay.purchase_id AND pay.status != 'CANCELLED' AND `+replacedInstallment); err != nil {
+		return 0, 0, fmt.Errorf("erro ao ocultar parcelas trocadas: %w", err)
+	}
 	if _, err := tx.Exec(ctx, `UPDATE payments pay SET note = s.note FROM synthetic_notes s WHERE pay.external_id = s.external_id`); err != nil {
 		return 0, 0, fmt.Errorf("erro ao devolver as notas das previsões: %w", err)
 	}
@@ -145,7 +164,7 @@ func knownCardInstallments(ctx context.Context, tx pgx.Tx) ([]domain.CardInstall
 		FROM payments pay
 		JOIN purchases p ON p.id = pay.purchase_id
 		JOIN accounts a ON a.id = pay.account_id
-		WHERE a.type = 'CREDIT' AND p.kind = 'EXPENSE' AND pay.status != 'CANCELLED' AND pay.bill_due_date IS NOT NULL
+		WHERE a.type = 'CREDIT' AND p.kind = 'EXPENSE' AND `+activeOrReplaced+` AND pay.bill_due_date IS NOT NULL
 		  AND p.description ~ '`+installmentSuffix+`' AND `+notSynthetic)
 	if err != nil {
 		return nil, fmt.Errorf("erro ao ler parcelas do cartão: %w", err)
@@ -178,7 +197,7 @@ func insertBillGaps(ctx context.Context, tx pgx.Tx) (int, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT b.external_id, b.account_id, b.due_date, b.total_amount, a.name,
 		       COALESCE((SELECT SUM(pay.amount) FROM payments pay JOIN purchases p ON p.id = pay.purchase_id
-		                 WHERE pay.account_id = b.account_id AND p.kind = 'EXPENSE' AND pay.status != 'CANCELLED'
+		                 WHERE pay.account_id = b.account_id AND p.kind = 'EXPENSE' AND `+activeOrReplaced+`
 		                   AND DATE_TRUNC('month', pay.bill_due_date) = DATE_TRUNC('month', b.due_date)), 0)
 		FROM card_bills b
 		JOIN accounts a ON a.id = b.account_id
