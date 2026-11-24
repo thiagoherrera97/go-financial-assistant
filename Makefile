@@ -1,4 +1,4 @@
-.PHONY: init run build test lint front-dev front-test front-build compose-up compose-down compose-logs db-shell backup restore secret-key
+.PHONY: init run build test lint front-dev front-test front-build compose-up compose-down compose-logs db-shell backup restore secret-key watchdog-install watchdog-uninstall
 
 # Instalação nova: cria o .env, a chave mestra e o SETUP_TOKEN (sem sobrescrever nada). Depois: docker compose up -d
 # e abra o dashboard para o setup pelo navegador.
@@ -93,3 +93,16 @@ backup:
 restore:
 	@test -n "$(FILE)" || (echo "uso: make restore FILE=backups/<arquivo>.dump" && exit 1)
 	docker compose exec -T postgres pg_restore -U finassist -d finassist --clean --if-exists --no-owner < $(FILE)
+
+# LaunchAgent que mantém o Colima e os containers no ar (login, volta de energia, crash). Ver scripts/watchdog.sh.
+watchdog-install:
+	mkdir -p "$(HOME)/Library/Application Support/finassist"
+	install -m 755 scripts/watchdog.sh "$(HOME)/Library/Application Support/finassist/watchdog.sh"
+	sed -e "s|__HOME__|$(HOME)|g" scripts/launchd/com.thiago.finassist.plist > $(HOME)/Library/LaunchAgents/com.thiago.finassist.plist
+	launchctl bootout gui/$$(id -u)/com.thiago.finassist 2>/dev/null || true
+	launchctl bootstrap gui/$$(id -u) $(HOME)/Library/LaunchAgents/com.thiago.finassist.plist
+	@echo "ok — log em ~/Library/Logs/finassist-watchdog.log"
+
+watchdog-uninstall:
+	launchctl bootout gui/$$(id -u)/com.thiago.finassist 2>/dev/null || true
+	rm -f $(HOME)/Library/LaunchAgents/com.thiago.finassist.plist
