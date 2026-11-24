@@ -59,7 +59,9 @@ func (c *Client) generate(ctx context.Context, model string, contents []*genai.C
 	if client == nil {
 		return nil, ports.ErrAIUnavailable
 	}
-	return client.Models.GenerateContent(ctx, model, contents, config)
+	return withFallback(ctx, model, func(ctx context.Context, m string) (*genai.GenerateContentResponse, error) {
+		return client.Models.GenerateContent(ctx, m, contents, config)
+	})
 }
 
 // SetCoachModel troca o modelo do Coach com o app rodando.
