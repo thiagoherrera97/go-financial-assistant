@@ -124,6 +124,7 @@ services:
       ADMIN_SECRET: ${ADMIN_SECRET:-}
       DASHBOARD_PASSWORD: ${DASHBOARD_PASSWORD:-}
       DASHBOARD_2FA: ${DASHBOARD_2FA:-auto}
+      DASHBOARD_AUTH: ${DASHBOARD_AUTH:-on}
       # Setup pelo navegador (make init gera o token). SETUP_REOPEN=true reabre o setup para recuperar senha ou canal.
       SETUP_TOKEN: ${SETUP_TOKEN:-}
       SETUP_REOPEN: ${SETUP_REOPEN:-}

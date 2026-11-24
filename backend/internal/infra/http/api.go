@@ -48,6 +48,7 @@ func (s *Server) mountAPI(password PasswordCheck, reader ports.DashboardReader, 
 	if err != nil {
 		return err
 	}
+	sess.open = s.noAuth
 	a := &api{reader: reader, sessions: sess, logger: s.logger, now: now, coach: newCoachService(s.coach, s.coachPaid), insights: insights.NewInsights(reader), syncer: s.syncer, settings: s.settings, factor: s.factor, challenges: auth.NewChallenges(), setup: s.setup, cycles: s.cycles}
 	a.insights.SetCycles(s.cycles)
 	if s.settings != nil {

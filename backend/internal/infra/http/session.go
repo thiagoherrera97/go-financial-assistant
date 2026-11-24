@@ -25,7 +25,12 @@ const (
 type sessions struct {
 	key   []byte
 	check PasswordCheck
+	// open libera tudo sem login (DASHBOARD_AUTH=off): toda requisição conta como sessão válida.
+	open bool
 }
+
+// noAuthSessionID prende os códigos de confirmação quando não há login (DASHBOARD_AUTH=off) e o navegador não tem cookie.
+const noAuthSessionID = "sem-login"
 
 // PasswordCheck confere a senha do dashboard (a do setup, com hash, ou a do ambiente) em tempo constante.
 type PasswordCheck func(candidate string) bool
@@ -76,6 +81,9 @@ func (s *sessions) clear(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *sessions) valid(r *http.Request) bool {
+	if s.open {
+		return true
+	}
 	c, err := r.Cookie(sessionCookie)
 	if err != nil {
 		return false
@@ -92,6 +100,9 @@ func (s *sessions) valid(r *http.Request) bool {
 func (s *sessions) id(r *http.Request) string {
 	c, err := r.Cookie(sessionCookie)
 	if err != nil {
+		if s.open {
+			return noAuthSessionID
+		}
 		return ""
 	}
 	return c.Value

@@ -76,7 +76,7 @@ func (a *api) me(w http.ResponseWriter, _ *http.Request) {
 	// cycle é o ciclo do salário de hoje: o "mês atual" das telas (pode ser o mês anterior no calendário).
 	month := a.monthStart()
 	start, end := a.insights.Cycles().Bounds(month)
-	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "secondFactor": a.factor.Active(), "cycle": map[string]string{
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "secondFactor": a.factor.Active(), "noAuth": a.sessions.open, "cycle": map[string]string{
 		"month": formatMonth(month), "startsOn": start.Format("2006-01-02"), "endsOn": end.Format("2006-01-02"),
 	}})
 }

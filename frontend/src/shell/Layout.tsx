@@ -25,7 +25,7 @@ import {
 import { useEffect, useState, type ReactNode } from 'react'
 import { NavLink, useNavigate } from 'react-router'
 import { useTheme } from '../shared/lib/theme'
-import { logout } from '../features/auth/api'
+import { logout, useMe } from '../features/auth/api'
 import { SyncControl } from '../shared/components/SyncControl'
 
 interface Item {
@@ -70,6 +70,7 @@ export function Layout({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const { theme, toggle } = useTheme()
+  const noAuth = useMe().data?.noAuth ?? false
   const [open, setOpen] = useState(false)
 
   // Em telas estreitas o menu é uma gaveta: Esc fecha.
@@ -140,10 +141,12 @@ export function Layout({ children }: { children: ReactNode }) {
             {theme === 'dark' ? <Sun size={18} aria-hidden="true" /> : <Moon size={18} aria-hidden="true" />}
             {theme === 'dark' ? 'Tema claro' : 'Tema escuro'}
           </button>
-          <button type="button" className="side-link" onClick={handleLogout}>
-            <LogOut size={18} aria-hidden="true" />
-            Sair
-          </button>
+          {!noAuth && (
+            <button type="button" className="side-link" onClick={handleLogout}>
+              <LogOut size={18} aria-hidden="true" />
+              Sair
+            </button>
+          )}
         </div>
       </aside>
 

@@ -55,6 +55,8 @@ type Config struct {
 	DashboardPassword string
 	// DashboardTwoFactor pede, além da senha, um código enviado ao chat (DASHBOARD_2FA=auto, o padrão). "off" desliga.
 	DashboardTwoFactor bool
+	// DashboardNoAuth libera o dashboard sem login (DASHBOARD_AUTH=off). Só para uso pessoal numa rede fechada (Tailscale).
+	DashboardNoAuth bool
 
 	TelegramBotToken string
 	TelegramChatID   int64
@@ -165,6 +167,13 @@ func (l *loader) app(cfg *Config) {
 	cfg.DashboardPassword = l.get("DASHBOARD_PASSWORD", "")
 	if cfg.DashboardPassword != "" && len(cfg.DashboardPassword) < minDashboardPasswordLen {
 		l.fail("DASHBOARD_PASSWORD muito curta: use ao menos %d caracteres", minDashboardPasswordLen)
+	}
+	switch mode := strings.ToLower(strings.TrimSpace(l.get("DASHBOARD_AUTH", "on"))); mode {
+	case "on", "":
+	case "off":
+		cfg.DashboardNoAuth = true
+	default:
+		l.fail("DASHBOARD_AUTH inválida: %q — use on ou off", mode)
 	}
 	switch mode := strings.ToLower(strings.TrimSpace(l.get("DASHBOARD_2FA", "auto"))); mode {
 	case "auto", "":

@@ -51,7 +51,13 @@ type Server struct {
 	mu     sync.Mutex
 	runCtx context.Context // definido em Start: rotas montadas depois (canal ligado pelo setup) já sobem as limpezas
 	cycles func() domain.Cycles
+
+	// noAuth libera o dashboard sem login (DASHBOARD_AUTH=off).
+	noAuth bool
 }
+
+// SetNoAuth desliga o login do dashboard: toda requisição conta como autenticada. Chamar antes de MountAPI.
+func (s *Server) SetNoAuth() { s.noAuth = true }
 
 // SetSyncer liga a sincronização do Open Finance à API do dashboard (chame antes de MountAPI).
 func (s *Server) SetSyncer(syncer chat.Syncer) { s.syncer = syncer }

@@ -18,6 +18,10 @@ func (a *app) mountDashboard() error {
 	a.server.SetCoach(a.gemini, a.cfg.GeminiPaidPlan)
 	a.server.SetSyncer(a.syncer)
 	a.server.SetCycles(a.cycles.Current)
+	if a.cfg.DashboardNoAuth {
+		a.server.SetNoAuth()
+		a.logger.Warn("dashboard SEM login (DASHBOARD_AUTH=off): qualquer um que alcance o app tem acesso")
+	}
 	a.settingsDeps = &httpserver.SettingsDeps{
 		Service: a.settings, // o canal da página vem da configuração CHANNEL, que o setup pode mudar
 		Audit:   a.store,
