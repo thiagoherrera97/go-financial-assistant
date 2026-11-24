@@ -391,13 +391,9 @@ table.tx td { vertical-align: top; }
 .tx-meta.always { display: block; }
 .tx-meta { display: none; font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
 .tx-note-text { font-size: 0.8125rem; color: var(--text-secondary); overflow-wrap: anywhere; }
-/* Nota da compra: linha inteira, legível, em destaque; toque para editar */
-.tx-note-card { flex: 1 1 100%; display: flex; align-items: flex-start; gap: 8px; margin: 6px 0 2px; padding: 8px 12px; border: 0; border-radius: var(--r-md);
-  background: var(--accent-soft); color: var(--text-primary); font: inherit; font-size: 0.9375rem; font-weight: 500; line-height: 1.4; text-align: left; cursor: pointer; }
-.tx-note-card > svg { flex: none; margin-top: 3px; color: var(--accent-ink); }
-.tx-note-card-text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-.tx-note-card .tx-note-card-edit { opacity: 0.7; }
-.tx-note-card:hover, .tx-note-card:focus-visible { background: color-mix(in srgb, var(--accent-ink) 18%, var(--accent-soft)); }
+/* Título da linha: a nota quando houver (o que foi), senão a descrição do banco */
+.tx-title-note { font-weight: 650; color: var(--text-primary); }
+.tx-bank-desc { display: block; margin-top: 2px; font-size: 0.75rem; font-weight: 400; color: var(--text-secondary); overflow-wrap: anywhere; }
 .tx-note-btn { display: inline-flex; align-items: center; gap: 4px; min-height: 28px; padding: 2px 8px; border: 0; background: none; color: var(--text-muted); font: inherit; font-size: 0.75rem; cursor: pointer; border-radius: 999px; transition: background-color 0.15s ease, color 0.15s ease; }
 .tx-note-btn:hover, .tx-note-btn:focus-visible { color: var(--accent-ink); background: var(--accent-soft); }
 .tx-note-form .btn-small { margin-left: 0; }
@@ -426,12 +422,13 @@ table.tx td { vertical-align: top; }
   table.tx td:first-child { grid-area: date; font-size: 0.75rem; color: var(--text-muted); }
   table.tx td:first-child .amount-caption { display: inline; margin-left: 6px; }
   table.tx td.left:not(.col-wide) { grid-area: desc; font-weight: 500; overflow-wrap: anywhere; }
+  table.tx .tx-title-note { font-size: 1rem; }
   table.tx td.amount { grid-area: amount; text-align: right; }
   table.tx .tx-meta { font-weight: 400; }
   table.tx .tx-actions { gap: 0 2px; margin-top: 2px; font-weight: 400; }
   /* Os botões encostam no texto de cima; nota e formulários usam a largura toda do card, não só a coluna da descrição. */
   table.tx .tx-actions > .tx-note-btn { margin-left: -8px; margin-right: 8px; }
-  table.tx .tx-note-card, table.tx .tx-note-form, table.tx .tx-class-form { flex: none; width: 100cqi; box-sizing: border-box; }
+  table.tx .tx-note-form, table.tx .tx-class-form { flex: none; width: 100cqi; box-sizing: border-box; }
   table.tx tbody tr:hover { background: none; }
 }
 

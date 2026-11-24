@@ -1,11 +1,11 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { Check, PencilLine, StickyNote, X } from 'lucide-react'
+import { Check, PencilLine, X } from 'lucide-react'
 import { setTransactionNote } from '../api'
 
 const MAX = 300
 
-/** A nota da transação ("o que foi"): mostra em destaque, e um toque abre o campo para escrever ou mudar. */
+/** A nota da transação ("o que foi"): o botão abre o campo para escrever ou mudar. */
 export function NoteEditor({ id, note }: { id: string; note: string }) {
   const queryClient = useQueryClient()
   const [editing, setEditing] = useState(false)
@@ -24,16 +24,10 @@ export function NoteEditor({ id, note }: { id: string; note: string }) {
     setEditing(true)
   }
   if (!editing) {
-    // Com nota, ela aparece inteira e em destaque (é o "o que foi" da compra); tocar nela abre a edição.
-    return note ? (
-      <button type="button" className="tx-note-card" onClick={edit} aria-label={`Nota: ${note}. Editar nota`}>
-        <StickyNote size={14} aria-hidden="true" />
-        <span className="tx-note-card-text">{note}</span>
-        <PencilLine size={13} aria-hidden="true" className="tx-note-card-edit" />
-      </button>
-    ) : (
-      <button type="button" className="tx-note-btn" onClick={edit} aria-label="Adicionar nota">
-        <PencilLine size={13} aria-hidden="true" /> nota
+    // A nota em si é o título da linha (TransactionTable); aqui fica só o botão de escrever ou editar.
+    return (
+      <button type="button" className="tx-note-btn" onClick={edit} aria-label={note ? 'Editar nota' : 'Adicionar nota'}>
+        <PencilLine size={13} aria-hidden="true" /> {note ? 'editar nota' : 'nota'}
       </button>
     )
   }

@@ -48,9 +48,11 @@ export function TransactionTable({ items, hideCategory = false }: { items: Trans
                   )}
                 </td>
                 <td className="left">
-                  {t.description || '—'}
+                  {/* Com nota, ela é o título ("o que foi"); a descrição do banco desce como referência. */}
+                  <span className={t.note ? 'tx-title tx-title-note' : 'tx-title'}>{t.note || t.description || '—'}</span>
                   {t.status === 'PENDING' && <span className="badge">Pendente</span>}
                   {t.source === 'MANUAL' && <span className="badge">Manual</span>}
+                  {t.note && <span className="tx-bank-desc">No extrato: {t.description || '—'}</span>}
                   {hideCategory && t.kind === 'EXPENSE' && (
                     <span className="tx-meta always">
                       {t.subcategoryLabel}
