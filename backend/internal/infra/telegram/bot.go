@@ -97,6 +97,12 @@ func (b *Bot) toChatMessage(m *message) chat.Message {
 	}
 
 	switch {
+	case m.Voice != nil:
+		return chat.Message{Audio: attachment(m.Voice.FileID, orDefault(m.Voice.MimeType, "audio/ogg"))}
+	case m.Audio != nil:
+		return chat.Message{Audio: attachment(m.Audio.FileID, orDefault(m.Audio.MimeType, "audio/mpeg"))}
+	case m.Document != nil && strings.HasPrefix(m.Document.MimeType, "audio/"):
+		return chat.Message{Audio: attachment(m.Document.FileID, m.Document.MimeType)}
 	case len(m.Photo) > 0:
 		// O último item do array é a maior resolução; fotos do Telegram são sempre JPEG.
 		return chat.Message{Image: attachment(m.Photo[len(m.Photo)-1].FileID, "image/jpeg")}
@@ -107,4 +113,11 @@ func (b *Bot) toChatMessage(m *message) chat.Message {
 		return chat.Message{Document: attachment(m.Document.FileID, m.Document.MimeType)}
 	}
 	return chat.Message{Text: m.Text}
+}
+
+func orDefault(v, def string) string {
+	if v == "" {
+		return def
+	}
+	return v
 }

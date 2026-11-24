@@ -70,6 +70,10 @@ Mande o **valor**, o **dia** (opcional) e a **nota**; o app acha a transação s
 - **Ainda não chegou do banco:** o app guarda a nota e a coloca na transação quando a sincronização a trouxer (mesmo valor, até 3 dias do dia dito, sem outra nota). Nada é lançado em dobro. Nota pendente espera até 60 dias.
 - Funciona sem a IA. Tamanho máximo: 300 caracteres.
 
+### Mandar por áudio (Telegram)
+
+Tudo acima também vale por **mensagem de voz**: fale como escreveria ("gastei doze e cinquenta na padaria", "nota trezentos e noventa e três, dia primeiro do onze, jantar pizza"). O Gemini transcreve, o bot responde com o que entendeu (🎙️ _…_) e segue como se fosse texto, com valores e datas em algarismos. Precisa da IA ligada (chave do Gemini).
+
 ### Importar extrato bancário (PDF)
 
 Envie o PDF do extrato do seu banco diretamente no WhatsApp. O assistente processa todas as transações automaticamente:

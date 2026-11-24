@@ -55,6 +55,8 @@ type Handler struct {
 
 	mu      sync.Mutex
 	pending *pendingImportSession
+
+	transcriber Transcriber // nil = sem áudio
 }
 
 func NewHandler(analyzeExpense ledger.ExpenseAnalyzer, csvExporter ledger.CSVExporter, messenger ports.Messenger, owner string, logger *slog.Logger) *Handler {
@@ -77,6 +79,15 @@ func (h *Handler) Handle(ctx context.Context, msg Message) (*ledger.ExpenseOutpu
 	if msg.Document != nil {
 		h.handleDocumentImport(ctx, msg.Document)
 		return nil, nil
+	}
+
+	// Voz vira texto e segue o caminho de uma mensagem digitada (notas, confirmações, despesas).
+	if msg.Audio != nil {
+		text, ok := h.transcribe(ctx, msg.Audio)
+		if !ok {
+			return nil, nil
+		}
+		msg = Message{Text: text}
 	}
 
 	if h.tryHandlePendingConfirmation(ctx, msg.Text) {

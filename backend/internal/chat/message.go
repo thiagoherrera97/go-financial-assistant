@@ -8,6 +8,7 @@ type Message struct {
 	Text     string
 	Image    *Attachment
 	Document *Attachment
+	Audio    *Attachment // voz ou arquivo de áudio: é transcrito e segue como texto
 }
 
 // Attachment carrega o conteúdo sob demanda, pois cada canal obtém a mídia de um jeito.

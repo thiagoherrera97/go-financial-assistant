@@ -78,6 +78,7 @@ func (a *app) startTelegram(token string, chatID, offset int64) {
 		handler.SetDigester(a.insights)
 		handler.SetBalancer(a.insights)
 		handler.SetNoter(db.NewNotesRepo(a.db))
+		handler.SetTranscriber(a.gemini)
 		bot := telegram.NewBot(tg, chatID, handler, a.logger).StartFrom(offset)
 		a.channel.publish(tg, owner)
 		go bot.Run(a.ctx)

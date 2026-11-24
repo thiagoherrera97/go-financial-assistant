@@ -186,6 +186,8 @@ type message struct {
 	From     *user       `json:"from"`
 	Photo    []photoSize `json:"photo"`
 	Document *document   `json:"document"`
+	Voice    *document   `json:"voice"` // mensagem de voz gravada no app (OGG/Opus)
+	Audio    *document   `json:"audio"` // arquivo de áudio enviado
 }
 
 type chatInfo struct {

@@ -187,6 +187,16 @@ func TestToChatMessage(t *testing.T) {
 	if m := b.toChatMessage(&message{Document: &document{FileID: "d", MimeType: "application/pdf"}}); m.Document == nil || m.Document.MimeType != "application/pdf" {
 		t.Errorf("pdf: %+v", m)
 	}
+
+	if m := b.toChatMessage(&message{Voice: &document{FileID: "v"}}); m.Audio == nil || m.Audio.MimeType != "audio/ogg" || m.Document != nil {
+		t.Errorf("voz: %+v", m)
+	}
+	if m := b.toChatMessage(&message{Audio: &document{FileID: "a", MimeType: "audio/mp4"}}); m.Audio == nil || m.Audio.MimeType != "audio/mp4" {
+		t.Errorf("áudio: %+v", m)
+	}
+	if m := b.toChatMessage(&message{Document: &document{FileID: "d", MimeType: "audio/ogg"}}); m.Audio == nil || m.Document != nil {
+		t.Errorf("áudio como arquivo deveria ser Audio: %+v", m)
+	}
 }
 
 func TestRun_AdvancesOffsetAndStopsOnCancel(t *testing.T) {
