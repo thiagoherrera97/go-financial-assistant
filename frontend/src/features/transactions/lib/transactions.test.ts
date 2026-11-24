@@ -145,6 +145,11 @@ describe('showsExpectedExpenses', () => {
     expect(showsExpectedExpenses(p(''), '2026-11')).toBe(true)
     expect(showsExpectedExpenses(p('mes=2026-12&tipo=EXPENSE'), '2026-11')).toBe(true)
   })
+  it('conta fixa é essencial: aparece no filtro Essencial, some em Supérfluo e A revisar', () => {
+    expect(showsExpectedExpenses(p('essencial=true'), '2026-11')).toBe(true)
+    expect(showsExpectedExpenses(p('essencial=false'), '2026-11')).toBe(false)
+    expect(showsExpectedExpenses(p('essencial=unknown'), '2026-11')).toBe(false)
+  })
   it('some com filtro que as contas fixas não têm', () => {
     for (const q of ['tipo=INCOME', 'categoria=FOOD', 'forma=PIX', 'q=uber', 'mes=todos'])
       expect(showsExpectedExpenses(p(q), '2026-11')).toBe(false)

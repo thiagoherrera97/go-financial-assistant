@@ -57,7 +57,10 @@ export function showsExpectedExpenses(params: URLSearchParams, now = currentMont
   if (!monthFilter(params, now)) return false
   const kind = params.get('tipo')?.trim()
   if (kind && kind !== 'EXPENSE') return false
-  return (['categoria', 'sub', 'essencial', 'forma', 'conta', 'q'] as const).every((k) => !params.get(k)?.trim())
+  // Conta fixa (aluguel, seguro, financiamento) é essencial: continua prevista quando o filtro é "Essencial".
+  const essential = params.get('essencial')?.trim()
+  if (essential && essential !== 'true') return false
+  return (['categoria', 'sub', 'forma', 'conta', 'q'] as const).every((k) => !params.get(k)?.trim())
 }
 
 /**
