@@ -65,10 +65,26 @@ func transactionWhere(f domain.TransactionFilter) (string, []any) {
 	return strings.Join(where, " AND "), args
 }
 
+// installmentPurchaseDay acha o dia da compra de uma parcela do cartão ("(3/10)"). O banco só manda esse dia na parcela
+// 1; as outras vêm com o dia da fatura em que caem. Busca a parcela 1 da mesma série (mesma conta, mesma descrição com
+// "(1/N)", valor igual a menos do arredondamento, que o banco joga na parcela 1) mais recente antes desta. Sem ela, ou na própria parcela 1, não há
+// linha e o extrato fica com o dia da transação.
+const installmentPurchaseDay = `
+	SELECT COALESCE(fp.due_date, fp.paid_at::date, fp.created_at::date) AS day
+	FROM payments fp
+	JOIN purchases fpp ON fpp.id = fp.purchase_id
+	WHERE p.description ~ '\(\d+/\d+\)\s*$' AND SUBSTRING(p.description FROM '\((\d+)/\d+\)\s*$') <> '1'
+	  AND fpp.description = REGEXP_REPLACE(p.description, '\(\d+/(\d+)\)\s*$', '(1/\1)')
+	  AND fp.account_id IS NOT DISTINCT FROM pay.account_id AND fp.id <> pay.id AND fp.status != 'CANCELLED'
+	  AND ABS(fp.amount - pay.amount) <= GREATEST(0.20, pay.amount * 0.02)
+	  AND COALESCE(fp.due_date, fp.paid_at::date, fp.created_at::date) <= ` + txDate + `
+	ORDER BY 1 DESC
+	LIMIT 1`
+
 func (r *TransactionsRepo) Transactions(ctx context.Context, f domain.TransactionFilter) ([]domain.Transaction, int, error) {
 	where, args := transactionWhere(f)
 	args = append(args, f.Limit, f.Offset)
-	order := "date DESC, pay.bank_time DESC NULLS LAST, pay.created_at DESC, pay.id"
+	order := "COALESCE(first.day, " + txDate + ") DESC, date DESC, pay.bank_time DESC NULLS LAST, pay.created_at DESC, pay.id"
 	if f.SortByAmount {
 		order = "ABS(pay.amount) DESC, date DESC, pay.id"
 	}
@@ -79,10 +95,11 @@ func (r *TransactionsRepo) Transactions(ctx context.Context, f domain.Transactio
 		       COALESCE(p.description, ''), p.category, COALESCE(p.subcategory, ''), p.essential, p.payment_method, p.kind,
 		       COALESCE(p.transfer_direction, ''), p.type, pay.status, pay.amount,
 		       pay.installment_number, a.id, COALESCE(a.name || ' ' || a.last4, ''),
-		       pay.external_id IS NOT NULL, COALESCE(pay.note, ''), pay.bank_time, COUNT(*) OVER ()
+		       pay.external_id IS NOT NULL, COALESCE(pay.note, ''), pay.bank_time, first.day, COUNT(*) OVER ()
 		FROM payments pay
 		JOIN purchases p ON p.id = pay.purchase_id
 		LEFT JOIN accounts a ON a.id = pay.account_id
+		LEFT JOIN LATERAL (`+installmentPurchaseDay+`) first ON true
 		WHERE %s
 		ORDER BY %s
 		LIMIT $%d OFFSET $%d
@@ -102,7 +119,7 @@ func (r *TransactionsRepo) Transactions(ctx context.Context, f domain.Transactio
 		var t domain.Transaction
 		if err := rows.Scan(&t.ID, &t.Date, &t.Description, &t.Category, &t.Subcategory, &t.Essential, &t.PaymentMethod, &t.Kind,
 			&t.TransferDirection, &t.Type, &t.Status, &t.Amount, &t.InstallmentNumber,
-			&t.AccountID, &t.AccountName, &t.FromOpenFinance, &t.Note, &t.BankTime, &total); err != nil {
+			&t.AccountID, &t.AccountName, &t.FromOpenFinance, &t.Note, &t.BankTime, &t.PurchaseDate, &total); err != nil {
 			return nil, 0, fmt.Errorf("erro ao escanear transação: %w", err)
 		}
 		result = append(result, t)

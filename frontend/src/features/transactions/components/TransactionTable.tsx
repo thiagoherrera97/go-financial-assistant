@@ -40,7 +40,13 @@ export function TransactionTable({ items, hideCategory = false }: { items: Trans
             return (
               <tr key={t.id}>
                 <td>
-                  {formatDay(t.date)}
+                  {t.purchaseDate ? (
+                    <span title={`Compra parcelada em ${formatDay(t.purchaseDate)}; a parcela cai na fatura de ${formatDay(t.date)}`}>
+                      {formatDay(t.purchaseDate)}
+                    </span>
+                  ) : (
+                    formatDay(t.date)
+                  )}
                   {time && (
                     <span className="amount-caption" title="Hora informada pelo banco">
                       {time}

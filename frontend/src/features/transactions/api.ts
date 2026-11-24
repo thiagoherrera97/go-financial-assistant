@@ -27,6 +27,8 @@ export interface Transaction {
   note: string
   /** Instante (ISO, com hora) em que o banco registrou; ausente em manuais, parcelas e bancos que só mandam o dia. */
   bankTime?: string
+  /** Dia da compra (AAAA-MM-DD) numa parcela 2+ do cartão, cuja `date` é a da fatura; ausente nos demais. */
+  purchaseDate?: string
 }
 
 export interface TransactionGroup {

@@ -64,6 +64,7 @@ type Transaction struct {
 	FromOpenFinance   bool
 	Note              string     // escrita pela pessoa; vazia sem nota
 	BankTime          *time.Time // instante (com hora) informado pelo banco; nil se não houver
+	PurchaseDate      *time.Time // dia da compra, numa parcela 2+ do cartão (Date é o da fatura); nil nos demais
 }
 
 // TransferCandidate é um lançamento do banco que parece Pix, TED ou DOC.
