@@ -589,3 +589,46 @@ table.tx td { vertical-align: top; }
   *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
   .sync-spin { animation: none; }
 }
+
+/* Painel "Lançar": o chat do Telegram dentro do app */
+.page-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.page-head .page-title { margin-bottom: 20px; }
+.compose-fab {
+  position: fixed; right: max(20px, env(safe-area-inset-right)); bottom: max(20px, env(safe-area-inset-bottom)); z-index: 40;
+  min-height: 48px; padding: 0 20px; border-radius: 999px; box-shadow: var(--shadow-md);
+}
+.compose-scrim { position: fixed; inset: 0; z-index: 44; background: rgba(14, 8, 28, 0.32); }
+.compose {
+  position: fixed; z-index: 45; right: 20px; bottom: 20px; width: min(420px, calc(100vw - 40px)); height: min(560px, calc(100dvh - 40px));
+  display: flex; flex-direction: column; background: var(--surface); border-radius: var(--r-lg); box-shadow: var(--shadow-md);
+  border: 1px solid var(--border); overflow: hidden; animation: compose-in 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes compose-in { from { opacity: 0; transform: translateY(12px); } }
+@media (prefers-reduced-motion: reduce) { .compose { animation: none; } }
+.compose-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 12px 12px 20px; border-bottom: 1px solid var(--border); }
+.compose-head h2 { font-size: 1.0625rem; font-weight: 650; }
+.compose-lines { list-style: none; margin: 0; padding: 16px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+.compose-line { max-width: 85%; padding: 10px 14px; border-radius: var(--r-md); font-size: 0.9375rem; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
+.compose-me { align-self: flex-end; background: var(--accent); color: var(--on-accent); border-bottom-right-radius: 4px; }
+.compose-bot { align-self: flex-start; background: var(--surface-2); color: var(--text-primary); border-bottom-left-radius: 4px; }
+.compose-busy { color: var(--text-muted); }
+.compose-hint { color: var(--text-secondary); font-size: 0.9375rem; line-height: 1.5; display: grid; gap: 12px; }
+.compose-examples { display: flex; flex-wrap: wrap; gap: 8px; }
+.compose-example { all: unset; cursor: pointer; font-size: 0.8125rem; padding: 6px 12px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-ink); }
+.compose-example:hover { background: color-mix(in srgb, var(--accent) 18%, var(--surface)); }
+.compose-example:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.compose-error { padding: 0 16px 8px; font-size: 0.8125rem; }
+.compose-form { display: flex; align-items: flex-end; gap: 8px; padding: 12px; padding-bottom: max(12px, env(safe-area-inset-bottom)); border-top: 1px solid var(--border); }
+.compose-form textarea {
+  flex: 1; min-width: 0; resize: none; max-height: 120px; min-height: 40px; padding: 9px 12px; font: inherit; font-size: 1rem;
+  color: var(--text-primary); background: var(--surface-2); border: 1px solid transparent; border-radius: var(--r-sm); field-sizing: content;
+}
+.compose-form textarea:focus-visible { outline: 2px solid var(--focus); outline-offset: 0; }
+.compose-form .btn-icon { width: 40px; min-height: 40px; flex: none; }
+.compose-recording { flex: 1; display: flex; align-items: center; gap: 8px; min-height: 40px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.compose-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--bad); animation: compose-pulse 1s ease-in-out infinite; }
+@keyframes compose-pulse { 50% { opacity: 0.35; } }
+@media (max-width: 640px) {
+  .compose { right: 0; bottom: 0; left: 0; width: 100%; height: min(78dvh, 620px); border-radius: var(--r-lg) var(--r-lg) 0 0; }
+  .compose-fab { right: 16px; bottom: max(16px, env(safe-area-inset-bottom)); }
+}

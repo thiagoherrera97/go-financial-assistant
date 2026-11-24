@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/chat"
 	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/infra/db"
 	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/infra/gemini"
 	httpserver "github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/infra/http"
@@ -18,6 +19,7 @@ func (a *app) mountDashboard() error {
 	a.server.SetCoach(a.gemini, a.cfg.GeminiPaidPlan)
 	a.server.SetSyncer(a.syncer)
 	a.server.SetCycles(a.cycles.Current)
+	a.server.SetComposer(a.composer())
 	if a.cfg.DashboardNoAuth {
 		a.server.SetNoAuth()
 		a.logger.Warn("dashboard SEM login (DASHBOARD_AUTH=off): qualquer um que alcance o app tem acesso")
@@ -45,4 +47,16 @@ func (a *app) mountDashboard() error {
 	}
 	a.logger.Info("API do dashboard ativa", "coach", a.cfg.GeminiPaidPlan, "setup_aberto", a.setup.Open())
 	return nil
+}
+
+// composer monta o painel "Lançar" do dashboard: o mesmo cérebro do chat (gastos, notas, áudio), numa conversa à parte.
+func (a *app) composer() *chat.Web {
+	web := chat.NewWeb(a.analyzeExpense, a.exportCSV, a.logger)
+	h := web.Handler()
+	h.SetSyncer(a.syncer)
+	h.SetDigester(a.insights)
+	h.SetBalancer(a.insights)
+	h.SetNoter(db.NewNotesRepo(a.db))
+	h.SetTranscriber(a.gemini)
+	return web
 }

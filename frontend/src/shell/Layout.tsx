@@ -27,6 +27,8 @@ import { NavLink, useNavigate } from 'react-router'
 import { useTheme } from '../shared/lib/theme'
 import { logout, useMe } from '../features/auth/api'
 import { SyncControl } from '../shared/components/SyncControl'
+import { ComposeFab, ComposePanel } from '../shared/components/ComposePanel'
+import { ComposeProvider } from '../shared/lib/compose'
 
 interface Item {
   to: string
@@ -89,70 +91,75 @@ export function Layout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="app">
-      <header className="mobilebar">
-        <button type="button" className="icon-btn" aria-label="Abrir menu" aria-expanded={open} aria-controls="sidebar" onClick={() => setOpen(true)}>
-          <Menu size={22} aria-hidden="true" />
-        </button>
-        <span className="brand">
-          <span className="brand-mark" aria-hidden="true">F</span>
-          FinAssist
-        </span>
-        <span className="mobilebar-end">
-          <SyncControl compact />
-        </span>
-      </header>
-
-      {open && <div className="scrim" onClick={() => setOpen(false)} aria-hidden="true" />}
-
-      <aside id="sidebar" className={`sidebar ${open ? 'is-open' : ''}`}>
-        <div className="side-brand">
+    <ComposeProvider>
+      <div className="app">
+        <header className="mobilebar">
+          <button type="button" className="icon-btn" aria-label="Abrir menu" aria-expanded={open} aria-controls="sidebar" onClick={() => setOpen(true)}>
+            <Menu size={22} aria-hidden="true" />
+          </button>
           <span className="brand">
             <span className="brand-mark" aria-hidden="true">F</span>
             FinAssist
           </span>
-          <button type="button" className="icon-btn side-close" aria-label="Fechar menu" onClick={() => setOpen(false)}>
-            <X size={20} aria-hidden="true" />
-          </button>
-        </div>
+          <span className="mobilebar-end">
+            <SyncControl compact />
+          </span>
+        </header>
 
-        <SyncControl />
+        {open && <div className="scrim" onClick={() => setOpen(false)} aria-hidden="true" />}
 
-        <nav aria-label="Principal" className="side-nav">
-          {SECTIONS.map((section, i) => (
-            <div className="side-section" key={section.title ?? i}>
-              {section.title && <p className="side-title">{section.title}</p>}
-              {section.items.map(({ to, label, Icon }) => (
-                <NavLink key={to} to={to} end={to === '/'} className="side-link" onClick={() => setOpen(false)}>
-                  <Icon size={18} aria-hidden="true" />
-                  {label}
-                </NavLink>
-              ))}
-            </div>
-          ))}
-        </nav>
-
-        <div className="side-foot">
-          <NavLink to="/configuracoes" className="side-link" onClick={() => setOpen(false)}>
-            <Settings size={18} aria-hidden="true" />
-            Configurações
-          </NavLink>
-          <button type="button" className="side-link" onClick={toggle}>
-            {theme === 'dark' ? <Sun size={18} aria-hidden="true" /> : <Moon size={18} aria-hidden="true" />}
-            {theme === 'dark' ? 'Tema claro' : 'Tema escuro'}
-          </button>
-          {!noAuth && (
-            <button type="button" className="side-link" onClick={handleLogout}>
-              <LogOut size={18} aria-hidden="true" />
-              Sair
+        <aside id="sidebar" className={`sidebar ${open ? 'is-open' : ''}`}>
+          <div className="side-brand">
+            <span className="brand">
+              <span className="brand-mark" aria-hidden="true">F</span>
+              FinAssist
+            </span>
+            <button type="button" className="icon-btn side-close" aria-label="Fechar menu" onClick={() => setOpen(false)}>
+              <X size={20} aria-hidden="true" />
             </button>
-          )}
-        </div>
-      </aside>
+          </div>
 
-      <main className="content">
-        <div className="container">{children}</div>
-      </main>
-    </div>
+          <SyncControl />
+
+          <nav aria-label="Principal" className="side-nav">
+            {SECTIONS.map((section, i) => (
+              <div className="side-section" key={section.title ?? i}>
+                {section.title && <p className="side-title">{section.title}</p>}
+                {section.items.map(({ to, label, Icon }) => (
+                  <NavLink key={to} to={to} end={to === '/'} className="side-link" onClick={() => setOpen(false)}>
+                    <Icon size={18} aria-hidden="true" />
+                    {label}
+                  </NavLink>
+                ))}
+              </div>
+            ))}
+          </nav>
+
+          <div className="side-foot">
+            <NavLink to="/configuracoes" className="side-link" onClick={() => setOpen(false)}>
+              <Settings size={18} aria-hidden="true" />
+              Configurações
+            </NavLink>
+            <button type="button" className="side-link" onClick={toggle}>
+              {theme === 'dark' ? <Sun size={18} aria-hidden="true" /> : <Moon size={18} aria-hidden="true" />}
+              {theme === 'dark' ? 'Tema claro' : 'Tema escuro'}
+            </button>
+            {!noAuth && (
+              <button type="button" className="side-link" onClick={handleLogout}>
+                <LogOut size={18} aria-hidden="true" />
+                Sair
+              </button>
+            )}
+          </div>
+        </aside>
+
+        <main className="content">
+          <div className="container">{children}</div>
+        </main>
+
+        <ComposeFab />
+        <ComposePanel />
+      </div>
+    </ComposeProvider>
   )
 }

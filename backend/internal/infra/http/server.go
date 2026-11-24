@@ -52,6 +52,9 @@ type Server struct {
 	runCtx context.Context // definido em Start: rotas montadas depois (canal ligado pelo setup) já sobem as limpezas
 	cycles func() domain.Cycles
 
+	// composer liga o painel "Lançar" (nil = desligado).
+	composer Composer
+
 	// noAuth libera o dashboard sem login (DASHBOARD_AUTH=off).
 	noAuth bool
 }

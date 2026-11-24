@@ -74,6 +74,10 @@ Mande o **valor**, o **dia** (opcional) e a **nota**; o app acha a transação s
 
 Tudo acima também vale por **mensagem de voz**: fale como escreveria ("gastei doze e cinquenta na padaria", "nota trezentos e noventa e três, dia primeiro do onze, jantar pizza"). O Gemini transcreve, o bot responde com o que entendeu (🎙️ _…_) e segue como se fosse texto, com valores e datas em algarismos. Precisa da IA ligada (chave do Gemini).
 
+### Pelo dashboard (botão Lançar)
+
+O botão **Lançar** (no canto de qualquer tela e no topo de Transações) abre o mesmo chat dentro do app, por texto ou pelo microfone. É o jeito de lançar na hora o que você nota que falta em Transações porque ainda não chegou do banco. A conversa é separada da do Telegram e as telas se atualizam depois de cada mensagem. O arquivo do CSV só sai pelo Telegram.
+
 ### Importar extrato bancário (PDF)
 
 Envie o PDF do extrato do seu banco diretamente no WhatsApp. O assistente processa todas as transações automaticamente:
