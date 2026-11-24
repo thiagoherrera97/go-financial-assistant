@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -98,5 +99,77 @@ func TestReclassifyOwnMoves(t *testing.T) {
 	}
 	if s, c, f, err := repo.ReclassifyOwnMoves(ctx); err != nil || s != 0 || c != 0 || f != 0 {
 		t.Errorf("segunda passada não muda nada: %d %d %d %v", s, c, f, err)
+	}
+}
+
+func TestCancelRefundedCharges(t *testing.T) {
+	repo, pg := newTestRepo(t)
+	ctx := context.Background()
+	card, err := repo.UpsertAccount(ctx, ports.ExternalAccount{ID: "rf-card", ItemID: "rf-test", Type: domain.AccountType("CREDIT"), Name: "Cartão RF"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { pg.Pool.Exec(context.Background(), `DELETE FROM accounts WHERE id = $1`, card) })
+	dec, jan := time.Date(1999, 12, 10, 0, 0, 0, 0, time.UTC), time.Date(2000, 1, 10, 0, 0, 0, 0, time.UTC)
+	n := 0
+	save := func(desc string, amount float64, day, bill time.Time) uuid.UUID {
+		t.Helper()
+		n++
+		ext := fmt.Sprintf("rf-%d", n)
+		var p *domain.Purchase
+		if amount < 0 {
+			p, _ = domain.NewCardRefund(-amount, &desc, domain.CategoryOther, "raw")
+		} else {
+			p, _ = domain.NewPurchase(amount, &desc, domain.CategoryOther, domain.PaymentMethodCreditCard, domain.PurchaseTypeSingle, "raw")
+		}
+		pay := domain.NewPayment(p.ID, amount, domain.PaymentStatusPending)
+		pay.DueDate, pay.ExternalID, pay.AccountID = &day, &ext, &card
+		if err := repo.SaveExternal(ctx, p, pay); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := pg.Pool.Exec(ctx, `UPDATE payments SET bill_due_date = $2 WHERE purchase_id = $1`, p.ID, bill); err != nil {
+			t.Fatal(err)
+		}
+		cleanup(t, pg, p)
+		return p.ID
+	}
+	charge := save("RF RECARGA", 150.69, dec, dec)
+	refund := save("RF RECARGA", -150.69, dec.AddDate(0, 0, 1), dec) // mesma fatura: os dois somem
+	real := save("RF RECARGA", 29.97, dec, dec)                      // a recarga de verdade fica
+	twice1 := save("RF POSTO", 100, dec, dec)                        // duas cobranças, um estorno:
+	twice2 := save("RF POSTO", 100, dec.AddDate(0, 0, 2), dec)       // só um par some
+	save("RF POSTO", -100, dec.AddDate(0, 0, 3), dec)
+	crossC := save("RF HOTEL", 300, dec, dec) // faturas diferentes: os dois ficam
+	crossR := save("RF HOTEL", -300, jan, jan)
+	other := save("RF OUTRA LOJA", -150.69, dec, dec) // outra descrição não casa
+
+	got, err := repo.CancelRefundedCharges(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != 4 {
+		t.Errorf("dois pares = 4 lançamentos cancelados, veio %d", got)
+	}
+	status := func(id uuid.UUID) string {
+		var s string
+		if err := pg.Pool.QueryRow(ctx, `SELECT status FROM payments WHERE purchase_id = $1`, id).Scan(&s); err != nil {
+			t.Fatal(err)
+		}
+		return s
+	}
+	for name, c := range map[string]struct {
+		id   uuid.UUID
+		want string
+	}{
+		"cobrança": {charge, "CANCELLED"}, "estorno": {refund, "CANCELLED"}, "recarga de verdade": {real, "PENDING"},
+		"primeira do posto": {twice1, "CANCELLED"}, "segunda do posto": {twice2, "PENDING"},
+		"hotel em dezembro": {crossC, "PENDING"}, "estorno do hotel em janeiro": {crossR, "PENDING"}, "outra loja": {other, "PENDING"},
+	} {
+		if s := status(c.id); s != c.want {
+			t.Errorf("%s: %s, queria %s", name, s, c.want)
+		}
+	}
+	if again, _ := repo.CancelRefundedCharges(ctx); again != 0 {
+		t.Errorf("rodar de novo não cancela mais nada: %d", again)
 	}
 }

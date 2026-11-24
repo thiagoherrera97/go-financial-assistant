@@ -18,7 +18,6 @@ type TransactionFilter struct {
 	Day           *time.Time // um dia específico (sobrepõe Month)
 	Search        string     // trecho da descrição ou da nota
 	SortByAmount  bool       // do maior valor para o menor (senão, do mais recente)
-	HideRefunded  bool       // tira os estornos e as cobranças que eles anularam (ex.: pré-autorização devolvida)
 	Limit         int
 	Offset        int
 }

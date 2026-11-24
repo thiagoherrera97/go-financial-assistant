@@ -322,3 +322,42 @@ func (r *LedgerRepo) ReclassifyOwnMoves(ctx context.Context) (savings, cardPayme
 	}
 	return savings, cardPayments, tag.RowsAffected(), nil
 }
+
+// refundedReason marca a cobrança devolvida na mesma fatura (ex.: pré-autorização de recarga, posto, hotel) e o estorno dela.
+const refundedReason = "cobrança devolvida na mesma fatura (estorno)"
+
+// CancelRefundedCharges some com o par cobrança e estorno que caem na mesma fatura (cartão) ou no mesmo ciclo (conta): o
+// efeito no total é zero e os dois só poluem as listas. Par = mesma conta, mesma descrição e mesmo valor com sinal trocado,
+// casados um a um. Se caem em faturas diferentes, os dois ficam, porque mudam o total de cada fatura. Roda depois de
+// calcular a fatura de cada compra (sem ela não dá para saber se caem na mesma). Devolve quantos lançamentos cancelou.
+func (r *LedgerRepo) CancelRefundedCharges(ctx context.Context) (int64, error) {
+	tag, err := r.db.Pool.Exec(ctx, `
+		WITH c AS (
+			SELECT pay.id, pay.purchase_id, pay.account_id, p.description, ROUND(ABS(pay.amount)::numeric, 2) AS amount,
+			       SIGN(pay.amount) AS sign, COALESCE(pay.bill_due_date, `+paymentMonth+`) AS period,
+			       ROW_NUMBER() OVER (
+			           PARTITION BY pay.account_id, p.description, ROUND(ABS(pay.amount)::numeric, 2),
+			                        COALESCE(pay.bill_due_date, `+paymentMonth+`), SIGN(pay.amount)
+			           ORDER BY `+txDate+`, pay.created_at, pay.id) AS n
+			FROM payments pay
+			JOIN purchases p ON p.id = pay.purchase_id
+			WHERE p.kind = 'EXPENSE' AND p.type = 'SINGLE' AND pay.status != 'CANCELLED' AND pay.amount <> 0
+			  AND p.description IS NOT NULL AND pay.account_id IS NOT NULL
+			  AND pay.external_id IS NOT NULL AND pay.external_id NOT LIKE '`+syntheticPrefix+`%'
+		), pairs AS (
+			SELECT a.id AS charge, a.purchase_id AS charge_purchase, b.id AS refund, b.purchase_id AS refund_purchase
+			FROM c a JOIN c b ON a.sign = 1 AND b.sign = -1 AND a.account_id = b.account_id AND a.description = b.description
+			                 AND a.amount = b.amount AND a.period = b.period AND a.n = b.n
+		), hit AS (
+			SELECT charge AS id, charge_purchase AS purchase_id FROM pairs
+			UNION ALL SELECT refund, refund_purchase FROM pairs
+		), cancelled AS (
+			UPDATE purchases p SET cancelled_at = NOW(), cancellation_reason = $1 WHERE p.id IN (SELECT purchase_id FROM hit)
+		)
+		UPDATE payments SET status = 'CANCELLED' WHERE id IN (SELECT id FROM hit)
+	`, refundedReason)
+	if err != nil {
+		return 0, fmt.Errorf("erro ao cancelar cobranças estornadas: %w", err)
+	}
+	return tag.RowsAffected(), nil
+}

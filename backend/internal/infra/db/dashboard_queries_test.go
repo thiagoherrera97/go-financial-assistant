@@ -168,41 +168,6 @@ func TestDashboard_TransactionsFilterAndPaging(t *testing.T) {
 	}
 }
 
-func TestDashboard_TransactionsHideRefunded(t *testing.T) {
-	repo, pg := newTestRepo(t)
-	ctx := context.Background()
-	refund := func(desc string, amount float64, date time.Time) {
-		t.Helper()
-		p, err := domain.NewCardRefund(amount, &desc, domain.CategoryOther, "teste-dashboard")
-		if err != nil {
-			t.Fatal(err)
-		}
-		pay := domain.NewPayment(p.ID, -amount, domain.PaymentStatusPaid)
-		pay.DueDate = &date
-		if err := repo.SaveExternal(ctx, p, pay); err != nil {
-			t.Fatal(err)
-		}
-		cleanup(t, pg, p)
-	}
-	seed(t, repo, pg, seedEntry{kind: domain.KindExpense, cat: domain.CategoryOther, desc: "PG *RECARGA", amount: 150.69, date: mar1999.AddDate(0, 0, 8)})
-	refund("PG *RECARGA", 150.69, mar1999.AddDate(0, 0, 9)) // devolvida: some com a cobrança
-	seed(t, repo, pg, seedEntry{kind: domain.KindExpense, cat: domain.CategoryOther, desc: "PG *RECARGA", amount: 80, date: mar1999.AddDate(0, 0, 10)})
-	seed(t, repo, pg, seedEntry{kind: domain.KindExpense, cat: domain.CategoryOther, desc: "Outra loja", amount: 150.69, date: mar1999.AddDate(0, 0, 8)})
-
-	f := domain.TransactionFilter{Month: &mar1999, Kind: "EXPENSE", HideRefunded: true, SortByAmount: true, Limit: 50}
-	txs, total, err := repo.Transactions(ctx, f)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if total != 2 || txs[0].Description != "Outra loja" || txs[1].Amount != 80 {
-		t.Errorf("sem o par cobrança/estorno, do maior para o menor: %d %+v", total, txs)
-	}
-	f.HideRefunded = false
-	if _, total, _ := repo.Transactions(ctx, f); total != 4 {
-		t.Errorf("sem o filtro, tudo aparece: %d", total)
-	}
-}
-
 func TestInvestments_SaveSnapshotsAndHistory(t *testing.T) {
 	repo, pg := newTestRepo(t)
 	ctx := context.Background()

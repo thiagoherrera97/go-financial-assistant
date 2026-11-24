@@ -69,6 +69,12 @@ func (s *SyncOpenFinance) RecomputeCardBills(ctx context.Context) error {
 		// Só a contagem vai para o log.
 		s.logger.Info("fatura das compras no cartão recalculada", "count", n, "close_days_before_due", days)
 	}
+	// Depende da fatura de cada compra: só agora dá para saber se cobrança e estorno caem na mesma.
+	if n, err := s.repo.CancelRefundedCharges(ctx); err != nil {
+		return err
+	} else if n > 0 {
+		s.logger.Info("cobranças estornadas na mesma fatura escondidas", "count", n)
+	}
 	today := s.today()
 	forecasts, adjustments, err := s.repo.RebuildCardForecasts(ctx, days, time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, time.UTC))
 	if err != nil {

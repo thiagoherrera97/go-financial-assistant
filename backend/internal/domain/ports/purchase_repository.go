@@ -83,6 +83,9 @@ type ExternalStore interface {
 	// uma conta, da fatura de um cartão seu (cancelado); e devolve ao gasto o pagamento que o banco classificou como
 	// aplicação ("Pagamento com Pix ... FIDC"). Devolve quantos de cada.
 	ReclassifyOwnMoves(ctx context.Context) (savings, cardPayments, fundPayments int64, err error)
+	// CancelRefundedCharges cancela o par cobrança e estorno que cai na mesma fatura (ou no mesmo ciclo, fora do cartão).
+	// Devolve quantos lançamentos cancelou.
+	CancelRefundedCharges(ctx context.Context) (int64, error)
 	// ApplyPendingNotes coloca as notas mandadas pelo chat antes da transação chegar nas transações que chegaram.
 	ApplyPendingNotes(ctx context.Context) (int, error)
 }

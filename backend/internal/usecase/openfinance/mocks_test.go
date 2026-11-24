@@ -33,6 +33,8 @@ func (m *mockStore) ApplyPendingNotes(ctx context.Context) (int, error) {
 	return 0, nil
 }
 
+func (m *mockStore) CancelRefundedCharges(ctx context.Context) (int64, error) { return 0, nil }
+
 func (m *mockStore) ReclassifyOwnMoves(ctx context.Context) (int64, int64, int64, error) {
 	if m.reclassifyFn != nil {
 		return m.reclassifyFn(ctx)

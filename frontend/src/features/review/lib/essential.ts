@@ -7,6 +7,6 @@ export const ESSENTIAL_TABS: { value: EssentialTab; label: string; empty: string
   { value: 'unknown', label: 'A revisar', empty: 'a revisar' },
 ]
 
-/** Despesas do mês de uma aba, do maior valor para o menor, sem estornos nem as cobranças que eles devolveram. */
+/** Despesas do mês de uma aba, do maior valor para o menor. */
 export const essentialQuery = (month: string, tab: EssentialTab, limit: number) =>
-  new URLSearchParams({ month, kind: 'EXPENSE', essential: tab, sort: 'amount', hide_refunded: 'true', limit: String(limit) }).toString()
+  new URLSearchParams({ month, kind: 'EXPENSE', essential: tab, sort: 'amount', limit: String(limit) }).toString()
