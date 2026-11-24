@@ -103,6 +103,8 @@ export interface ExpenseItem {
   essential: boolean | null
   amount: number
   note: string
+  /** Dia da compra numa parcela 2+ do cartão (date é o da fatura). */
+  purchaseDate?: string
 }
 
 /** query já montada (essentialQuery); usa a mesma chave das transações para atualizar junto quando algo muda. */

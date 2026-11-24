@@ -77,7 +77,7 @@ export function EssentialList({ month }: { month: string }) {
                     <span className="ess-name">
                       <strong className={tx.note ? 'tx-title-note' : undefined}>{tx.note || cleanLabel(tx.description) || '—'}</strong>
                       <span className="bill-meta">
-                        {shortDay(tx.date)} · {tx.subcategoryLabel || tx.categoryLabel}
+                        {shortDay(tx.purchaseDate ?? tx.date)} · {tx.subcategoryLabel || tx.categoryLabel}
                         {tx.note && ` · no extrato: ${cleanLabel(tx.description) || '—'}`}
                       </span>
                     </span>
