@@ -45,7 +45,8 @@ export function ComposePanel() {
 
   useEffect(() => {
     if (!open) return
-    input.current?.focus()
+    // Só no computador: no celular, focar abre o teclado sem a pessoa pedir; lá ele abre ao tocar no campo.
+    if (window.matchMedia('(pointer: fine)').matches) input.current?.focus()
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && !recording && setOpen(false)
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
@@ -54,6 +55,24 @@ export function ComposePanel() {
   useEffect(() => {
     list.current?.lastElementChild?.scrollIntoView({ block: 'end' })
   }, [lines, busy])
+
+  // No iPhone o teclado cobre a página sem encolher a tela: o painel sobe junto e cabe no que sobra visível.
+  const [keyboard, setKeyboard] = useState<{ bottom: number; height: number } | null>(null)
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!open || !vv) return
+    const update = () => {
+      const bottom = Math.max(0, window.innerHeight - vv.height - vv.offsetTop)
+      setKeyboard(bottom > 0 ? { bottom, height: vv.height } : null)
+    }
+    update()
+    vv.addEventListener('resize', update)
+    vv.addEventListener('scroll', update)
+    return () => {
+      vv.removeEventListener('resize', update)
+      vv.removeEventListener('scroll', update)
+    }
+  }, [open])
 
   useEffect(() => {
     if (!recording) return
@@ -127,7 +146,13 @@ export function ComposePanel() {
   return (
     <>
       <div className="compose-scrim" onClick={() => !recording && setOpen(false)} aria-hidden="true" />
-      <section className="compose" role="dialog" aria-modal="true" aria-labelledby="compose-title">
+      <section
+        className="compose"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="compose-title"
+        style={keyboard ? { bottom: keyboard.bottom, maxHeight: keyboard.height - 8 } : undefined}
+      >
         <header className="compose-head">
           <h2 id="compose-title">Lançar</h2>
           <button type="button" className="icon-btn" aria-label="Fechar" disabled={recording} onClick={() => setOpen(false)}>
@@ -141,7 +166,7 @@ export function ComposePanel() {
               <p>Lance o que ainda não chegou do banco ou anote o que foi uma transação, por texto ou voz. Funciona como o Telegram.</p>
               <div className="compose-examples">
                 {EXAMPLES.map((ex) => (
-                  <button key={ex} type="button" className="compose-example" onClick={() => { setText(ex); input.current?.focus() }}>
+                  <button key={ex} type="button" className="compose-example" onClick={() => setText(ex)}>
                     {ex}
                   </button>
                 ))}
