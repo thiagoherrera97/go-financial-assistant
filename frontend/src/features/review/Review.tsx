@@ -1,6 +1,6 @@
 import './styles.css'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff, StickyNote } from 'lucide-react'
 import { useState, type CSSProperties } from 'react'
 import { Link } from 'react-router'
 import { CategoryChip } from '../../shared/components/CategoryChip'
@@ -8,6 +8,7 @@ import { HeatMatrix } from './components/HeatMatrix'
 import { MonthFilter } from '../../shared/components/MonthFilter'
 import { QueryState } from '../../shared/components/QueryState'
 import { SavingsPanel } from './components/SavingsPanel'
+import { EssentialList } from './components/EssentialList'
 import { categoryVisual } from '../../shared/lib/categoryVisual'
 import { formatMonthTitle } from '../../shared/lib/format'
 import { candidateDetail, candidateName, countByKind, KIND_META, KIND_ORDER, savingText, transactionsLink, visibleCandidates } from './lib/review'
@@ -100,6 +101,8 @@ export default function Review() {
                 )}
               </section>
 
+              <EssentialList month={month} />
+
               <p className="tile-note section-gap">
                 Tudo aqui é calculado a partir dos seus lançamentos, sem IA. A economia é uma estimativa: aumento = voltar à média; fixa = cancelar; gasto
                 formiga (4 ou mais compras de até R$ 40, fora o Pix) = cortar pela metade; duplicata e conta nova valem uma vez só. Os tipos se sobrepõem,
@@ -136,6 +139,15 @@ function CandidateCard({
           <span className="bill-meta">{candidateDetail(c)}</span>
         </span>
       </div>
+      {c.notes.length > 0 && (
+        <ul className="cand-notes" aria-label="Suas notas">
+          {c.notes.map((n) => (
+            <li key={n}>
+              <StickyNote size={12} aria-hidden="true" /> {n}
+            </li>
+          ))}
+        </ul>
+      )}
       <p className="saving">
         <span className="saving-label">Economia possível</span> <strong>{savingText(c)}</strong>
       </p>

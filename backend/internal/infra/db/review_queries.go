@@ -37,7 +37,7 @@ func (r *ReviewRepo) CategoryMonths(ctx context.Context, from, to time.Time) ([]
 
 func (r *ReviewRepo) ExpensePayments(ctx context.Context, from, to time.Time) ([]domain.ExpensePayment, error) {
 	query := `
-		SELECT ` + expenseKey + ` AS key, ` + cleanDescription + `, p.category, p.payment_method, ` + txDate + ` AS day, pay.amount
+		SELECT ` + expenseKey + ` AS key, ` + cleanDescription + `, p.category, p.payment_method, ` + txDate + ` AS day, pay.amount, COALESCE(pay.note, '')
 		FROM payments pay
 		JOIN purchases p ON p.id = pay.purchase_id
 		WHERE p.kind = 'EXPENSE' AND pay.status != 'CANCELLED' AND p.description IS NOT NULL
@@ -54,7 +54,7 @@ func (r *ReviewRepo) ExpensePayments(ctx context.Context, from, to time.Time) ([
 	var result []domain.ExpensePayment
 	for rows.Next() {
 		var e domain.ExpensePayment
-		if err := rows.Scan(&e.Key, &e.Label, &e.Category, &e.PaymentMethod, &e.Date, &e.Amount); err != nil {
+		if err := rows.Scan(&e.Key, &e.Label, &e.Category, &e.PaymentMethod, &e.Date, &e.Amount, &e.Note); err != nil {
 			return nil, fmt.Errorf("erro ao escanear despesa: %w", err)
 		}
 		result = append(result, e)

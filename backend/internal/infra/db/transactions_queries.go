@@ -68,6 +68,10 @@ func transactionWhere(f domain.TransactionFilter) (string, []any) {
 func (r *TransactionsRepo) Transactions(ctx context.Context, f domain.TransactionFilter) ([]domain.Transaction, int, error) {
 	where, args := transactionWhere(f)
 	args = append(args, f.Limit, f.Offset)
+	order := "date DESC, pay.bank_time DESC NULLS LAST, pay.created_at DESC, pay.id"
+	if f.SortByAmount {
+		order = "ABS(pay.amount) DESC, date DESC, pay.id"
+	}
 
 	// COUNT(*) OVER () traz o total sem uma segunda consulta; sem linhas, o total é 0.
 	query := fmt.Sprintf(`
@@ -80,9 +84,9 @@ func (r *TransactionsRepo) Transactions(ctx context.Context, f domain.Transactio
 		JOIN purchases p ON p.id = pay.purchase_id
 		LEFT JOIN accounts a ON a.id = pay.account_id
 		WHERE %s
-		ORDER BY date DESC, pay.bank_time DESC NULLS LAST, pay.created_at DESC, pay.id
+		ORDER BY %s
 		LIMIT $%d OFFSET $%d
-	`, where, len(args)-1, len(args))
+	`, where, order, len(args)-1, len(args))
 
 	rows, err := r.db.Pool.Query(ctx, query, args...)
 	if err != nil {

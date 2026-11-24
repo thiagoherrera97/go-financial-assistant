@@ -16,7 +16,7 @@ O app expõe uma API JSON sob `/api`, **somente leitura** (as únicas escritas, 
 | `GET /api/timeseries?from=&to=` | os mesmos totais, mês a mês |
 | `GET /api/breakdown?month=&by=category\|payment_method\|account` | despesas do mês agrupadas |
 | `GET /api/investments?from=&to=` | aplicado, resgatado e **líquido acumulado desde o primeiro lançamento** |
-| `GET /api/transactions?month=&kind=&exclude_kind=&category=&payment_method=&account=&q=&page=&limit=` | lista paginada (padrão 50, máx. 100), manual e Open Finance; `exclude_kind` tira um tipo |
+| `GET /api/transactions?month=&kind=&exclude_kind=&category=&essential=&payment_method=&account=&q=&sort=&page=&limit=` | lista paginada (padrão 50, máx. 100), manual e Open Finance; `exclude_kind` tira um tipo; `sort=amount` ordena do maior valor para o menor (padrão: data) |
 | `GET /api/accounts` | contas e cartões, com saldo e limite |
 | `GET /api/balances` | painel: total em conta, bancos, contas e cartões (saldo devedor, limite, vencimento) |
 | `DELETE /api/transactions/{id}` | apaga um lançamento manual avulso (204); do banco, parcelado ou recorrente: 404. Exige mesma origem |
@@ -28,7 +28,7 @@ O app expõe uma API JSON sob `/api`, **somente leitura** (as únicas escritas, 
 | `GET /api/budget?month=` | despesas do mês e dos 11 anteriores por classe (fixas, parceladas, variáveis) e as contas do mês |
 | `GET /api/projection?months=` | base da projeção: premissas (renda, fixas, variáveis) e parcelas já conhecidas por mês |
 | `PUT /api/expense-rules` | corrige a classe de uma conta (`FIXED`, `VARIABLE` ou `AUTO`); só JSON na mesma origem |
-| `GET /api/review?month=` | revisão do mês: matriz categoria × 6 meses e sugestões de corte (aumentos, fixas, gasto formiga, duplicatas, contas novas) com a economia em R$/mês e R$/ano |
+| `GET /api/review?month=` | revisão do mês: matriz categoria × 6 meses e sugestões de corte (aumentos, fixas, gasto formiga, duplicatas, contas novas) com a economia em R$/mês e R$/ano e as notas dos lançamentos de cada conta |
 | `PUT /api/review-dismissals` | dispensa (ou restaura) uma sugestão da revisão; só JSON na mesma origem |
 | `GET /api/categorize` | contas com despesa em "Outros" (da maior para a menor), as categorias atribuíveis e a prévia do que a IA receberia |
 | `PUT /api/categorize/rules` | classifica uma conta (ou mantém em Outros): reclassifica as despesas antigas e vale nas próximas sincronizações; só JSON na mesma origem |

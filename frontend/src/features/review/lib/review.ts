@@ -56,7 +56,9 @@ export function candidateDetail(c: ReviewCandidate): string {
     case 'DUPLICATE':
       return `${c.count} cobranças de ${formatBRL(c.amount)} em poucos dias`
     case 'NEW':
-      return `${formatBRL(c.amount)}, e a conta não existia nos meses anteriores`
+      return c.count > 1
+        ? `${c.count} lançamentos somando ${formatBRL(c.amount)}, e a conta não existia nos meses anteriores`
+        : `${formatBRL(c.amount)}, e a conta não existia nos meses anteriores`
   }
 }
 

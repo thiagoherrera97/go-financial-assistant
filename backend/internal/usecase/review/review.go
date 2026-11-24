@@ -1,6 +1,7 @@
 package review
 
 import (
+	"slices"
 	"sort"
 	"time"
 
@@ -58,12 +59,13 @@ type Candidate struct {
 	Key       string
 	Label     string
 	Category  string
-	Saving    float64 // economia estimada: por mês quando Recurring, senão uma vez só
-	Recurring bool    // vale todo mês (dá para anualizar); falso em duplicata e conta nova
-	Amount    float64 // quanto custou no mês (aumento: o total da categoria)
-	Baseline  float64 // só nos aumentos: a média dos meses anteriores
-	Count     int     // lançamentos no mês (formiga e duplicata)
-	Months    int     // há quantos meses a conta se repete (fixas)
+	Saving    float64  // economia estimada: por mês quando Recurring, senão uma vez só
+	Recurring bool     // vale todo mês (dá para anualizar); falso em duplicata e conta nova
+	Amount    float64  // quanto custou no mês (aumento: o total da categoria)
+	Baseline  float64  // só nos aumentos: a média dos meses anteriores
+	Count     int      // lançamentos no mês (formiga e duplicata)
+	Months    int      // há quantos meses a conta se repete (fixas)
+	Notes     []string // notas que você escreveu nos lançamentos do mês dessa conta (sem repetir)
 	Dismissed bool
 }
 
@@ -91,6 +93,13 @@ func BuildReview(catMonths []domain.CategoryMonth, keyRows []domain.ExpenseKeyMo
 	r.Candidates = append(r.Candidates, antSpending(payments, budget.Classes)...)
 	r.Candidates = append(r.Candidates, duplicates(payments, budget.Classes)...)
 	r.Candidates = append(r.Candidates, newBills(budget, keyRows, to)...)
+
+	notes := notesByKey(payments)
+	for i := range r.Candidates {
+		if c := &r.Candidates[i]; c.Kind != ReviewIncrease {
+			c.Notes = notes[c.Key]
+		}
+	}
 
 	off := make(map[domain.Dismissal]bool, len(dismissed))
 	for _, d := range dismissed {
@@ -278,6 +287,21 @@ func newBills(b planning.Budget, keyRows []domain.ExpenseKeyMonth, to time.Time)
 		if it.Months == 1 && it.Total >= minNewAmount && it.Class != domain.ClassInstallment {
 			out = append(out, Candidate{Kind: ReviewNew, Key: it.Key, Label: it.Label, Category: it.Category, Saving: it.Total, Amount: it.Total, Count: it.Count})
 		}
+	}
+	return out
+}
+
+// maxCandidateNotes limita quantas notas cada sugestão mostra.
+const maxCandidateNotes = 3
+
+// notesByKey junta as notas dos lançamentos do mês por conta, na ordem em que aparecem, sem repetir.
+func notesByKey(payments []domain.ExpensePayment) map[string][]string {
+	out := map[string][]string{}
+	for _, p := range payments {
+		if p.Note == "" || len(out[p.Key]) >= maxCandidateNotes || slices.Contains(out[p.Key], p.Note) {
+			continue
+		}
+		out[p.Key] = append(out[p.Key], p.Note)
 	}
 	return out
 }

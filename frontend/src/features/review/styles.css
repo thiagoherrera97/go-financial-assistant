@@ -22,3 +22,22 @@
 .saving-list .chip { width: 28px; height: 28px; border-radius: 8px; }
 .saving-main { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .saving-list .btn-small { margin-left: 0; flex: none; }
+
+/* Notas no card de sugestão */
+.cand-notes { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 4px; font-size: 0.8125rem; color: var(--text-primary); }
+.cand-notes li { display: flex; gap: 6px; align-items: baseline; overflow-wrap: anywhere; }
+.cand-notes svg { flex: none; color: var(--text-secondary); }
+
+/* Supérfluos e essenciais */
+.ess-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.ess-row { display: grid; grid-template-columns: auto 1fr auto auto; gap: 12px; align-items: center; padding: 12px 14px; background: var(--surface); border: 1px solid var(--card-border); border-radius: var(--r-md); box-shadow: var(--shadow-sm); }
+.ess-row .chip { width: 28px; height: 28px; border-radius: 8px; }
+.ess-name { display: flex; flex-direction: column; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+.ess-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.ess-actions .btn-small { margin-left: 0; }
+.ess-more { margin: 12px 0 0; }
+.ess-more .btn-small { margin-left: 0; }
+@media (max-width: 640px) {
+  .ess-row { grid-template-columns: auto 1fr auto; }
+  .ess-actions { grid-column: 1 / -1; justify-content: flex-start; }
+}

@@ -4,7 +4,7 @@ import type { ReviewCandidate } from '../api'
 
 const base: ReviewCandidate = {
   kind: 'FIXED', key: 'streaming', label: 'STREAMING (1/12)', category: 'ENTERTAINMENT', categoryLabel: 'Lazer',
-  monthly: 40, annual: 480, amount: 40, baseline: 0, count: 1, months: 6, dismissed: false,
+  monthly: 40, annual: 480, amount: 40, baseline: 0, count: 1, months: 6, notes: [], dismissed: false,
 }
 const c = (over: Partial<ReviewCandidate>): ReviewCandidate => ({ ...base, ...over })
 
@@ -55,5 +55,12 @@ describe('textos', () => {
 
   it('link para as despesas da categoria no mês', () => {
     expect(transactionsLink('2026-09', 'FOOD')).toBe('/transacoes?mes=2026-09&categoria=FOOD&tipo=EXPENSE')
+  })
+})
+
+describe('candidateDetail de conta nova', () => {
+  it('fala quantos lançamentos quando há mais de um', () => {
+    expect(candidateDetail(c({ kind: 'NEW', amount: 373.47, count: 2 }))).toMatch(/^2 lançamentos somando R\$\s373,47/)
+    expect(candidateDetail(c({ kind: 'NEW', amount: 373.47, count: 1 }))).toMatch(/^R\$\s373,47, e a conta/)
   })
 })

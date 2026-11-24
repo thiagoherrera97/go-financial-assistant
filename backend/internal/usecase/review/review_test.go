@@ -194,3 +194,14 @@ func TestBuildReview_DismissedAndOrder(t *testing.T) {
 		t.Errorf("ordem e dispensa: %q", got)
 	}
 }
+
+func TestBuildReview_NotesOfTheBill(t *testing.T) {
+	ps := []domain.ExpensePayment{
+		pay("oficina", 250, 2, "CREDIT_CARD"), pay("oficina", 250, 3, "CREDIT_CARD"), pay("oficina", 250, 3, "CREDIT_CARD"),
+	}
+	ps[0].Note, ps[1].Note, ps[2].Note = "troca de óleo", "pastilha de freio", "troca de óleo" // repetida não volta
+	dup := candidatesOf(BuildReview(nil, rowsOf(ps), nil, ps, nil, reviewTo), ReviewDuplicate)
+	if n := dup["oficina"].Notes; len(n) != 2 || n[0] != "troca de óleo" || n[1] != "pastilha de freio" {
+		t.Errorf("as notas da conta, sem repetir: %+v", n)
+	}
+}

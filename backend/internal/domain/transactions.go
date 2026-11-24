@@ -17,6 +17,7 @@ type TransactionFilter struct {
 	AccountID     *uuid.UUID
 	Day           *time.Time // um dia específico (sobrepõe Month)
 	Search        string     // trecho da descrição ou da nota
+	SortByAmount  bool       // do maior valor para o menor (senão, do mais recente)
 	Limit         int
 	Offset        int
 }

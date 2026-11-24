@@ -129,6 +129,14 @@ func (a *api) transactions(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	f.Offset = (page - 1) * f.Limit
+	switch q.Get("sort") {
+	case "", "date":
+	case "amount":
+		f.SortByAmount = true
+	default:
+		writeError(w, http.StatusBadRequest, "sort deve ser date ou amount")
+		return
+	}
 
 	txs, total, err := a.reader.Transactions(r.Context(), f)
 	if err != nil {

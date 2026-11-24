@@ -39,6 +39,7 @@ func (a *api) review(w http.ResponseWriter, r *http.Request) {
 		Baseline      float64  `json:"baseline"`
 		Count         int      `json:"count"`
 		Months        int      `json:"months"`
+		Notes         []string `json:"notes"`
 		Dismissed     bool     `json:"dismissed"`
 	}
 	months := make([]string, len(rev.Months))
@@ -55,7 +56,7 @@ func (a *api) review(w http.ResponseWriter, r *http.Request) {
 		if c.Label == "" {
 			c.Label = label
 		}
-		out := candidate{c.Kind, c.Key, c.Label, c.Category, label, c.Saving, nil, c.Amount, c.Baseline, c.Count, c.Months, c.Dismissed}
+		out := candidate{c.Kind, c.Key, c.Label, c.Category, label, c.Saving, nil, c.Amount, c.Baseline, c.Count, c.Months, notes(c.Notes), c.Dismissed}
 		if c.Recurring {
 			annual := c.Saving * 12
 			out.Annual = &annual
@@ -99,4 +100,12 @@ func (a *api) setDismissal(w http.ResponseWriter, r *http.Request) {
 func (a *api) registerReview(rt routes) {
 	rt.mux.Handle("GET /api/review", rt.protected(a.review))
 	rt.mux.Handle("PUT /api/review-dismissals", rt.protected(jsonOnly(a.setDismissal)))
+}
+
+// notes nunca vai nulo no JSON: sem nota é lista vazia.
+func notes(n []string) []string {
+	if n == nil {
+		return []string{}
+	}
+	return n
 }

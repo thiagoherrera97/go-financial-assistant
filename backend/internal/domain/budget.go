@@ -48,6 +48,7 @@ type ExpensePayment struct {
 	PaymentMethod string
 	Date          time.Time
 	Amount        float64
+	Note          string // nota escrita por você; vazia sem nota
 }
 
 // MonthLine é um lançamento do mês para a tela do mês (estilo planilha), já com a chave da conta e de onde veio.

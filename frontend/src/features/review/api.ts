@@ -25,6 +25,8 @@ export interface ReviewCandidate {
   baseline: number
   count: number
   months: number
+  /** Notas que você escreveu nos lançamentos do mês dessa conta. */
+  notes: string[]
   dismissed: boolean
 }
 
@@ -86,4 +88,27 @@ export const setDecision = (kind: ReviewKind, key: string, month: string, decide
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ kind, key, month, decided }),
+  })
+
+/** Uma despesa do mês, só com o que a lista de supérfluos e essenciais mostra (mesmo formato de /api/transactions). */
+export interface ExpenseItem {
+  id: string
+  date: string
+  description: string
+  category: string
+  categoryLabel: string
+  subcategory?: string
+  subcategoryLabel?: string
+  /** true = essencial, false = supérfluo, null = a revisar. */
+  essential: boolean | null
+  amount: number
+  note: string
+}
+
+/** query já montada (essentialQuery); usa a mesma chave das transações para atualizar junto quando algo muda. */
+export const useExpenseList = (query: string) =>
+  useQuery({
+    queryKey: ['transactions', query],
+    queryFn: () => request<{ items: ExpenseItem[]; total: number }>(`/api/transactions?${query}`),
+    placeholderData: keepPreviousData,
   })
