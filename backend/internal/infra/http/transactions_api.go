@@ -60,6 +60,14 @@ func (a *api) filterParams(w http.ResponseWriter, r *http.Request) (domain.Trans
 		}
 		f.AccountID = &id
 	}
+	switch q.Get("hide_refunded") {
+	case "", "false":
+	case "true":
+		f.HideRefunded = true
+	default:
+		writeError(w, http.StatusBadRequest, "hide_refunded deve ser true ou false")
+		return f, false
+	}
 	if utf8.RuneCountInString(f.Search) > maxSearchLen {
 		writeError(w, http.StatusBadRequest, "q muito longo")
 		return f, false

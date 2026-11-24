@@ -53,6 +53,9 @@ func transactionWhere(f domain.TransactionFilter) (string, []any) {
 	case "unknown":
 		where = append(where, "p.kind = 'EXPENSE' AND p.essential IS NULL")
 	}
+	if f.HideRefunded {
+		where = append(where, "pay.amount > 0 AND NOT EXISTS ("+refundOf+")")
+	}
 	if f.PaymentMethod != "" {
 		add("p.payment_method = ?", f.PaymentMethod)
 	}
@@ -64,6 +67,14 @@ func transactionWhere(f domain.TransactionFilter) (string, []any) {
 	}
 	return strings.Join(where, " AND "), args
 }
+
+// refundOf acha o estorno de uma despesa (pay/p): mesmo valor com sinal trocado, mesma descrição e até 45 dias de
+// distância. É o caso da pré-autorização (recarga, hotel, posto) que o banco cobra e devolve logo depois.
+var refundOf = `
+	SELECT 1 FROM payments rp JOIN purchases r ON r.id = rp.purchase_id
+	WHERE r.kind = 'EXPENSE' AND rp.status != 'CANCELLED' AND rp.amount < 0
+	  AND ABS(rp.amount + pay.amount) < 0.005 AND r.description = p.description
+	  AND ABS(` + strings.ReplaceAll(txDate, "pay.", "rp.") + ` - ` + txDate + `) <= 45`
 
 func (r *TransactionsRepo) Transactions(ctx context.Context, f domain.TransactionFilter) ([]domain.Transaction, int, error) {
 	where, args := transactionWhere(f)
