@@ -75,6 +75,13 @@ func (r *LedgerRepo) RebuildCardForecasts(ctx context.Context, closeDaysBefore i
 		SELECT external_id, note FROM payments WHERE external_id LIKE '`+syntheticPrefix+`%' AND note IS NOT NULL`); err != nil {
 		return 0, 0, fmt.Errorf("erro ao guardar as notas das previsões: %w", err)
 	}
+	// Idem para o que a pessoa corrigiu à mão (categoria, subcategoria, essencial/supérfluo).
+	if _, err := tx.Exec(ctx, `CREATE TEMP TABLE synthetic_classes ON COMMIT DROP AS
+		SELECT pay.external_id, p.category, p.subcategory, p.subcategory_manual, p.essential, p.essential_manual
+		FROM payments pay JOIN purchases p ON p.id = pay.purchase_id
+		WHERE pay.external_id LIKE '`+syntheticPrefix+`%' AND (p.subcategory_manual OR p.essential_manual)`); err != nil {
+		return 0, 0, fmt.Errorf("erro ao guardar a classificação das previsões: %w", err)
+	}
 	if _, err := tx.Exec(ctx, `DELETE FROM purchases WHERE id IN (SELECT purchase_id FROM payments WHERE external_id LIKE '`+syntheticPrefix+`%')`); err != nil {
 		return 0, 0, fmt.Errorf("erro ao apagar previsões antigas: %w", err)
 	}
@@ -113,6 +120,16 @@ func (r *LedgerRepo) RebuildCardForecasts(ctx context.Context, closeDaysBefore i
 		return 0, 0, fmt.Errorf("erro ao devolver as notas das previsões: %w", err)
 	}
 	if _, err := inheritNotes(ctx, tx, ""); err != nil {
+		return 0, 0, err
+	}
+	if _, err := tx.Exec(ctx, `
+		UPDATE purchases p SET category = c.category, subcategory = c.subcategory, subcategory_manual = c.subcategory_manual,
+			essential = c.essential, essential_manual = c.essential_manual
+		FROM payments pay JOIN synthetic_classes c ON c.external_id = pay.external_id
+		WHERE pay.purchase_id = p.id`); err != nil {
+		return 0, 0, fmt.Errorf("erro ao devolver a classificação das previsões: %w", err)
+	}
+	if err := inheritInstallmentClassification(ctx, tx); err != nil {
 		return 0, 0, err
 	}
 	if err := tx.Commit(ctx); err != nil {

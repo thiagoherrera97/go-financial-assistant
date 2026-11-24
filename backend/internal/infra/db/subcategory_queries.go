@@ -3,11 +3,13 @@ package db
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/domain"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 // pluggyCategory é a categoria que o banco mandou, gravada em raw_input ("[open finance: X | ...]"); vazia nos manuais.
@@ -141,6 +143,22 @@ func (r *ClassifyRepo) SetClassification(ctx context.Context, id uuid.UUID, c do
 	`, purchaseID, string(c.Category), sub, c.Essential); err != nil {
 		return false, 0, fmt.Errorf("erro ao corrigir a classificação: %w", err)
 	}
+	// As outras parcelas da mesma compra (inclusive as previstas) seguem a mesma classificação, como a nota.
+	if !c.ApplyToAll {
+		if _, err := tx.Exec(ctx, `
+			UPDATE purchases p SET category = src.category, subcategory = src.subcategory,
+				subcategory_manual = src.subcategory_manual, essential = src.essential, essential_manual = src.essential_manual
+			FROM purchases src, payments pay, payments spay
+			WHERE src.id = $1 AND spay.purchase_id = src.id AND pay.purchase_id = p.id AND p.id <> src.id
+			  AND p.kind = 'EXPENSE' AND pay.status != 'CANCELLED'
+			  AND src.description ~ '`+installmentSuffix+`'
+			  AND SUBSTRING(p.description FROM '`+installmentTotal+`') = SUBSTRING(src.description FROM '`+installmentTotal+`')
+			  AND `+expenseKey+` = `+strings.ReplaceAll(expenseKey, "p.description", "src.description")+`
+			  AND ROUND(pay.amount::numeric, 2) = ROUND(spay.amount::numeric, 2)
+		`, purchaseID); err != nil {
+			return false, 0, fmt.Errorf("erro ao classificar as outras parcelas: %w", err)
+		}
+	}
 	if c.ApplyToAll && key != "" {
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO category_rules (key, category, subcategory, essential) VALUES ($1, $2, $3, $4)
@@ -201,4 +219,39 @@ func (r *ClassifyRepo) SpendBySubcategory(ctx context.Context, month time.Time) 
 		out = append(out, s)
 	}
 	return out, rows.Err()
+}
+
+// installmentTotal tira o total de parcelas da marcação no fim da descrição ("VIVARA SJV (4/10)" → "10").
+const installmentTotal = `/(\d+)\)$`
+
+// inheritInstallmentClassification passa a classificação corrigida à mão de uma parcela para as outras parcelas da mesma
+// compra que ainda não foram corrigidas: as previstas que o app recria e as reais que chegam do banco depois. Irmãs =
+// mesmo estabelecimento, mesmo valor e mesmo total de parcelas. Havendo mais de uma corrigida, vale a mais recente.
+func inheritInstallmentClassification(ctx context.Context, q interface {
+	Exec(context.Context, string, ...any) (pgconn.CommandTag, error)
+}) error {
+	if _, err := q.Exec(ctx, `
+		WITH s AS (
+			SELECT p.id, `+expenseKey+` AS key, ROUND(pay.amount::numeric, 2) AS amount,
+			       SUBSTRING(p.description FROM '`+installmentTotal+`') AS total, `+txDate+` AS day,
+			       p.category, p.subcategory, p.subcategory_manual, p.essential, p.essential_manual
+			FROM purchases p JOIN payments pay ON pay.purchase_id = p.id
+			WHERE p.kind = 'EXPENSE' AND pay.status != 'CANCELLED' AND p.description ~ '`+installmentSuffix+`'
+		), src AS (
+			SELECT DISTINCT ON (key, amount, total) * FROM s
+			WHERE subcategory_manual OR essential_manual
+			ORDER BY key, amount, total, day DESC
+		)
+		UPDATE purchases p SET
+			category = CASE WHEN src.subcategory_manual THEN src.category ELSE p.category END,
+			subcategory = CASE WHEN src.subcategory_manual THEN src.subcategory ELSE p.subcategory END,
+			subcategory_manual = src.subcategory_manual,
+			essential = CASE WHEN src.essential_manual THEN src.essential ELSE p.essential END,
+			essential_manual = src.essential_manual
+		FROM s JOIN src ON src.key = s.key AND src.amount = s.amount AND src.total = s.total
+		WHERE p.id = s.id AND NOT (s.subcategory_manual OR s.essential_manual)
+	`); err != nil {
+		return fmt.Errorf("erro ao repetir a classificação nas outras parcelas: %w", err)
+	}
+	return nil
 }

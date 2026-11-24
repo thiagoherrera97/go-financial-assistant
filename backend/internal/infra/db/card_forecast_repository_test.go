@@ -5,7 +5,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/domain"
 	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/domain/ports"
+	"github.com/google/uuid"
 )
 
 func TestRebuildCardForecasts(t *testing.T) {
@@ -109,6 +111,46 @@ func TestRebuildCardForecasts(t *testing.T) {
 		return *n
 	}
 
+	// Marcar uma parcela prevista como essencial vale para todas as parcelas da compra, e sobrevive ao refazer.
+	essentialOf := func(where string) []bool {
+		t.Helper()
+		rows, err := pg.Pool.Query(ctx, `SELECT COALESCE(p.essential, FALSE) FROM payments pay JOIN purchases p ON p.id = pay.purchase_id
+			WHERE pay.account_id = $1 AND p.description LIKE 'fc-teste VIVARA%' AND pay.status != 'CANCELLED' AND `+where+` ORDER BY p.description`, card)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer rows.Close()
+		var out []bool
+		for rows.Next() {
+			var e bool
+			if err := rows.Scan(&e); err != nil {
+				t.Fatal(err)
+			}
+			out = append(out, e)
+		}
+		return out
+	}
+	allTrue := func(v []bool) bool {
+		for _, e := range v {
+			if !e {
+				return false
+			}
+		}
+		return len(v) > 0
+	}
+	var fiveOf10 uuid.UUID
+	if err := pg.Pool.QueryRow(ctx, `SELECT pay.id FROM payments pay JOIN purchases p ON p.id = pay.purchase_id
+		WHERE pay.account_id = $1 AND p.description = 'fc-teste VIVARA (5/10)'`, card).Scan(&fiveOf10); err != nil {
+		t.Fatal(err)
+	}
+	yes := true
+	if _, _, err := repo.SetClassification(ctx, fiveOf10, domain.Classification{Category: domain.CategoryFood, Essential: &yes}); err != nil {
+		t.Fatal(err)
+	}
+	if got := essentialOf("TRUE"); len(got) != 5 || !allTrue(got) {
+		t.Errorf("3/10 real e 4/10 a 7/10 previstas deveriam ficar essenciais: %v", got)
+	}
+
 	// Refazer não duplica; quando a parcela real chega, a prevista some e o ajuste diminui.
 	if _, _, err := repo.RebuildCardForecasts(ctx, 6, day("2026-11-20")); err != nil {
 		t.Fatal(err)
@@ -122,6 +164,9 @@ func TestRebuildCardForecasts(t *testing.T) {
 	if got := noteOf(`p.description = 'fc-teste VIVARA (5/10)'`); got != "alianças 5/10" {
 		t.Errorf("nota da parcela prevista perdida ao refazer: %q", got)
 	}
+	if got := essentialOf("TRUE"); len(got) != 5 || !allTrue(got) {
+		t.Errorf("a classificação das parcelas previstas se perdeu ao refazer: %v", got)
+	}
 	cardExpense(t, repo, pg, card, "fc-t3", "fc-teste VIVARA (4/10)", 669, day("2026-11-15"))
 	cardExpense(t, repo, pg, card, "fc-t4", "fc-teste farmácia", 31, day("2026-10-25"))
 	if _, err := repo.RecomputeCardBills(ctx, 6); err != nil {
@@ -129,6 +174,9 @@ func TestRebuildCardForecasts(t *testing.T) {
 	}
 	if _, _, err := repo.RebuildCardForecasts(ctx, 6, day("2026-11-20")); err != nil {
 		t.Fatal(err)
+	}
+	if got := essentialOf(`pay.external_id = 'fc-t3'`); len(got) != 1 || !got[0] {
+		t.Errorf("a 4/10 real que chegou do banco deveria herdar o essencial: %v", got)
 	}
 	got = read()
 	if len(got) != 4 || got[0].amount != 200 || got[1].desc != "fc-teste VIVARA (5/10)" {
