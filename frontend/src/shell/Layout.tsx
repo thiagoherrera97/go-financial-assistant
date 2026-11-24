@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import {
   FileSpreadsheet,
   ArrowLeftRight,
+  CreditCard,
   Bot,
   Calculator,
   ChartPie,
@@ -49,6 +50,7 @@ const SECTIONS: { title?: string; items: Item[] }[] = [
     title: 'Dia a dia',
     items: [
       { to: '/transacoes', label: 'Transações', Icon: ArrowLeftRight },
+      { to: '/faturas', label: 'Faturas', Icon: CreditCard },
       { to: '/gastos', label: 'Gastos', Icon: ChartPie },
       { to: '/classificar', label: 'Classificar', Icon: Tags },
       { to: '/orcamento', label: 'Orçamento', Icon: Scale },

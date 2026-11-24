@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react'
+import { Link } from 'react-router'
 import { CalendarClock, CreditCard, OctagonAlert, TriangleAlert } from 'lucide-react'
 import { contrast, dueText, inkOn, LEVEL_LABEL, money, nextBillText, safeHex } from '../lib/balances'
 import { formatPercent } from '../../../shared/lib/format'
@@ -51,6 +52,9 @@ export function CreditCardTile({ card, color, hidden }: { card: BalanceCard; col
             {nextBill}
           </p>
         )}
+        <Link className="bal-card-link" to={`/faturas?cartao=${card.id}`}>
+          Ver a fatura e conferir com o banco →
+        </Link>
       </div>
       {hasLimit ? (
         <div>

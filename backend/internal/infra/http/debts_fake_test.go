@@ -10,12 +10,15 @@ import (
 
 // debtFake guarda as dívidas dos testes da API.
 type debtFake struct {
-	debts    []domain.Debt
-	hits     []domain.MoneyMovement
-	days     []domain.BalanceDay
-	bill     float64
-	outflows []domain.MoneyMovement
-	flows    []domain.RecurringFlow
+	debts     []domain.Debt
+	hits      []domain.MoneyMovement
+	days      []domain.BalanceDay
+	bill      float64
+	outflows  []domain.MoneyMovement
+	flows     []domain.RecurringFlow
+	cardBills []domain.CardBillSummary
+	billLines []domain.CardBillLine
+	billAsked time.Time
 }
 
 func (f *fakeReader) Debts(context.Context) ([]domain.Debt, error) { return f.debt.debts, f.err }
@@ -81,4 +84,12 @@ func (f *fakeReader) DeleteRecurringFlow(_ context.Context, id uuid.UUID) (bool,
 		}
 	}
 	return false, f.err
+}
+
+func (f *fakeReader) CardBills(context.Context, uuid.UUID) ([]domain.CardBillSummary, error) {
+	return f.debt.cardBills, f.err
+}
+func (f *fakeReader) CardBillLines(_ context.Context, _ uuid.UUID, due time.Time) ([]domain.CardBillLine, error) {
+	f.debt.billAsked = due
+	return f.debt.billLines, f.err
 }

@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router'
 import { RequireAuth } from './features/auth/RequireAuth'
 import Login from './features/auth/Login'
 import Budget from './features/budget/Budget'
+import CardBills from './features/cards/CardBills'
 import Coach from './features/coach/Coach'
 import Categorize from './features/categorize/Categorize'
 import Compare from './features/compare/Compare'
@@ -30,6 +31,7 @@ export default function App() {
         <Route path="/investimentos" element={<Investments />} />
         <Route path="/comparacoes" element={<Compare />} />
         <Route path="/transacoes" element={<Transactions />} />
+        <Route path="/faturas" element={<CardBills />} />
         <Route path="/contas" element={<Navigate to="/" replace />} />
         <Route path="/projecao" element={<Projection />} />
         <Route path="/orcamento" element={<Budget />} />
