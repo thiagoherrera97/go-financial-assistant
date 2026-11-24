@@ -28,7 +28,8 @@ Conecte seus bancos pelo **Open Finance**, converse com o seu próprio **bot no 
 11. [Recuperar o acesso](#recuperar-o-acesso)
 12. [Backup e restauração](#backup-e-restauração)
 13. [Atualizando uma instalação existente](#atualizando-uma-instalação-existente)
-14. [Comandos úteis e documentação](#comandos-úteis-e-documentação)
+14. [Uma segunda instalação na mesma máquina](#uma-segunda-instalação-na-mesma-máquina)
+15. [Comandos úteis e documentação](#comandos-úteis-e-documentação)
 
 ## O que dá para fazer
 
@@ -361,6 +362,28 @@ DASHBOARD_PASSWORD=uma-senha-com-12-ou-mais
 
 4. `docker compose up -d`. O log (`docker compose logs -f app`) mostra `canal Telegram ativo`.
 </details>
+
+## Uma segunda instalação na mesma máquina
+
+Para outra pessoa ter a própria instalação, zerada (bancos, bot, senha, banco de dados e backups dela), clone o repositório numa **outra pasta**. Não use a mesma pasta com outro `.env`: `./secrets` e `./backups` ficariam compartilhados.
+
+```bash
+git clone https://github.com/thiagoherrera97/go-financial-assistant.git ../finassist-2
+cd ../finassist-2
+make init
+```
+
+Acrescente ao `.env` dessa pasta nomes e portas próprios (veja a seção "Segunda instalação" do `.env.example`):
+
+```env
+COMPOSE_PROJECT_NAME=finassist-2
+CONTAINER_PREFIX=finassist-2
+APP_PORT=3001
+WEB_PORT=8081
+POSTGRES_PORT=5433
+```
+
+Depois, `docker compose up -d --build` e o setup em `http://localhost:8081`. O banco nasce vazio (volume `finassist-2_postgres_data`) e a primeira instalação não é tocada. Na primeira instalação não mude nada: os padrões são os valores de sempre. Para atualizar, rode `git pull` e `docker compose up -d --build` em cada pasta.
 
 ## Comandos úteis e documentação
 
