@@ -36,7 +36,7 @@ export function EssentialList({ month }: { month: string }) {
   const linkAll = `/transacoes?${new URLSearchParams({ mes: month, tipo: 'EXPENSE', essencial: tab })}`
 
   return (
-    <section className="section-gap" aria-labelledby="essential-title">
+    <section aria-labelledby="essential-title">
       <h2 className="bill-head" id="essential-title">
         Supérfluos e essenciais do mês
       </h2>

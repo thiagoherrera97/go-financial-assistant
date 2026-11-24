@@ -1,8 +1,8 @@
 import './styles.css'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Eye, EyeOff, StickyNote } from 'lucide-react'
+import { Eye, EyeOff, Grid3x3, Scale, Scissors, StickyNote } from 'lucide-react'
 import { useState, type CSSProperties } from 'react'
-import { Link } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { CategoryChip } from '../../shared/components/CategoryChip'
 import { HeatMatrix } from './components/HeatMatrix'
 import { MonthFilter } from '../../shared/components/MonthFilter'
@@ -13,6 +13,7 @@ import { categoryVisual } from '../../shared/lib/categoryVisual'
 import { formatMonthTitle } from '../../shared/lib/format'
 import { candidateDetail, candidateName, countByKind, KIND_META, KIND_ORDER, savingText, transactionsLink, visibleCandidates } from './lib/review'
 import { canDecide } from './lib/savings'
+import { parseTab, type ReviewTab } from './lib/tabs'
 import { useMonth } from '../../shared/lib/useMonth'
 import { setDecision, setDismissal, useReview } from './api'
 import type { ReviewCandidate, ReviewKind } from './api'
@@ -23,6 +24,14 @@ export default function Review() {
   const queryClient = useQueryClient()
   const [kind, setKind] = useState<ReviewKind | 'ALL'>('ALL')
   const [showDismissed, setShowDismissed] = useState(false)
+  const [params, setParams] = useSearchParams()
+  const tab = parseTab(params.get('aba'))
+  const setTab = (t: ReviewTab) =>
+    setParams((prev) => {
+      const next = new URLSearchParams(prev)
+      next.set('aba', t)
+      return next
+    })
 
   const dismiss = useMutation({
     mutationFn: ({ c, dismissed }: { c: ReviewCandidate; dismissed: boolean }) => setDismissal(c.kind, c.key, dismissed),
@@ -44,8 +53,19 @@ export default function Review() {
       <h1 className="page-title">Revisão de {formatMonthTitle(month)}</h1>
       <MonthFilter month={month} now={now} onChange={setMonth} warnPartial />
 
-      <SavingsPanel />
+      <div className="view-toggle review-tabs" role="group" aria-label="Parte da revisão">
+        {TABS.map(({ value, label, Icon }) => (
+          <button key={value} type="button" className="btn" aria-pressed={tab === value} onClick={() => setTab(value)}>
+            <Icon size={14} aria-hidden="true" /> {label}
+          </button>
+        ))}
+      </div>
 
+      {tab === 'gastos' && <EssentialList month={month} />}
+
+      {tab === 'cortar' && <SavingsPanel />}
+
+      {tab !== 'gastos' && (
       <QueryState query={review}>
         {(r) => {
           const counts = countByKind(r.candidates)
@@ -53,6 +73,7 @@ export default function Review() {
           const dismissedTotal = r.candidates.filter((c) => c.dismissed).length
           return (
             <>
+              {tab === 'categorias' && (
               <section className="card" aria-labelledby="heat-title">
                 <h2 className="chart-title" id="heat-title">
                   Categoria por mês
@@ -60,7 +81,9 @@ export default function Review() {
                 <p className="chart-sub">Quanto mais escura a célula, mais a categoria gastou naquele mês, comparado aos outros meses dela.</p>
                 <HeatMatrix months={r.months} rows={r.matrix} stale={review.isPlaceholderData} />
               </section>
-
+              )}
+              {tab === 'cortar' && (
+                <>
               <section className="section-gap" aria-labelledby="cand-title">
                 <h2 className="bill-head" id="cand-title">
                   {showDismissed ? 'Sugestões dispensadas' : 'O que dá para cortar'} <span className="count">{list.length}</span>
@@ -101,20 +124,27 @@ export default function Review() {
                 )}
               </section>
 
-              <EssentialList month={month} />
-
               <p className="tile-note section-gap">
                 Tudo aqui é calculado a partir dos seus lançamentos, sem IA. A economia é uma estimativa: aumento = voltar à média; fixa = cancelar; gasto
                 formiga (4 ou mais compras de até R$ 40, fora o Pix) = cortar pela metade; duplicata e conta nova valem uma vez só. Os tipos se sobrepõem,
                 então não some as sugestões. Com pouco histórico, aumentos e contas novas ficam menos confiáveis.
               </p>
+                </>
+              )}
             </>
           )
         }}
       </QueryState>
+      )}
     </>
   )
 }
+
+const TABS: { value: ReviewTab; label: string; Icon: typeof Scissors }[] = [
+  { value: 'cortar', label: 'Cortar', Icon: Scissors },
+  { value: 'gastos', label: 'Supérfluos', Icon: Scale },
+  { value: 'categorias', label: 'Categorias', Icon: Grid3x3 },
+]
 
 function CandidateCard({
   c,
