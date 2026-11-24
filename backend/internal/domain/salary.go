@@ -114,6 +114,7 @@ type SalaryCredit struct {
 	ID     string // id do pagamento
 	Date   time.Time
 	Amount float64
+	Label  string     // descrição do extrato, para a pessoa reconhecer o crédito
 	Kind   SalaryKind // vazio = sem decisão
 	Month  time.Time  // MONTH e PART: o mês (primeiro dia) do ciclo a que o crédito pertence
 	Day    int        // PART: o dia da parte

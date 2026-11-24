@@ -1,6 +1,8 @@
 package ports
 
 import (
+	"github.com/google/uuid"
+
 	"context"
 	"time"
 
@@ -23,4 +25,14 @@ type BudgetReader interface {
 	KnownInstallments(ctx context.Context, from, to time.Time) (map[time.Time]float64, error)
 	// SetExpenseRule grava a correção manual; class vazio apaga e volta à detecção automática.
 	SetExpenseRule(ctx context.Context, key string, class domain.ExpenseClass) error
+}
+
+// SalaryDecisionStore grava o que a pessoa disse que um crédito de salário é. Os créditos já voltam com a decisão em
+// BudgetReader.SalaryCredits.
+type SalaryDecisionStore interface {
+	// DecideSalary grava (ou troca) a decisão sobre o pagamento; domain.ErrSalaryCreditNotFound se ele não é um crédito de
+	// salário. month e day só valem para MONTH e PART.
+	DecideSalary(ctx context.Context, paymentID uuid.UUID, kind domain.SalaryKind, month *time.Time, day int) error
+	// UndoSalaryDecision apaga a decisão; o app volta a decidir pelo valor e pela data.
+	UndoSalaryDecision(ctx context.Context, paymentID uuid.UUID) error
 }

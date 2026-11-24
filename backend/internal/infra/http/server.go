@@ -51,6 +51,8 @@ type Server struct {
 	mu     sync.Mutex
 	runCtx context.Context // definido em Start: rotas montadas depois (canal ligado pelo setup) já sobem as limpezas
 	cycles func() domain.Cycles
+	// refreshCycles recalcula os ciclos depois de uma decisão sobre o salário (nil = não recalcula).
+	refreshCycles func(context.Context) error
 
 	// composer liga o painel "Lançar" (nil = desligado).
 	composer Composer
@@ -67,6 +69,9 @@ func (s *Server) SetSyncer(syncer chat.Syncer) { s.syncer = syncer }
 
 // SetCycles liga os ciclos do salário: o "mês" das telas passa a ser o ciclo. Chamar antes de MountAPI.
 func (s *Server) SetCycles(f func() domain.Cycles) { s.cycles = f }
+
+// SetCyclesRefresh liga o recálculo dos ciclos: uma decisão sobre um crédito de salário pode mudar onde o mês começa.
+func (s *Server) SetCyclesRefresh(f func(context.Context) error) { s.refreshCycles = f }
 
 // SetCoach liga o Coach com IA da API do dashboard. Sem plano pago declarado, ele fica bloqueado.
 func (s *Server) SetCoach(coach ports.Coach, paidPlan bool) {

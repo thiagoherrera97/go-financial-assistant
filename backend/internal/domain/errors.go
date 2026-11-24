@@ -21,3 +21,6 @@ var (
 	ErrVendorTxNotFound = errors.New("transação não encontrada ou não é uma saída")
 	ErrVendorTxLinked   = errors.New("essa transação já está ligada a um fornecedor")
 )
+
+// Conferência do salário.
+var ErrSalaryCreditNotFound = errors.New("crédito de salário não encontrado")

@@ -231,13 +231,18 @@ func (a *api) salary(w http.ResponseWriter, r *http.Request) {
 		parts[i] = p
 	}
 	type extraJSON struct {
-		Date   string  `json:"date"`
-		Amount float64 `json:"amount"`
+		Date      string  `json:"date"`
+		Amount    float64 `json:"amount"`
+		Kind      string  `json:"kind,omitempty"`      // vazio: ainda não conferido
+		KindLabel string  `json:"kindLabel,omitempty"` // "PLR", "Hora extra"...
 	}
 	extras := make([]extraJSON, len(view.Extras))
 	var extrasTotal float64
 	for i, e := range view.Extras {
-		extras[i] = extraJSON{e.Date.Format("2006-01-02"), e.Amount}
+		extras[i] = extraJSON{Date: e.Date.Format("2006-01-02"), Amount: e.Amount}
+		if e.Kind != "" {
+			extras[i].Kind, extras[i].KindLabel = string(e.Kind), e.Kind.Label()
+		}
 		extrasTotal += e.Amount
 	}
 	writeJSON(w, http.StatusOK, map[string]any{

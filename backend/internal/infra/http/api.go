@@ -1,6 +1,7 @@
 package httpserver
 
 import (
+	"context"
 	"github.com/MarcosAAlbanoJunior/go-financial-assistant/internal/domain"
 	"log/slog"
 	"net/http"
@@ -17,16 +18,17 @@ import (
 
 // api serve as rotas JSON de leitura do dashboard sob /api.
 type api struct {
-	reader   ports.DashboardReader
-	sessions *sessions
-	logger   *slog.Logger
-	now      func() time.Time
-	cycles   func() domain.Cycles // nil = mês do calendário
-	coach    *coachService
-	insights *insights.Insights
-	syncer   chat.Syncer   // nil sem Open Finance
-	settings *SettingsDeps // nil sem a página de configurações
-	factor   *SecondFactor // nil = só senha
+	reader        ports.DashboardReader
+	sessions      *sessions
+	logger        *slog.Logger
+	now           func() time.Time
+	cycles        func() domain.Cycles        // nil = mês do calendário
+	refreshCycles func(context.Context) error // nil = não recalcula
+	coach         *coachService
+	insights      *insights.Insights
+	syncer        chat.Syncer   // nil sem Open Finance
+	settings      *SettingsDeps // nil sem a página de configurações
+	factor        *SecondFactor // nil = só senha
 
 	challenges *auth.Challenges
 
@@ -50,6 +52,13 @@ func (s *Server) mountAPI(password PasswordCheck, reader ports.DashboardReader, 
 	}
 	sess.open = s.noAuth
 	a := &api{reader: reader, sessions: sess, logger: s.logger, now: now, coach: newCoachService(s.coach, s.coachPaid), insights: insights.NewInsights(reader), syncer: s.syncer, settings: s.settings, factor: s.factor, challenges: auth.NewChallenges(), setup: s.setup, cycles: s.cycles}
+	// Lido a cada decisão: o recálculo pode ser ligado depois de montar a API.
+	a.refreshCycles = func(ctx context.Context) error {
+		if s.refreshCycles == nil {
+			return nil
+		}
+		return s.refreshCycles(ctx)
+	}
 	a.insights.SetCycles(s.cycles)
 	if s.settings != nil {
 		svc := s.settings.Service
@@ -82,6 +91,7 @@ func (s *Server) mountAPI(password PasswordCheck, reader ports.DashboardReader, 
 	a.registerCoach(rt)
 	a.registerCategorize(rt)
 	a.registerTransfers(rt)
+	a.registerSalaryReview(rt)
 	a.registerSavings(rt)
 	a.registerBalances(rt)
 	a.registerVendors(rt)

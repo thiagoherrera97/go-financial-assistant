@@ -19,6 +19,7 @@ func (a *app) mountDashboard() error {
 	a.server.SetCoach(a.gemini, a.cfg.GeminiPaidPlan)
 	a.server.SetSyncer(a.syncer)
 	a.server.SetCycles(a.cycles.Current)
+	a.server.SetCyclesRefresh(a.cycles.Refresh) // a conferência do salário pode mudar onde o mês começa
 	a.server.SetComposer(a.composer())
 	if a.cfg.DashboardNoAuth {
 		a.server.SetNoAuth()

@@ -81,6 +81,54 @@ func (i *Insights) salaryFor(ctx context.Context, month time.Time) (SalaryView, 
 	return SalaryView{Configured: true, Parts: status, Extras: extras}, nil
 }
 
+// salaryReviewMonths é quantos ciclos para trás (além do atual) a conferência do salário olha.
+const salaryReviewMonths = 3
+
+// SalaryReviewView é a conferência do salário: o que espera a pessoa dizer o que é e o que ela já disse, nos últimos ciclos.
+type SalaryReviewView struct {
+	Parts   []domain.SalaryPart
+	Pending []domain.SalaryReview
+	Decided []domain.SalaryCredit
+}
+
+// SalaryReviews monta a conferência do salário do ciclo de today e dos salaryReviewMonths anteriores. Vazio sem salário
+// configurado: sem partes não há o que conferir.
+func (i *Insights) SalaryReviews(ctx context.Context, today time.Time) (SalaryReviewView, error) {
+	parts := i.salaryParts()
+	if len(parts) == 0 {
+		return SalaryReviewView{}, nil
+	}
+	view := SalaryReviewView{Parts: parts}
+	key := i.CycleKey(today)
+	first, _ := i.Cycles().Bounds(key.AddDate(0, -salaryReviewMonths, 0))
+	_, last := i.Cycles().Bounds(key)
+	seen := map[string]bool{}
+	for m := key.AddDate(0, -salaryReviewMonths, 0); !m.After(key); m = m.AddDate(0, 1, 0) {
+		start, end := i.Cycles().Bounds(m)
+		credits, err := i.reader.SalaryCredits(ctx, start.AddDate(0, 0, -domain.SalaryMatchDays), end.AddDate(0, 0, domain.SalaryMatchDays))
+		if err != nil {
+			return SalaryReviewView{}, err
+		}
+		for _, r := range domain.SalaryReviews(parts, m, credits) {
+			if !seen[r.Credit.ID] {
+				seen[r.Credit.ID] = true
+				view.Pending = append(view.Pending, r)
+			}
+		}
+	}
+	credits, err := i.reader.SalaryCredits(ctx, first, last)
+	if err != nil {
+		return SalaryReviewView{}, err
+	}
+	for n := len(credits) - 1; n >= 0; n-- { // mais recentes primeiro
+		if credits[n].Kind != "" {
+			view.Decided = append(view.Decided, credits[n])
+		}
+	}
+	slices.Reverse(view.Pending)
+	return view, nil
+}
+
 // SetCardCloseDays liga a configuração de quantos dias antes do vencimento a fatura fecha (lida a cada consulta).
 func (i *Insights) SetCardCloseDays(f func() int) { i.closeDays = f }
 

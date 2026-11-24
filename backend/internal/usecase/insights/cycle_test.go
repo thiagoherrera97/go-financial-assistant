@@ -15,11 +15,15 @@ type cycleReader struct {
 	credits []domain.SalaryCredit
 }
 
-func (cycleReader) MonthLines(context.Context, time.Time) ([]domain.MonthLine, error) { return nil, nil }
+func (cycleReader) MonthLines(context.Context, time.Time) ([]domain.MonthLine, error) {
+	return nil, nil
+}
 func (cycleReader) ExpenseKeyMonths(context.Context, time.Time, time.Time) ([]domain.ExpenseKeyMonth, error) {
 	return nil, nil
 }
-func (cycleReader) ExpenseRules(context.Context) (map[string]domain.ExpenseClass, error) { return nil, nil }
+func (cycleReader) ExpenseRules(context.Context) (map[string]domain.ExpenseClass, error) {
+	return nil, nil
+}
 func (r cycleReader) SalaryCredits(_ context.Context, from, to time.Time) ([]domain.SalaryCredit, error) {
 	var out []domain.SalaryCredit
 	for _, c := range r.credits {

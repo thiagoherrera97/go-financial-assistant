@@ -21,6 +21,7 @@ const testPassword = "senha-de-teste-123"
 
 type fakeReader struct {
 	salaryCredits  []domain.SalaryCredit
+	salaryDecided  []string // DecideSalary/UndoSalaryDecision gravados: "id kind mês dia" ou "undo id"
 	monthLines     []domain.MonthLine
 	notes          map[uuid.UUID]string
 	deletedTx      []uuid.UUID

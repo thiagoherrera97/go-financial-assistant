@@ -1,6 +1,8 @@
 package db
 
 import (
+	"github.com/google/uuid"
+
 	"context"
 	"fmt"
 	"time"
@@ -135,12 +137,14 @@ func (r *BudgetRepo) IncomePayments(ctx context.Context, from, to time.Time) ([]
 
 func (r *BudgetRepo) SalaryCredits(ctx context.Context, from, to time.Time) ([]domain.SalaryCredit, error) {
 	query := `
-		SELECT ` + txDate + `::date AS day, pay.amount
+		SELECT pay.id::text, ` + txDate + `::date AS day, pay.amount, ` + cleanDescription + `,
+		       COALESCE(d.kind, ''), d.month, COALESCE(d.day, 0)
 		FROM payments pay
 		JOIN purchases p ON p.id = pay.purchase_id
-		WHERE p.kind = 'INCOME' AND p.category = 'SALARY' AND pay.status != 'CANCELLED'
+		LEFT JOIN salary_decisions d ON d.payment_id = pay.id
+		WHERE ` + salaryCredit + `
 		  AND ` + txDate + `::date BETWEEN $1::date AND $2::date
-		ORDER BY 1, 2 DESC
+		ORDER BY 2, 3 DESC, 1
 	`
 	rows, err := r.db.Pool.Query(ctx, query, from, to)
 	if err != nil {
@@ -150,11 +154,18 @@ func (r *BudgetRepo) SalaryCredits(ctx context.Context, from, to time.Time) ([]d
 
 	var result []domain.SalaryCredit
 	for rows.Next() {
-		var c domain.SalaryCredit
-		if err := rows.Scan(&c.Date, &c.Amount); err != nil {
+		var (
+			c     domain.SalaryCredit
+			kind  string
+			month *time.Time
+		)
+		if err := rows.Scan(&c.ID, &c.Date, &c.Amount, &c.Label, &kind, &month, &c.Day); err != nil {
 			return nil, fmt.Errorf("erro ao escanear crédito de salário: %w", err)
 		}
-		c.Date = c.Date.UTC()
+		c.Date, c.Kind = c.Date.UTC(), domain.SalaryKind(kind)
+		if month != nil {
+			c.Month = month.UTC()
+		}
 		result = append(result, c)
 	}
 	return result, rows.Err()
@@ -190,4 +201,39 @@ func (r *BudgetRepo) MonthLines(ctx context.Context, month time.Time) ([]domain.
 		result = append(result, l)
 	}
 	return result, rows.Err()
+}
+
+// salaryCredit: entrada na categoria Salário, ainda contando (a mesma regra de SalaryCredits).
+const salaryCredit = `p.kind = 'INCOME' AND p.category = 'SALARY' AND pay.status != 'CANCELLED'`
+
+func (r *BudgetRepo) DecideSalary(ctx context.Context, paymentID uuid.UUID, kind domain.SalaryKind, month *time.Time, day int) error {
+	var dayArg *int
+	if kind == domain.SalaryKindPart {
+		dayArg = &day
+	}
+	if kind != domain.SalaryKindMonth && kind != domain.SalaryKindPart {
+		month = nil
+	}
+	tag, err := r.db.Pool.Exec(ctx, `
+		INSERT INTO salary_decisions (payment_id, kind, month, day)
+		SELECT pay.id, $2, $3::date, $4
+		FROM payments pay
+		JOIN purchases p ON p.id = pay.purchase_id
+		WHERE pay.id = $1 AND `+salaryCredit+`
+		ON CONFLICT (payment_id) DO UPDATE SET kind = EXCLUDED.kind, month = EXCLUDED.month, day = EXCLUDED.day, decided_at = NOW()
+	`, paymentID, string(kind), month, dayArg)
+	if err != nil {
+		return fmt.Errorf("erro ao gravar a decisão do salário: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return domain.ErrSalaryCreditNotFound
+	}
+	return nil
+}
+
+func (r *BudgetRepo) UndoSalaryDecision(ctx context.Context, paymentID uuid.UUID) error {
+	if _, err := r.db.Pool.Exec(ctx, `DELETE FROM salary_decisions WHERE payment_id = $1`, paymentID); err != nil {
+		return fmt.Errorf("erro ao desfazer a decisão do salário: %w", err)
+	}
+	return nil
 }
