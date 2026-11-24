@@ -20,13 +20,15 @@ const installmentSuffix = `\(\d+/\d+\)$`
 // transações, lançamento sem fatura informada ainda não entrou em fatura fechada: se a estimativa o puser na última
 // fatura fechada, ele vai para a seguinte. Vale para a compra à vista pendente perto do fechamento e para a parcela que
 // o banco data um mês antes da fatura em que cai (ex.: FREE VISA, em que a 5/6 ficava na fatura fechada junto com a
-// 4/6 e o app previa as parcelas seguintes duas vezes). Grava só o que mudou e devolve quantas linhas mudaram.
+// 4/6 e o app previa as parcelas seguintes duas vezes). Parcela n que cairia antes da parcela 1 da série vai para n-1
+// meses depois dela (domain.CardInstallmentNotBeforeFirst). Grava só o que mudou e devolve quantas linhas mudaram.
 func (r *LedgerRepo) RecomputeCardBills(ctx context.Context, closeDaysBefore int) (int64, error) {
 	query := `
 		SELECT pay.id, COALESCE(pay.due_date, pay.created_at::date), p.description ~ '` + installmentSuffix + `',
 		       EXTRACT(DAY FROM a.due_date)::int,
 		       CASE WHEN a.close_date IS NOT NULL AND a.close_date < a.due_date THEN (a.due_date - a.close_date) END,
-		       pay.bill_due_date, cb.due_date, lb.last_due
+		       pay.bill_due_date, cb.due_date, lb.last_due,
+		       COALESCE(SUBSTRING(p.description FROM '\((\d+)/\d+\)$')::int, 0), COALESCE(fb.bills, '{}')
 		FROM payments pay
 		JOIN purchases p ON p.id = pay.purchase_id
 		JOIN accounts a ON a.id = pay.account_id
@@ -36,6 +38,20 @@ func (r *LedgerRepo) RecomputeCardBills(ctx context.Context, closeDaysBefore int
 			WHERE b.account_id = a.id
 			  AND EXISTS (SELECT 1 FROM payments q WHERE q.account_id = a.id AND q.card_bill_id IS NOT NULL)
 		) lb ON TRUE
+		LEFT JOIN LATERAL (
+			-- Faturas da parcela 1 da mesma série (mesma conta, mesma descrição com "(1/N)", valor igual a menos do arredondamento).
+			-- Vale a fatura do banco, senão a já calculada, senão o mês em que a parcela 1 está datada (primeira passada).
+			SELECT ARRAY_AGG(COALESCE(fcb.due_date, fp.bill_due_date, fp.due_date)
+			                 ORDER BY COALESCE(fcb.due_date, fp.bill_due_date, fp.due_date)) AS bills
+			FROM payments fp
+			JOIN purchases fpp ON fpp.id = fp.purchase_id
+			LEFT JOIN card_bills fcb ON fcb.external_id = fp.card_bill_id AND fcb.account_id = fp.account_id
+			WHERE p.description ~ '\((\d+)/\d+\)$' AND SUBSTRING(p.description FROM '\((\d+)/\d+\)$') <> '1'
+			  AND fpp.description = REGEXP_REPLACE(p.description, '\(\d+/(\d+)\)$', '(1/\1)')
+			  AND fp.account_id = pay.account_id AND fp.id <> pay.id AND fp.status != 'CANCELLED'
+			  AND COALESCE(fcb.due_date, fp.bill_due_date, fp.due_date) IS NOT NULL
+			  AND ABS(fp.amount - pay.amount) <= GREATEST(0.20, pay.amount * 0.02)
+		) fb ON TRUE
 		WHERE a.type = 'CREDIT' AND a.due_date IS NOT NULL AND p.kind = 'EXPENSE' AND ` + notSynthetic + `
 	`
 	rows, err := r.db.Pool.Query(ctx, query)
@@ -53,9 +69,11 @@ func (r *LedgerRepo) RecomputeCardBills(ctx context.Context, closeDaysBefore int
 			bankClose   *int
 			current     *time.Time
 			bankBill    *time.Time
-			lastBill    *time.Time // última fatura fechada, só em cartão cujo banco informa a fatura das transações
+			lastBill    *time.Time  // última fatura fechada, só em cartão cujo banco informa a fatura das transações
+			number      int         // número da parcela ("(n/m)"); 0 fora das parcelas
+			firstBills  []time.Time // faturas da parcela 1 da mesma série
 		)
-		if err := rows.Scan(&id, &day, &installment, &dueDay, &bankClose, &current, &bankBill, &lastBill); err != nil {
+		if err := rows.Scan(&id, &day, &installment, &dueDay, &bankClose, &current, &bankBill, &lastBill, &number, &firstBills); err != nil {
 			rows.Close()
 			return 0, fmt.Errorf("erro ao ler compra no cartão: %w", err)
 		}
@@ -66,6 +84,9 @@ func (r *LedgerRepo) RecomputeCardBills(ctx context.Context, closeDaysBefore int
 		want := domain.CardBillDue(day, dueDay, closeDays)
 		if installment {
 			want = domain.CardInstallmentBillDue(day, dueDay)
+			if bankBill == nil {
+				want = domain.CardInstallmentNotBeforeFirst(want, firstBills, number, dueDay)
+			}
 		}
 		switch {
 		case bankBill != nil:

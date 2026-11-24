@@ -96,3 +96,27 @@ func TestReplacementDates(t *testing.T) {
 		t.Errorf("dia 31 em fevereiro deveria ser 28/02, got %v", got)
 	}
 }
+
+func TestCardInstallmentNotBeforeFirst(t *testing.T) {
+	d := func(s string) time.Time { v, _ := time.Parse("2006-01-02", s); return v }
+	sep := []time.Time{d("2026-09-12")}
+	cases := []struct {
+		name  string
+		want  string
+		first []time.Time
+		n     int
+		out   string
+	}{
+		{"8/12 datada antes da 1/12 vai para 7 meses depois dela", "2026-08-12", sep, 8, "2027-04-12"},
+		{"parcela em ordem fica", "2026-12-12", sep, 4, "2026-12-12"},
+		{"mesmo mês da 1/12 fica", "2026-09-12", sep, 2, "2026-09-12"},
+		{"série anterior antes: fica", "2026-04-12", []time.Time{d("2025-09-12"), d("2026-09-12")}, 8, "2026-04-12"},
+		{"sem parcela 1 conhecida fica", "2026-08-12", nil, 8, "2026-08-12"},
+		{"parcela 1 não muda", "2026-08-12", sep, 1, "2026-08-12"},
+	}
+	for _, c := range cases {
+		if got := CardInstallmentNotBeforeFirst(d(c.want), c.first, c.n, 12).Format("2006-01-02"); got != c.out {
+			t.Errorf("%s: got %s, want %s", c.name, got, c.out)
+		}
+	}
+}

@@ -54,3 +54,24 @@ func ReplacementDates(firstBill, fromBill, today time.Time, installments, day in
 	}
 	return out
 }
+
+// CardInstallmentNotBeforeFirst corrige a fatura de uma parcela n (n > 1) que cairia antes da parcela 1 da mesma série:
+// impossível, e sinal de data errada vinda do banco (ex.: parcela futura com a data da compra e sem previsão de fatura).
+// Quando nenhuma parcela 1 da série (firstBills, faturas em ordem crescente) vence no mês de want ou antes, a parcela vai
+// para n-1 meses depois da fatura da parcela 1 mais antiga. Com uma parcela 1 até want (série anterior, ou a própria
+// série em ordem), want fica como está.
+func CardInstallmentNotBeforeFirst(want time.Time, firstBills []time.Time, n, dueDay int) time.Time {
+	if n <= 1 || len(firstBills) == 0 {
+		return want
+	}
+	month := func(t time.Time) time.Time {
+		t = t.UTC()
+		return time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, time.UTC)
+	}
+	for _, f := range firstBills {
+		if !month(f).After(month(want)) {
+			return want
+		}
+	}
+	return cardDueIn(month(firstBills[0]).AddDate(0, n-1, 0), dueDay)
+}
