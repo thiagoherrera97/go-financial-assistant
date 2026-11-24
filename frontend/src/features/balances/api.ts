@@ -88,7 +88,8 @@ export interface Salary {
   received: number
   pending: number
   /** Créditos de salário do mês fora das partes (13º, PLR, férias, hora extra à parte), por data. */
-  extras: { date: string; amount: number }[]
+  /** kind/kindLabel: o que a pessoa disse que o extra é (PLR, Hora extra...); vazio se ainda não conferiu. */
+  extras: { date: string; amount: number; kind?: string; kindLabel?: string }[]
   extrasTotal: number
 }
 

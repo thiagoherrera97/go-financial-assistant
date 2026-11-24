@@ -76,3 +76,54 @@ export const decideTransfer = (id: string, decision: TransferDecision, category?
 
 /** Desfaz a decisão: o status e a categoria de antes voltam. */
 export const undoTransfer = (id: string) => request<{ ok: boolean }>(`/api/transfers/review/${encodeURIComponent(id)}`, { method: 'DELETE' })
+
+export type SalaryKind = 'MONTH' | 'PART' | 'OVERTIME' | 'PLR' | 'THIRTEENTH' | 'VACATION' | 'OTHER'
+
+/** Crédito de salário que o app não reconheceu com certeza (valor fora do combinado, ou extra). */
+export interface SalaryReviewItem {
+  id: string
+  date: string
+  amount: number
+  label: string
+  /** Palpite do app: MONTH (salário do mês inteiro), PART (uma parte, ver day) ou vazio (extra: o app não sabe qual). */
+  suggest: '' | 'MONTH' | 'PART'
+  /** AAAA-MM: o ciclo do palpite. */
+  month: string
+  day?: number
+}
+
+export interface SalaryDecidedItem {
+  id: string
+  date: string
+  amount: number
+  label: string
+  kind: SalaryKind
+  kindLabel: string
+  month?: string
+  day?: number
+}
+
+export interface SalaryReview {
+  pending: SalaryReviewItem[]
+  decided: SalaryDecidedItem[]
+  /** Partes do salário configuradas; vazio sem salário em Configurações → Renda. */
+  parts: { day: number; amount: number }[]
+  kinds: { value: SalaryKind; label: string }[]
+}
+
+export interface SalaryDecision {
+  kind: SalaryKind
+  month?: string
+  day?: number
+}
+
+export const useSalaryReview = () => useQuery({ queryKey: ['salary-review'], queryFn: () => request<SalaryReview>('/api/salary/review') })
+
+export const decideSalary = (id: string, decision: SalaryDecision) =>
+  request<void>(`/api/salary/review/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(decision),
+  })
+
+export const undoSalary = (id: string) => request<void>(`/api/salary/review/${encodeURIComponent(id)}`, { method: 'DELETE' })

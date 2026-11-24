@@ -46,8 +46,11 @@ export function SalaryCard({ salary, hidden }: { salary: Salary; hidden: boolean
         {salary.extras.map((e) => (
           <li key={`extra-${e.date}-${e.amount}`} className="is-received is-extra">
             <Sparkles size={16} aria-label="extra" />
-            <span className="bal-salary-day">Extra</span>
-            <span className="bal-salary-when">caiu {shortDay(e.date)} · 13º, PLR, férias ou hora extra</span>
+            <span className="bal-salary-day">{e.kindLabel ?? 'Extra'}</span>
+            <span className="bal-salary-when">
+              caiu {shortDay(e.date)}
+              {e.kindLabel ? '' : ' · confira em Classificar: 13º, PLR, férias ou hora extra?'}
+            </span>
             <span className="bal-salary-amount">
               <StaticMoney value={e.amount} hidden={hidden} />
             </span>
