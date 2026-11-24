@@ -17,9 +17,10 @@ const installmentSuffix = `\(\d+/\d+\)$`
 // menos fechamento) e, senão, closeDaysBefore dias antes do vencimento. Parcelas usam o mês em que a sincronização já as
 // datou (o da fatura); compras à vista, a regra de fechamento. Quando o banco informou a fatura da transação (billId) e ela
 // está entre as faturas lidas, vale o vencimento dela, sem estimativa. Num cartão em que o banco informa a fatura das
-// transações, compra à vista sem fatura informada ainda não entrou em fatura fechada: se a estimativa a puser na última
-// fatura fechada (compra pendente perto do fechamento), ela vai para a seguinte. Grava só o que mudou e devolve quantas
-// linhas mudaram.
+// transações, lançamento sem fatura informada ainda não entrou em fatura fechada: se a estimativa o puser na última
+// fatura fechada, ele vai para a seguinte. Vale para a compra à vista pendente perto do fechamento e para a parcela que
+// o banco data um mês antes da fatura em que cai (ex.: FREE VISA, em que a 5/6 ficava na fatura fechada junto com a
+// 4/6 e o app previa as parcelas seguintes duas vezes). Grava só o que mudou e devolve quantas linhas mudaram.
 func (r *LedgerRepo) RecomputeCardBills(ctx context.Context, closeDaysBefore int) (int64, error) {
 	query := `
 		SELECT pay.id, COALESCE(pay.due_date, pay.created_at::date), p.description ~ '` + installmentSuffix + `',
@@ -69,7 +70,7 @@ func (r *LedgerRepo) RecomputeCardBills(ctx context.Context, closeDaysBefore int
 		switch {
 		case bankBill != nil:
 			want = bankBill.UTC()
-		case !installment && lastBill != nil && sameMonth(want, *lastBill):
+		case lastBill != nil && sameMonth(want, *lastBill):
 			want = domain.CardInstallmentBillDue(lastBill.UTC().AddDate(0, 0, -lastBill.Day()+1).AddDate(0, 1, 0), dueDay)
 		}
 		if current == nil || !current.Equal(want) {

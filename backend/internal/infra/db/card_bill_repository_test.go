@@ -182,6 +182,25 @@ func TestRecomputeCardBills_BankBillAndRefund(t *testing.T) {
 		t.Errorf("pendente sem fatura do banco deveria ir para 10/11, got %v", got)
 	}
 
+	// Parcela sem fatura informada, datada pela sincronização no mês da fatura de outubro (fechada): se fosse de outubro,
+	// o banco teria dito. Vai para a seguinte; ficar em outubro a punha ao lado da parcela anterior e duplicava a previsão.
+	inst := time.Date(2026, 10, 5, 0, 0, 0, 0, time.UTC)
+	idesc := "billid-teste parcela (5/6)"
+	ip, _ := domain.NewPurchase(40, &idesc, domain.CategoryShopping, domain.PaymentMethodCreditCard, domain.PurchaseTypeSingle, "[open finance: x | x]")
+	ipay := domain.NewPayment(ip.ID, 40, domain.PaymentStatusPending)
+	iext := "billid-t4"
+	ipay.DueDate, ipay.ExternalID, ipay.AccountID = &inst, &iext, &card
+	if err := repo.SaveExternal(ctx, ip, ipay); err != nil {
+		t.Fatal(err)
+	}
+	cleanup(t, pg, ip)
+	if _, err := repo.RecomputeCardBills(ctx, 6); err != nil {
+		t.Fatal(err)
+	}
+	if got := billDueOf(t, pg, ip.ID); got == nil || got.Format("2006-01-02") != "2026-11-10" {
+		t.Errorf("parcela sem fatura do banco deveria ir para 10/11, got %v", got)
+	}
+
 	// O billId chega numa ressincronização de transação já gravada.
 	if _, err := pg.Pool.Exec(ctx, `UPDATE payments SET card_bill_id = NULL WHERE external_id = 'billid-t1'`); err != nil {
 		t.Fatal(err)
