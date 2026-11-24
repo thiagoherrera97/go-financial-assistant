@@ -63,7 +63,6 @@ export function ClassificationEditor({ tx }: { tx: Transaction }) {
   }
 
   const subs = (catalog.data?.subcategories ?? []).filter((s) => s.category === category)
-  const auto = subs.find((s) => s.code === subcategory)
   return (
     <form
       className="tx-class-form"
@@ -72,11 +71,23 @@ export function ClassificationEditor({ tx }: { tx: Transaction }) {
         save.mutate()
       }}
     >
+      <div className="segmented" role="radiogroup" aria-label="Essencial ou supérfluo">
+        {(
+          [
+            ['auto', 'Padrão'],
+            ['yes', 'Essencial'],
+            ['no', 'Supérfluo'],
+          ] as const
+        ).map(([value, label]) => (
+          <button key={value} type="button" role="radio" aria-checked={essential === value} className="btn btn-small" onClick={() => setEssential(value)}>
+            {label}
+          </button>
+        ))}
+      </div>
       <label className="field">
         <span className="sr-only">Categoria</span>
         <select
           value={category}
-          autoFocus
           onChange={(e) => {
             setCategory(e.target.value)
             setSubcategory('')
@@ -102,19 +113,6 @@ export function ClassificationEditor({ tx }: { tx: Transaction }) {
           </select>
         </label>
       )}
-      <div className="segmented" role="radiogroup" aria-label="Essencial ou supérfluo">
-        {(
-          [
-            ['auto', auto ? `Padrão (${essentialLabel(auto.essential).toLowerCase()})` : 'Padrão'],
-            ['yes', 'Essencial'],
-            ['no', 'Supérfluo'],
-          ] as const
-        ).map(([value, label]) => (
-          <button key={value} type="button" role="radio" aria-checked={essential === value} className="btn btn-small" onClick={() => setEssential(value)}>
-            {label}
-          </button>
-        ))}
-      </div>
       <label className="check tx-class-all">
         <input type="checkbox" checked={applyToAll} onChange={(e) => setApplyToAll(e.target.checked)} />
         Aplicar às outras com esta descrição e às próximas
