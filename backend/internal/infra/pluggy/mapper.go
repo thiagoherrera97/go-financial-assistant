@@ -249,10 +249,15 @@ func bankDay(t time.Time, moment *time.Time) time.Time {
 
 // installmentDate leva a parcela para o mês da fatura em que ela cai (billForecastDate, "AAAA-MM"), mantendo o dia da
 // compra. O Pluggy datava todas as parcelas no dia da compra: o gasto de 12 meses caía inteiro no mês da compra e os
-// meses seguintes ficavam sem a parcela. Sem a previsão da fatura, a data da compra fica como está.
+// meses seguintes ficavam sem a parcela. Sem a previsão da fatura, a data da compra fica como está. Previsão fora do
+// possível (antes do mês da compra ou mais de 10 anos depois; um banco manda "0001-01" quando não tem) também é ignorada.
 func installmentDate(purchase time.Time, forecast string) time.Time {
 	m, err := time.Parse("2006-01", forecast)
 	if err != nil {
+		return purchase
+	}
+	month := time.Date(purchase.Year(), purchase.Month(), 1, 0, 0, 0, 0, time.UTC)
+	if m.Before(month) || m.After(month.AddDate(10, 0, 0)) {
 		return purchase
 	}
 	last := time.Date(m.Year(), m.Month()+1, 0, 0, 0, 0, 0, time.UTC).Day()

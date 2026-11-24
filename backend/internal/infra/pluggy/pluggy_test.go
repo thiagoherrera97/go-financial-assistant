@@ -558,6 +558,11 @@ func TestToExternal_InstallmentDate(t *testing.T) {
 	if got := installmentDate(time.Date(2026, 1, 31, 0, 0, 0, 0, time.UTC), "2026-02"); got.Format("2006-01-02") != "2026-02-28" {
 		t.Errorf("dia 31 em fevereiro deve ir para o último dia: %v", got)
 	}
+	for _, bad := range []string{"0001-01", "2025-12", "2040-01"} {
+		if got := installmentDate(time.Date(2026, 1, 21, 0, 0, 0, 0, time.UTC), bad); got.Format("2006-01-02") != "2026-01-21" {
+			t.Errorf("previsão impossível %q deve manter o dia da compra: %v", bad, got)
+		}
+	}
 	plain, _ := toExternal("CREDIT", tx("DEBIT", "Shopping", 10))
 	if plain.Installment {
 		t.Error("compra à vista não é parcela")
