@@ -184,6 +184,11 @@ func TestBuildLastCycle(t *testing.T) {
 	if BuildLastCycle(nil, 0, 0, day(2026, 11, 21)) != nil {
 		t.Fatal("sem salário")
 	}
+	// Um PLR depois do salário não é "o último salário".
+	withPLR := append(credits, domain.SalaryCredit{Date: day(2026, 11, 18), Amount: 3000, Kind: domain.SalaryKindPLR})
+	if lc := BuildLastCycle(withPLR, 0, 322.89, day(2026, 11, 21)); lc == nil || !lc.SalaryDate.Equal(day(2026, 11, 13)) {
+		t.Fatalf("com PLR: %+v", lc)
+	}
 }
 
 func TestDueBalance(t *testing.T) {

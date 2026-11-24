@@ -301,6 +301,9 @@ func BuildLastCycle(credits []domain.SalaryCredit, balance, saved float64, today
 	var last *domain.SalaryCredit
 	for n := range credits {
 		c := credits[n]
+		if c.Kind.IsExtra() {
+			continue // hora extra, PLR, 13º: não é o salário que fecha o ciclo
+		}
 		if !civil(c.Date).After(civil(today)) && (last == nil || !c.Date.Before(last.Date)) {
 			last = &c
 		}
