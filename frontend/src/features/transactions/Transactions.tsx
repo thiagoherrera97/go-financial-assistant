@@ -17,6 +17,7 @@ import { useAccounts } from '../../shared/api/accounts'
 import type { TransactionGroup } from './api'
 import type { ExpectedIncome } from '../../shared/api/expectedIncome'
 import { Pager } from '../../shared/components/Pager'
+import { RecurringCard } from './components/RecurringCard'
 import { signTone } from '../../shared/lib/tone'
 import { useSubcategoryCatalog } from '../../shared/api/subcategories'
 import { useCompose } from '../../shared/lib/composeContext'
@@ -118,6 +119,9 @@ export default function Transactions() {
         </QueryState>
       )}
       {view === 'dia' && <DayCards query={query} />}
+
+      {/* Cadastro do que se repete todo mês: alimenta o "a receber" e o "a pagar" acima. */}
+      <RecurringCard />
     </>
   )
 }

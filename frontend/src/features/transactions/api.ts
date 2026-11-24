@@ -72,3 +72,61 @@ export const useTransactionGroups = (query: string, by: 'category' | 'day') =>
 /** Apaga um lançamento manual avulso (os do banco não podem ser apagados: voltariam na sincronização). */
 export const deleteTransaction = (id: string) => request<void>(`/api/transactions/${id}`, { method: 'DELETE' })
 
+/** Entrada ou saída que se repete todo mês fora o salário (aluguel, seguro, a mãe pagando uma dívida antiga...). */
+export interface RecurringFlow {
+  id: string
+  in: boolean
+  name: string
+  party: string
+  amount: number
+  /** Quanto o valor sobe por mês (0 = fixo). */
+  step: number
+  /** Teto do valor (0 = sem teto). */
+  maxAmount: number
+  day: number
+  /** AAAA-MM */
+  startMonth: string
+  /** Quantas vezes (0 = sem fim). */
+  installments: number
+  payeeMatch: string
+  /** Meses em que a transação foi reconhecida. */
+  done: number
+  thisMonth: number
+  active: boolean
+  thisMonthDone: boolean
+  nextDate: string | null
+  nextAmount: number
+  remaining: number
+  ended: boolean
+  matches: { date: string; amount: number; label: string; in: boolean }[]
+}
+
+export interface FlowInput {
+  in: boolean
+  name: string
+  party: string
+  amount: number
+  step: number
+  maxAmount: number
+  day: number
+  startMonth: string
+  installments: number
+  payeeMatch: string
+}
+
+/** As recorrências vêm junto com as dívidas em /api/debts (a previsão do cheque especial usa as duas). */
+export const useRecurringFlows = () =>
+  useQuery({
+    queryKey: ['recurring-flows'],
+    queryFn: () => request<{ flows: RecurringFlow[] }>('/api/debts'),
+    select: (data) => data.flows,
+  })
+
+const flowBody = (method: string, input: FlowInput) => ({
+  method,
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(input),
+})
+export const createFlow = (input: FlowInput) => request('/api/recurring', flowBody('POST', input))
+export const updateFlow = (id: string, input: FlowInput) => request(`/api/recurring/${encodeURIComponent(id)}`, flowBody('PUT', input))
+export const deleteFlow = (id: string) => request(`/api/recurring/${encodeURIComponent(id)}`, { method: 'DELETE' })

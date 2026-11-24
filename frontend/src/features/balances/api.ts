@@ -188,59 +188,8 @@ export interface DebtInput {
   paidManual?: number
 }
 
-/** Entrada ou saída que se repete todo mês fora o salário (aluguel, seguro, a mãe pagando uma dívida antiga...). */
-export interface RecurringFlow {
-  id: string
-  in: boolean
-  name: string
-  party: string
-  amount: number
-  /** Quanto o valor sobe por mês (0 = fixo). */
-  step: number
-  /** Teto do valor (0 = sem teto). */
-  maxAmount: number
-  day: number
-  /** AAAA-MM */
-  startMonth: string
-  /** Quantas vezes (0 = sem fim). */
-  installments: number
-  payeeMatch: string
-  /** Meses em que a transação foi reconhecida. */
-  done: number
-  thisMonth: number
-  active: boolean
-  thisMonthDone: boolean
-  nextDate: string | null
-  nextAmount: number
-  remaining: number
-  ended: boolean
-  matches: { date: string; amount: number; label: string; in: boolean }[]
-}
-
-export interface FlowInput {
-  in: boolean
-  name: string
-  party: string
-  amount: number
-  step: number
-  maxAmount: number
-  day: number
-  startMonth: string
-  installments: number
-  payeeMatch: string
-}
-
 export const useDebts = () =>
-  useQuery({ queryKey: ['debts'], queryFn: () => request<{ debts: Debt[]; flows: RecurringFlow[] }>('/api/debts') })
-
-const flowBody = (method: string, input: FlowInput) => ({
-  method,
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify(input),
-})
-export const createFlow = (input: FlowInput) => request('/api/recurring', flowBody('POST', input))
-export const updateFlow = (id: string, input: FlowInput) => request(`/api/recurring/${encodeURIComponent(id)}`, flowBody('PUT', input))
-export const deleteFlow = (id: string) => request(`/api/recurring/${encodeURIComponent(id)}`, { method: 'DELETE' })
+  useQuery({ queryKey: ['debts'], queryFn: () => request<{ debts: Debt[] }>('/api/debts') })
 
 const jsonBody = (method: string, input: DebtInput) => ({
   method,

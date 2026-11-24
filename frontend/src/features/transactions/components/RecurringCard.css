@@ -1,0 +1,19 @@
+/* Card de recorrências (entradas e saídas de todo mês) no fim de Transações. */
+.rec-card { margin-top: 24px; background: var(--surface); border: 1px solid var(--card-border); border-radius: var(--r-lg); box-shadow: var(--shadow-sm); padding: 20px; }
+.rec-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 16px; }
+.rec-head h2 { font-size: 1.0625rem; font-weight: 650; letter-spacing: -0.01em; margin: 0; }
+.rec-head p { margin: 0; color: var(--text-secondary); }
+.rec-card .btn svg { vertical-align: -3px; }
+.rec-card .btn-icon { padding: 0; line-height: 0; }
+.rec-actions { display: flex; gap: 4px; }
+.rec-form { margin-top: 8px; display: grid; gap: 10px; }
+.rec-form .view-toggle { margin: 0; }
+.rec-flow-groups { display: grid; gap: 16px; margin-top: 10px; }
+@media (min-width: 900px) { .rec-flow-groups { grid-template-columns: 1fr 1fr; } }
+.rec-flow-group h3 { margin: 0 0 6px; font-size: 1rem; }
+.rec-flow-list { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 8px; }
+.rec-flow { display: grid; grid-template-columns: auto 1fr auto auto; gap: 4px 10px; align-items: start; border-top: 1px solid var(--border); padding-top: 8px; }
+.rec-flow > svg { margin-top: 3px; color: var(--text-secondary); }
+.rec-flow p { margin: 2px 0 0; }
+.rec-flow p svg { vertical-align: -2px; }
+.rec-flow-amount { font-weight: 600; color: var(--text-primary); white-space: nowrap; }
