@@ -20,6 +20,10 @@ type CardInstallment struct {
 	Amount    float64
 	Category  Category
 	BillDue   time.Time
+	// Displaced: o banco datou a parcela muito antes da fatura em que ela cai (parcela futura mandada com a data da compra,
+	// levada para a fatura certa por CardInstallmentNotBeforeFirst). Conta como parcela que já chegou, mas não diz até
+	// onde o banco já entregou as parcelas.
+	Displaced bool
 }
 
 // ForecastInstallment é uma parcela prevista: ainda não chegou do banco, mas a parcela anterior da mesma compra diz que
@@ -59,7 +63,7 @@ func CardForecastHorizon(today time.Time, dueDay int) time.Time {
 // descrição, número de parcelas, valor e mês em que começou (fatura menos a parcela, que é constante na mesma compra);
 // compras iguais no mesmo mês contam como cópias. O banco entrega as parcelas com atraso, então só se prevê depois da
 // última fatura em que chegou alguma parcela daquele cartão, e só para as compras que tinham parcela nela (as que pararam
-// antes terminaram ou mudaram de nome no banco). A partir da maior parcela conhecida, prevê as seguintes, uma por fatura,
+// antes terminaram ou mudaram de nome no banco). Parcela deslocada (Displaced) não conta para isso. A partir da maior parcela conhecida, prevê as seguintes, uma por fatura,
 // até a fatura horizon[conta] (inclusive). dueDay é o dia do vencimento de cada cartão.
 func ForecastCardInstallments(known []CardInstallment, dueDay map[uuid.UUID]int, horizon map[uuid.UUID]time.Time) []ForecastInstallment {
 	type chainKey struct {
@@ -89,14 +93,14 @@ func ForecastCardInstallments(known []CardInstallment, dueDay map[uuid.UUID]int,
 			order = append(order, key)
 		}
 		c.copies[k.Number]++
-		if k.Number > c.maxK {
+		if !k.Displaced && k.Number > c.maxK {
 			c.maxK, c.bill = k.Number, k.BillDue
 		}
 	}
 
 	lastKnown := map[uuid.UUID]time.Time{}
 	for _, k := range known {
-		if k.BillDue.After(lastKnown[k.AccountID]) {
+		if !k.Displaced && k.BillDue.After(lastKnown[k.AccountID]) {
 			lastKnown[k.AccountID] = k.BillDue
 		}
 	}
@@ -118,7 +122,7 @@ func ForecastCardInstallments(known []CardInstallment, dueDay map[uuid.UUID]int,
 			if bill.After(limit) {
 				break
 			}
-			for n := 1; n <= copies; n++ {
+			for n := c.copies[j] + 1; n <= copies; n++ { // a que já chegou deslocada não é prevista de novo
 				out = append(out, ForecastInstallment{
 					Key:       fmt.Sprintf("%s:%s:%d:%d:%d:%d:%d", key.account, key.base, key.total, key.cents, key.start, j, n),
 					AccountID: key.account, Base: strings.TrimSpace(c.sample.Base), Number: j, Total: key.total,

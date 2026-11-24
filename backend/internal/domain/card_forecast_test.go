@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -117,5 +118,32 @@ func TestForecastCardInstallments_OnlyAfterLastDeliveredBill(t *testing.T) {
 	got := ForecastCardInstallments(known, map[uuid.UUID]int{acc: 10}, map[uuid.UUID]time.Time{acc: d("2026-12-10")})
 	if len(got) != 1 || got[0].Number != 5 || !got[0].BillDue.Equal(d("2026-12-10")) {
 		t.Errorf("esperava só a 5/6 em dezembro, got %+v", got)
+	}
+}
+
+// VivoEasy da FREE VISA: a 8/12 chegou deslocada (data da compra) e foi para abril. Ela não pode virar "a última fatura
+// entregue" do cartão (as outras compras deixariam de ser previstas) nem ser prevista de novo.
+func TestForecastCardInstallments_DisplacedInstallment(t *testing.T) {
+	acc := uuid.New()
+	known := []CardInstallment{
+		{AccountID: acc, Base: "Vivo", Number: 4, Total: 12, Amount: 30, BillDue: d("2026-12-12")},
+		{AccountID: acc, Base: "Vivo", Number: 8, Total: 12, Amount: 30, BillDue: d("2027-04-12"), Displaced: true},
+		{AccountID: acc, Base: "Loja", Number: 2, Total: 5, Amount: 100, BillDue: d("2026-12-12")},
+	}
+	got := ForecastCardInstallments(known, map[uuid.UUID]int{acc: 12}, map[uuid.UUID]time.Time{acc: d("2027-05-12")})
+	var vivo []int
+	loja := 0
+	for _, f := range got {
+		if f.Base == "Vivo" {
+			vivo = append(vivo, f.Number)
+		} else {
+			loja++
+		}
+	}
+	if fmt.Sprint(vivo) != "[5 6 7 9]" {
+		t.Errorf("Vivo: esperava 5, 6, 7 e 9 (a 8 já chegou), got %v", vivo)
+	}
+	if loja != 3 {
+		t.Errorf("Loja: esperava 3/5 a 5/5 previstas, got %d", loja)
 	}
 }

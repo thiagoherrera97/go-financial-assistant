@@ -177,10 +177,15 @@ func cardHorizons(ctx context.Context, tx pgx.Tx, closeDaysBefore int, today tim
 	return dueDay, horizon, rows.Err()
 }
 
+// displacedDays: parcela com fatura mais de 70 dias depois do dia em que o banco a datou está deslocada (o normal é o
+// banco datar a parcela no mês da fatura ou no anterior).
+const displacedDays = "70"
+
 // knownCardInstallments lê as parcelas de cartão que vieram do banco, com a fatura já calculada.
 func knownCardInstallments(ctx context.Context, tx pgx.Tx) ([]domain.CardInstallment, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT pay.account_id, p.description, p.category, pay.amount, pay.bill_due_date
+		SELECT pay.account_id, p.description, p.category, pay.amount, pay.bill_due_date,
+		       pay.bill_due_date - COALESCE(pay.due_date, pay.created_at::date) > `+displacedDays+`
 		FROM payments pay
 		JOIN purchases p ON p.id = pay.purchase_id
 		JOIN accounts a ON a.id = pay.account_id
@@ -196,7 +201,7 @@ func knownCardInstallments(ctx context.Context, tx pgx.Tx) ([]domain.CardInstall
 			k    domain.CardInstallment
 			desc string
 		)
-		if err := rows.Scan(&k.AccountID, &desc, &k.Category, &k.Amount, &k.BillDue); err != nil {
+		if err := rows.Scan(&k.AccountID, &desc, &k.Category, &k.Amount, &k.BillDue, &k.Displaced); err != nil {
 			return nil, fmt.Errorf("erro ao ler parcela do cartão: %w", err)
 		}
 		m := installmentDesc.FindStringSubmatch(desc)
