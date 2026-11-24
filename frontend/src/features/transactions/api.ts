@@ -67,14 +67,6 @@ export const useTransactionGroups = (query: string, by: 'category' | 'day') =>
     placeholderData: keepPreviousData,
   })
 
-/** Grava a nota da transação; vazia apaga. */
-export const setTransactionNote = (id: string, note: string) =>
-  request<{ note: string }>(`/api/transactions/${id}/note`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ note }),
-  })
-
 /** Apaga um lançamento manual avulso (os do banco não podem ser apagados: voltariam na sincronização). */
 export const deleteTransaction = (id: string) => request<void>(`/api/transactions/${id}`, { method: 'DELETE' })
 

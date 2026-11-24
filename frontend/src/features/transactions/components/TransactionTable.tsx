@@ -1,7 +1,7 @@
 import { describeAmount, formatBankTime, formatDay } from '../lib/transactions'
 import { CategoryChip } from '../../../shared/components/CategoryChip'
 import { DeleteManual } from './DeleteManual'
-import { NoteEditor } from './NoteEditor'
+import { NoteEditor } from '../../../shared/components/NoteEditor'
 import { ClassificationEditor } from './ClassificationEditor'
 import { EssentialBadge } from './EssentialBadge'
 import type { Transaction } from '../api'

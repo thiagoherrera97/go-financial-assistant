@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Check, PencilLine, X } from 'lucide-react'
-import { setTransactionNote } from '../api'
+import { setTransactionNote } from '../api/notes'
 
 const MAX = 300
 
@@ -16,6 +16,7 @@ export function NoteEditor({ id, note }: { id: string; note: string }) {
       setEditing(false)
       queryClient.invalidateQueries({ queryKey: ['transactions'] })
       queryClient.invalidateQueries({ queryKey: ['month-sheet'] })
+      queryClient.invalidateQueries({ queryKey: ['review'] })
     },
   })
 

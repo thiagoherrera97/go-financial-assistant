@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { CategoryChip } from '../../../shared/components/CategoryChip'
+import { NoteEditor } from '../../../shared/components/NoteEditor'
 import { QueryState } from '../../../shared/components/QueryState'
 import { setClassification, useSubcategorySpend } from '../../../shared/api/subcategories'
 import { cleanLabel } from '../../../shared/lib/labels'
@@ -82,6 +83,7 @@ export function EssentialList({ month }: { month: string }) {
                     </span>
                     <span className="bill-amount">{formatBRL(tx.amount)}</span>
                     <span className="ess-actions">
+                      <NoteEditor key={`${tx.id}:${tx.note}`} id={tx.id} note={tx.note} />
                       {tx.essential !== false && (
                         <button type="button" className="btn btn-small" disabled={change.isPending} onClick={() => change.mutate({ tx, essential: false })}>
                           É supérfluo
