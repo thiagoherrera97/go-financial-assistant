@@ -141,9 +141,9 @@ export default function Review() {
 }
 
 const TABS: { value: ReviewTab; label: string; Icon: typeof Scissors }[] = [
+  { value: 'categorias', label: 'Categorias', Icon: Grid3x3 },
   { value: 'cortar', label: 'Cortar', Icon: Scissors },
   { value: 'gastos', label: 'Supérfluos', Icon: Scale },
-  { value: 'categorias', label: 'Categorias', Icon: Grid3x3 },
 ]
 
 function CandidateCard({
