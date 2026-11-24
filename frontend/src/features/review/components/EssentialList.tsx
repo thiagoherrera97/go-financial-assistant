@@ -5,7 +5,7 @@ import { CategoryChip } from '../../../shared/components/CategoryChip'
 import { NoteEditor } from '../../../shared/components/NoteEditor'
 import { QueryState } from '../../../shared/components/QueryState'
 import { setClassification, useSubcategorySpend } from '../../../shared/api/subcategories'
-import { cleanLabel } from '../../../shared/lib/labels'
+import { cleanLabel, installmentOf } from '../../../shared/lib/labels'
 import { formatBRL, shortDay } from '../../../shared/lib/format'
 import { useExpenseList, type ExpenseItem } from '../api'
 import { ESSENTIAL_TABS, essentialQuery, type EssentialTab } from '../lib/essential'
@@ -77,7 +77,8 @@ export function EssentialList({ month }: { month: string }) {
                     <span className="ess-name">
                       <strong className={tx.note ? 'tx-title-note' : undefined}>{tx.note || cleanLabel(tx.description) || '—'}</strong>
                       <span className="bill-meta">
-                        {shortDay(tx.purchaseDate ?? tx.date)} · {tx.subcategoryLabel || tx.categoryLabel}
+                        {shortDay(tx.purchaseDate ?? tx.date)}
+                        {installmentOf(tx.description) && ` · parcela ${installmentOf(tx.description)}`} · {tx.subcategoryLabel || tx.categoryLabel}
                         {tx.note && ` · no extrato: ${cleanLabel(tx.description) || '—'}`}
                       </span>
                     </span>

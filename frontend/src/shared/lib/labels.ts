@@ -31,3 +31,9 @@ export const PAYMENT_METHODS = [
 ]
 
 export const cleanLabel = (label: string) => label.replace(/\s*\(\s*\d+\s*\/\s*\d+\s*\)\s*$/, '').trim()
+
+/** O "n/m" de uma parcela ("VIVO LJ (7/12)" → "7/12"); null se a descrição não é de parcela. */
+export const installmentOf = (label: string) => {
+  const m = label.match(/\(\s*(\d+)\s*\/\s*(\d+)\s*\)\s*$/)
+  return m ? `${m[1]}/${m[2]}` : null
+}
