@@ -1,7 +1,7 @@
-# Segunda instalação do FinAssist (para a namorada)
+# Segunda instalação do FinAssist (para a Bella)
 
 ## Por quê
-Uma instalação própria, zerada, para a namorada do Thiago. É o mesmo app, mas ela tem bancos, bot do Telegram, senha,
+Uma instalação própria, zerada, para a Bella, namorada do Thiago. É o mesmo app, mas ela tem bancos, bot do Telegram, senha,
 banco de dados e backups próprios. Nada dela se mistura com a instalação atual, e as melhorias continuam chegando para as duas.
 
 ## Objetivos
@@ -33,7 +33,7 @@ banco de dados e backups próprios. Nada dela se mistura com a instalação atua
 - No `.env.example`: documentar `COMPOSE_PROJECT_NAME`, `CONTAINER_PREFIX`, `APP_PORT`, `POSTGRES_PORT` e `WEB_PORT` numa
   seção "Segunda instalação na mesma máquina".
 - No README: uma seção curta com o passo a passo.
-- A instalação dela, numa pasta irmã: `COMPOSE_PROJECT_NAME=finassist-<nome>`, `CONTAINER_PREFIX=finassist-<nome>`,
+- A instalação dela, numa pasta irmã: `COMPOSE_PROJECT_NAME=finassist-bella`, `CONTAINER_PREFIX=finassist-bella`,
   `APP_PORT=3001`, `WEB_PORT=8081`, `POSTGRES_PORT=5433`. Depois, `make init` e `docker compose up -d`.
   O volume do banco ganha o prefixo do projeto e nasce vazio.
 - O watchdog já religa qualquer container `finassist-*`, então cobre os containers dela sem mudança.
