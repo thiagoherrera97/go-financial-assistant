@@ -26,7 +26,7 @@ const (
 	maxCoachBody     = 1 << 10
 	coachTimeout     = 45 * time.Second
 	coachBlockedText = "O Coach envia valores e nomes de serviços ao Google Gemini. No plano gratuito o Google pode usar e revisar esse conteúdo, " +
-		"então ele só funciona com o plano pago: ative o faturamento do projeto da chave, defina GEMINI_PAID_PLAN=true no .env e reinicie o app."
+		"então ele fica bloqueado até você aceitar isso (ou usar uma chave de projeto pago): marque \"Liberar o Coach\" em Configurações → IA (Gemini), ou defina GEMINI_PAID_PLAN=true no .env."
 	aiOffText = "A IA está desligada: coloque a chave do Gemini em Configurações → IA (Gemini). Vale na hora, sem reiniciar."
 )
 

@@ -95,7 +95,7 @@ var Defs = []Def{
 	{Key: "PLUGGY_ITEM_IDS", Group: GroupPluggy, Label: "Item IDs dos bancos", Help: "Um UUID por banco conectado no Meu Pluggy, separados por vírgula.", Kind: KindList, Live: true, Validate: validUUIDs},
 
 	{Key: "GEMINI_API_KEY", Group: GroupAI, Label: "Chave da API do Gemini", Help: "Opcional. Sem ela, o chat funciona com os comandos e o dashboard inteiro; o que precisa de IA (mensagens livres, recibos, extratos, Coach) avisa como ligar.", Kind: KindSecret, Live: true, Validate: validToken},
-	{Key: "GEMINI_PAID_PLAN", Group: GroupAI, Label: "O projeto da chave tem faturamento (plano pago)", Help: "O Coach envia valores e nomes de estabelecimentos ao Gemini. No plano gratuito o Google pode usar esse conteúdo, então só marque se a chave é de um projeto pago. Sem isso, o Coach fica bloqueado.", Kind: KindBool, Default: "false", Live: true},
+	{Key: "GEMINI_PAID_PLAN", Group: GroupAI, Label: "Liberar o Coach (aceito enviar meus gastos ao Gemini)", Help: "O Coach envia valores e nomes de estabelecimentos ao Gemini. No plano gratuito o Google pode usar esse conteúdo para melhorar os modelos e revisores humanos podem lê-lo; no plano pago, não. Marque se a chave é de um projeto pago ou se você aceita isso no gratuito. Sem isso, o Coach fica bloqueado.", Kind: KindBool, Default: "false", Live: true},
 	{Key: "COACH_GEMINI_MODEL", Group: GroupAI, Label: "Modelo do Coach", Help: "Vazio usa o padrão do app.", Kind: KindText, Live: true, Validate: validToken},
 
 	{Key: "TELEGRAM_BOT_TOKEN", Group: GroupTelegram, Label: "Token do bot", Help: "Criado no @BotFather.", Kind: KindSecret, Channel: "telegram", Validate: validToken},
