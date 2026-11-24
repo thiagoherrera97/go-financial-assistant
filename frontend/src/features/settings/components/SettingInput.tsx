@@ -1,4 +1,4 @@
-import { SOURCE_LABEL, WEEKDAY_LABEL, fieldStatus } from '../lib/settings'
+import { SOURCE_LABEL, OPTION_LABEL, fieldStatus } from '../lib/settings'
 import type { SettingField } from '../api'
 
 interface Props {
@@ -39,7 +39,7 @@ export function SettingInput({ field: f, value, encryption, busy, onChange, onRe
         <select id={id} value={value} disabled={disabled} aria-describedby={helpId} onChange={(e) => onChange(e.target.value)}>
           {f.options?.map((o) => (
             <option key={o} value={o}>
-              {WEEKDAY_LABEL[o] ?? o}
+              {OPTION_LABEL[o] ?? o}
             </option>
           ))}
         </select>

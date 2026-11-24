@@ -1,4 +1,5 @@
-// Package cycles mantém os ciclos do salário: calcula pelo salário configurado e pelos créditos que chegaram, grava na
+// Package cycles mantém os ciclos (o "mês" do app): calcula pela regra configurada (salário, dia fixo ou calendário) e,
+// no modo salário, pelos créditos que chegaram, grava na
 // tabela que o SQL usa e guarda em memória para o lado Go perguntar "em que ciclo cai este dia".
 package cycles
 
@@ -24,6 +25,7 @@ type Service struct {
 	store   ports.CycleStore
 	credits Credits
 	parts   func() []domain.SalaryPart
+	rule    func() domain.CycleRule
 	now     func() time.Time
 
 	mu      sync.Mutex // serializa Refresh
@@ -32,8 +34,12 @@ type Service struct {
 	current atomic.Pointer[domain.Cycles]
 }
 
-func New(store ports.CycleStore, credits Credits, parts func() []domain.SalaryPart, now func() time.Time) *Service {
-	return &Service{store: store, credits: credits, parts: parts, now: now}
+// New monta o serviço. rule é a regra configurada (CYCLE_START/CYCLE_DAY); nil segue o salário.
+func New(store ports.CycleStore, credits Credits, parts func() []domain.SalaryPart, rule func() domain.CycleRule, now func() time.Time) *Service {
+	if rule == nil {
+		rule = func() domain.CycleRule { return domain.CycleRule{Mode: domain.CycleSalary} }
+	}
+	return &Service{store: store, credits: credits, parts: parts, rule: rule, now: now}
 }
 
 // Current são os ciclos em uso; antes do primeiro Refresh, vazio (mês do calendário).
@@ -74,9 +80,19 @@ func (s *Service) Refresh(ctx context.Context) error {
 }
 
 func (s *Service) build(ctx context.Context) ([]domain.CycleStart, error) {
-	parts := s.parts()
-	if len(parts) == 0 {
+	rule := s.rule()
+	var parts []domain.SalaryPart
+	switch rule.Mode {
+	case domain.CycleCalendar:
 		return nil, nil
+	case domain.CycleFixedDay:
+		if rule.Day <= 1 {
+			return nil, nil
+		}
+	default:
+		if parts = s.parts(); len(parts) == 0 {
+			return nil, nil
+		}
 	}
 	now := s.now()
 	from := now
@@ -86,6 +102,9 @@ func (s *Service) build(ctx context.Context) ([]domain.CycleStart, error) {
 		from = oldest
 	}
 	to := now.AddDate(aheadYears, 0, 0)
+	if rule.Mode == domain.CycleFixedDay {
+		return domain.BuildFixedDayCycles(rule.Day, from, to), nil
+	}
 	credits, err := s.credits(ctx, from.AddDate(0, 0, -domain.SalaryMatchDays), to)
 	if err != nil {
 		return nil, err

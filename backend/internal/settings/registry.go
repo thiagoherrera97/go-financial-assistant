@@ -29,6 +29,7 @@ const (
 // Grupos da página, na ordem em que aparecem.
 const (
 	GroupIncome   = "income"
+	GroupCycle    = "cycle"
 	GroupDigest   = "digest"
 	GroupSync     = "sync"
 	GroupPluggy   = "pluggy"
@@ -39,6 +40,7 @@ const (
 
 var Groups = []struct{ ID, Title, Help string }{
 	{GroupIncome, "Renda", "Quando e quanto cai o seu salário. Usado no \"a receber\" do Painel e na projeção."},
+	{GroupCycle, "Ciclo do mês", "Onde começa e termina o \"mês\" de todas as telas (orçamento, metas, resumo, CSV). Mudar recalcula também os meses passados."},
 	{GroupDigest, "Resumo semanal", "Mensagem de resumo no seu chat, calculada por código (sem IA)."},
 	{GroupSync, "Sincronização", "Com que frequência o app busca as transações no banco."},
 	{GroupPluggy, "Open Finance (Meu Pluggy)", "Credenciais da aplicação Pluggy e os bancos conectados."},
@@ -73,7 +75,10 @@ var weekdays = []string{"monday", "tuesday", "wednesday", "thursday", "friday", 
 var Defs = []Def{
 	{Key: "CHANNEL", Label: "Canal de conversa", Kind: KindEnum, Options: []string{"whatsapp", "telegram"}, Default: "whatsapp", Internal: true},
 
-	{Key: "SALARY_SCHEDULE", Group: GroupIncome, Label: "Partes do salário (dia=valor)", Help: "Separe as partes por ponto e vírgula, ex.: 15=5200; 30=4366,62. Se o dia cair em fim de semana ou feriado (nacional, bancário ou de SP), conta o dia útil anterior; 30 em fevereiro vira o último dia útil do mês. O crédito real do banco (categoria Salário) confirma cada parte. Vazio desliga.", Kind: KindText, Live: true, Validate: validSalarySchedule},
+	{Key: "SALARY_SCHEDULE", Group: GroupIncome, Label: "Partes do salário (dia=valor)", Help: "Separe as partes por ponto e vírgula, ex.: 5=3000 ou 15=2500; 30=2500. Se o dia cair em fim de semana ou feriado (nacional, bancário ou de SP), conta o dia útil anterior; 30 em fevereiro vira o último dia útil do mês. O crédito real do banco (categoria Salário) confirma cada parte. Vazio desliga.", Kind: KindText, Live: true, Validate: validSalarySchedule},
+
+	{Key: "CYCLE_START", Group: GroupCycle, Label: "O mês começa", Help: "No salário: no dia da 1ª parte de \"Partes do salário\" (ou antes, se o crédito chegar adiantado); sem salário configurado, vira o mês do calendário. Num dia fixo: no dia escolhido abaixo. No calendário: do dia 1 ao último dia.", Kind: KindEnum, Options: []string{string(domain.CycleSalary), string(domain.CycleFixedDay), string(domain.CycleCalendar)}, Default: string(domain.CycleSalary), Live: true},
+	{Key: "CYCLE_DAY", Group: GroupCycle, Label: "Dia fixo de início (1 a 31)", Help: "Só vale com \"Num dia fixo\". Se cair em fim de semana ou feriado, começa no dia útil anterior; 31 em meses curtos vira o último dia. Ex.: 5 para quem recebe no dia 5.", Kind: KindInt, Min: 1, Max: 31, Default: "1", Live: true},
 
 	{Key: "DIGEST_ENABLED", Group: GroupDigest, Label: "Enviar o resumo semanal", Kind: KindBool, Default: "true", Live: true},
 	{Key: "DIGEST_WEEKDAY", Group: GroupDigest, Label: "Dia da semana", Kind: KindEnum, Options: weekdays, Default: "monday", Live: true},

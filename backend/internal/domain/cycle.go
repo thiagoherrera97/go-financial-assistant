@@ -5,6 +5,21 @@ import (
 	"time"
 )
 
+// CycleMode diz de onde vem o início do ciclo (configuração CYCLE_START).
+type CycleMode string
+
+const (
+	CycleSalary   CycleMode = "salary"    // na 1ª parte do salário (SALARY_SCHEDULE); sem salário, o mês do calendário
+	CycleFixedDay CycleMode = "fixed_day" // num dia fixo do mês (CYCLE_DAY), no dia útil anterior se cair em folga
+	CycleCalendar CycleMode = "calendar"  // do dia 1 ao último dia do mês
+)
+
+// CycleRule é a regra configurada para os ciclos.
+type CycleRule struct {
+	Mode CycleMode
+	Day  int // só em CycleFixedDay: 1 a 31 (limitado ao último dia do mês)
+}
+
 // CycleStart é o início de um ciclo do salário. Key é o primeiro dia do mês que dá nome ao ciclo (o mês do dia combinado
 // da 1ª parte do salário); Start, o dia em que ele começa. Ambos à meia-noite em UTC.
 type CycleStart struct {
@@ -29,6 +44,19 @@ func BuildCycles(parts []SalaryPart, credits []SalaryCredit, from, to time.Time)
 			}
 		}
 		out = append(out, CycleStart{Key: key, Start: start})
+	}
+	return out
+}
+
+// BuildFixedDayCycles calcula ciclos que começam todo mês no mesmo dia (limitado ao último dia do mês; fim de semana ou
+// feriado volta para o dia útil anterior, a mesma regra do salário). Dia 1 ou fora de 1..31 é o mês do calendário (nil).
+func BuildFixedDayCycles(day int, from, to time.Time) []CycleStart {
+	if day <= 1 || day > 31 {
+		return nil
+	}
+	var out []CycleStart
+	for key := monthKey(from); !key.After(monthKey(to)); key = key.AddDate(0, 1, 0) {
+		out = append(out, CycleStart{Key: key, Start: SalaryPayDate(key.Year(), key.Month(), day)})
 	}
 	return out
 }

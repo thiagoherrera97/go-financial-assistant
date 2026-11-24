@@ -1,6 +1,6 @@
 import type { SettingField, SettingGroup } from '../api'
 
-export const WEEKDAY_LABEL: Record<string, string> = {
+export const OPTION_LABEL: Record<string, string> = {
   monday: 'Segunda-feira',
   tuesday: 'Terça-feira',
   wednesday: 'Quarta-feira',
@@ -8,6 +8,9 @@ export const WEEKDAY_LABEL: Record<string, string> = {
   friday: 'Sexta-feira',
   saturday: 'Sábado',
   sunday: 'Domingo',
+  salary: 'No salário',
+  fixed_day: 'Num dia fixo',
+  calendar: 'No dia 1 (calendário)',
 }
 
 export const SOURCE_LABEL: Record<SettingField['source'], string> = {

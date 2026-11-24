@@ -119,11 +119,11 @@ func (a *app) buildServices() error {
 	a.exportCSV = ledger.NewExportCSV(a.ledger)
 	reader := db.NewDashboardReader(a.db)
 	a.insights = insights.NewInsights(reader)
-	a.cycles = cycles.New(db.NewCycleRepo(a.db), reader.SalaryCredits, a.settings.SalaryParts, time.Now)
+	a.cycles = cycles.New(db.NewCycleRepo(a.db), reader.SalaryCredits, a.settings.SalaryParts, a.settings.CycleRule, time.Now)
 	a.insights.SetCycles(a.cycles.Current)
 	a.analyzeExpense.SetCycles(a.cycles.Current)
 	if err := a.cycles.Refresh(a.ctx); err != nil {
-		a.logger.Error("erro ao calcular os ciclos do salário; as telas usam o mês do calendário", "error", err)
+		a.logger.Error("erro ao calcular os ciclos; as telas usam o mês do calendário", "error", err)
 	}
 	a.insights.SetCardCloseDays(func() int { return a.settings.Int("CARD_CLOSE_DAYS_BEFORE_DUE") })
 	a.insights.SetSalarySchedule(a.settings.SalaryParts)

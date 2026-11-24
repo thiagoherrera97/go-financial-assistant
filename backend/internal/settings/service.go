@@ -327,6 +327,11 @@ func (s *Service) Sync() SyncSettings {
 	}
 }
 
+// CycleRule é a regra dos ciclos configurada (CYCLE_START e CYCLE_DAY).
+func (s *Service) CycleRule() domain.CycleRule {
+	return domain.CycleRule{Mode: domain.CycleMode(s.Get("CYCLE_START")), Day: s.Int("CYCLE_DAY")}
+}
+
 // SalaryParts são as partes do salário configuradas (SALARY_SCHEDULE); vazio se não configurado ou inválido.
 func (s *Service) SalaryParts() []domain.SalaryPart {
 	parts, err := domain.ParseSalarySchedule(s.Get("SALARY_SCHEDULE"))

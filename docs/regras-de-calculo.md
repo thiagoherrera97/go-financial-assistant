@@ -31,6 +31,7 @@ O "mês" do app é o **ciclo do salário** (decisão [0009](decisoes/0009-ciclo-
 - **Início:** o dia útil da 1ª parte (`domain.SalaryPayDate`: fim de semana ou feriado volta para o dia útil anterior; 15/nov/2026 é domingo e feriado, então o ciclo começa sexta, 13/nov). Se o crédito real dessa parte (casado por `SalaryMonth`, até 5 dias de distância) caiu antes, o ciclo começa no dia do crédito. Os gastos desses dias mudam de ciclo quando a sincronização traz o salário.
 - **Fim:** a véspera do início do ciclo seguinte.
 - **Sem salário configurado:** o ciclo é o mês do calendário.
+- **Outras regras** (Configurações → Ciclo do mês, `CYCLE_START`): `salary` é a regra acima (padrão); `fixed_day` começa todo mês no `CYCLE_DAY` (1 a 31, limitado ao último dia do mês, no dia útil anterior se cair em folga, sem olhar créditos); `calendar` é o mês do calendário mesmo com salário configurado. Trocar recalcula os ciclos passados na próxima volta do laço de sincronização (que acorda quando a configuração muda).
 - **Onde fica:** `domain/cycle.go` calcula; `usecase/cycles` grava na tabela `cycles` (ao subir e a cada volta do laço de sincronização, só quando algo mudou) e guarda em memória; o SQL usa `cycle_of(dia)` e `cycle_next_start(chave)`. Mudar o dia do salário recalcula também os ciclos passados.
 - **Lançamento só com mês de referência** (recorrente lançado à mão, sem vencimento): fica no ciclo com o nome desse mês.
 - **"Mês atual":** o ciclo de hoje (em 14/dez ainda é o de novembro). O front recebe esse valor em `GET /api/me` (`cycle`). Ritmo das metas, Coach e projeção contam os dias do ciclo; o patrimônio do período é o saldo na véspera do ciclo seguinte. O relatório mensal do dia 1 manda o último ciclo já fechado.
@@ -144,7 +145,7 @@ A conta da aba FORNECEDORES da planilha, calculada na hora (nada é gravado alé
 
 ## Salário e dias úteis (`domain/salary.go`, `domain/business_day.go`)
 
-- **Partes** em Configurações → Renda (`SALARY_SCHEDULE`), como `15=5200; 30=4366,62`. Vazio desliga.
+- **Partes** em Configurações → Renda (`SALARY_SCHEDULE`), como `15=2500; 30=2500`. Vazio desliga.
 - **Data de cada parte:** o dia combinado; se passar do fim do mês, o último dia (30 em fevereiro = 28 ou 29); se não for dia útil, o **dia útil anterior**.
 - **Dia útil:** segunda a sexta, menos os feriados nacionais (1/1, 21/4, 1/5, 7/9, 12/10, 2/11, 15/11, 20/11, 25/12), os bancários móveis (Carnaval segunda e terça, Sexta-feira Santa, Corpus Christi, pela Páscoa) e os de São Paulo (25/1 e 9/7).
 - **Conferência com o banco:** cada parte fica com o crédito da categoria Salário mais perto da data prevista, até 5 dias de distância; um crédito serve a uma parte só, e créditos extras (férias, 13º) ficam de fora. Parte sem crédito = **a receber**. Nada é lançado: o salário real continua vindo só do Open Finance, então não duplica.
