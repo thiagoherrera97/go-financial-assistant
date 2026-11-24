@@ -176,28 +176,33 @@ func (r *LedgerRepo) SaveExternal(ctx context.Context, purchase *domain.Purchase
 }
 
 // ReconcileExternal vincula a transação do banco a um lançamento manual equivalente (mesmo tipo e valor; avulso até 3 dias
-// de diferença, recorrente no mesmo mês), em vez de criar um segundo lançamento. Parcelados ficam de fora.
+// de diferença, recorrente no mesmo mês), em vez de criar um segundo lançamento. Parcelados ficam de fora. No avulso, o dia
+// passa a ser o do banco (lançado à mão no dia seguinte, ficaria com o dia errado); o recorrente segue no mês em que foi
+// lançado.
 func (r *LedgerRepo) ReconcileExternal(ctx context.Context, tx ports.ExternalTransaction, accountID uuid.UUID) (bool, error) {
 	query := `
-		UPDATE payments SET external_id = $1, account_id = $6, status = 'PAID', paid_at = COALESCE(paid_at, $5::timestamptz),
+		UPDATE payments pay SET external_id = $1, account_id = $6, status = 'PAID',
+			paid_at = CASE WHEN p.type = 'SINGLE' THEN $5::timestamptz ELSE COALESCE(pay.paid_at, $5::timestamptz) END,
+			due_date = CASE WHEN p.type = 'SINGLE' AND pay.due_date IS NOT NULL THEN $5::date ELSE pay.due_date END,
 			bank_time = $7
-		WHERE id = (
-			SELECT pay.id
-			FROM payments pay
-			JOIN purchases p ON p.id = pay.purchase_id
-			WHERE pay.external_id IS NULL
-			  AND pay.status != 'CANCELLED'
-			  AND p.kind = $2
-			  AND ABS(pay.amount - $3) < 0.005
+		FROM purchases p
+		WHERE p.id = pay.purchase_id AND pay.id = (
+			SELECT mp.id
+			FROM payments mp
+			JOIN purchases mpp ON mpp.id = mp.purchase_id
+			WHERE mp.external_id IS NULL
+			  AND mp.status != 'CANCELLED'
+			  AND mpp.kind = $2
+			  AND ABS(mp.amount - $3) < 0.005
 			  AND (
-			        (p.type = 'SINGLE'
-			         AND ABS(COALESCE(pay.due_date, pay.created_at::date) - $4::date) <= 3)
-			     OR (p.type = 'RECURRING'
-			         AND DATE_TRUNC('month', COALESCE(pay.due_date, pay.reference_month)) = DATE_TRUNC('month', $4::date))
+			        (mpp.type = 'SINGLE'
+			         AND ABS(COALESCE(mp.due_date, mp.created_at::date) - $4::date) <= 3)
+			     OR (mpp.type = 'RECURRING'
+			         AND DATE_TRUNC('month', COALESCE(mp.due_date, mp.reference_month)) = DATE_TRUNC('month', $4::date))
 			  )
-			ORDER BY pay.created_at
+			ORDER BY mp.created_at
 			LIMIT 1
-			FOR UPDATE SKIP LOCKED
+			FOR UPDATE OF mp SKIP LOCKED
 		)
 	`
 	tag, err := r.db.Pool.Exec(ctx, query, tx.ID, tx.Kind, tx.Amount, tx.Date, tx.Date, accountID, tx.BankTime)

@@ -98,12 +98,21 @@ func TestReconcileExternal_LinksManualSingle(t *testing.T) {
 		}
 	}
 
-	ok, err := repo.ReconcileExternal(ctx, externalTx("of-1", 987.65, time.Now().AddDate(0, 0, -2)), acc)
+	bankDay := time.Now().UTC().AddDate(0, 0, -2).Truncate(24 * time.Hour)
+	ok, err := repo.ReconcileExternal(ctx, externalTx("of-1", 987.65, bankDay), acc)
 	if err != nil || !ok {
 		t.Fatalf("deveria conciliar: ok=%v err=%v", ok, err)
 	}
 	if id := externalIDOf(t, pg, manual.ID); id == nil || *id != "of-1" {
 		t.Errorf("external_id não gravado: %v", id)
+	}
+	// O dia passa a ser o do banco, não o em que foi lançado à mão.
+	var paid time.Time
+	if err := pg.Pool.QueryRow(ctx, `SELECT paid_at FROM payments WHERE purchase_id = $1`, manual.ID).Scan(&paid); err != nil {
+		t.Fatal(err)
+	}
+	if !paid.Equal(bankDay) {
+		t.Errorf("paid_at = %v, quer o dia do banco %v", paid, bankDay)
 	}
 
 	// Cada lançamento manual só pode ser conciliado uma vez.
