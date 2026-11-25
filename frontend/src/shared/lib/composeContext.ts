@@ -7,5 +7,5 @@ export interface ComposeState {
 
 export const ComposeContext = createContext<ComposeState>({ open: false, setOpen: () => undefined })
 
-/** Abre e fecha o painel "Lançar" de qualquer tela (o botão fixo do Layout e o atalho em Transações). */
+/** Abre e fecha o painel "Lançar" de qualquer tela (o botão fixo do Layout). */
 export const useCompose = () => useContext(ComposeContext)

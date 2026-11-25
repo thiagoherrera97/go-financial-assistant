@@ -531,8 +531,11 @@ table.tx td { vertical-align: top; }
 .side-link { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 12px; min-height: 40px; padding: 8px 12px; border-radius: 12px; cursor: pointer;
   color: var(--text-secondary); font-size: 0.9375rem; font-weight: 500; transition: background-color 0.15s ease, color 0.15s ease; }
 .side-link svg { flex: none; color: var(--text-muted); transition: color 0.15s ease; }
-.side-link:hover { background: var(--surface-2); color: var(--text-primary); }
-.side-link:hover svg { color: var(--text-primary); }
+/* Só onde existe mouse: no toque o :hover gruda no último item tocado e parece um segundo item ativo. */
+@media (hover: hover) {
+  .side-link:hover { background: var(--surface-2); color: var(--text-primary); }
+  .side-link:hover svg { color: var(--text-primary); }
+}
 .side-link:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
 .side-link[aria-current='page'] { background: var(--accent-soft); color: var(--accent-ink); font-weight: 600; }
 .side-link[aria-current='page'] svg { color: var(--accent-ink); }
@@ -606,7 +609,7 @@ table.tx td { vertical-align: top; }
   .split-bar > span { animation: grow-x 0.8s 0.1s cubic-bezier(0.16, 1, 0.3, 1) both; transform-origin: left center; }
   .card, .group-card, .bill { transition: box-shadow 0.25s ease, background-color 0.2s ease, transform 0.2s ease; }
   .side-link svg { transition: color 0.15s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
-  .side-link:hover svg { transform: translateX(2px); }
+  @media (hover: hover) { .side-link:hover svg { transform: translateX(2px); } }
   .side-link[aria-current='page'] svg { transform: none; }
   .btn:active:not(:disabled), .icon-btn:active { transform: scale(0.96); }
   .compose-fab { transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, background-color 0.15s ease; }

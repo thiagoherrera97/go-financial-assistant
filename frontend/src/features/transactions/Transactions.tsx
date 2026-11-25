@@ -1,4 +1,4 @@
-import { CalendarClock, CalendarDays, LayoutGrid, List, Plus } from 'lucide-react'
+import { CalendarClock, CalendarDays, LayoutGrid, List } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { CategoryChip } from '../../shared/components/CategoryChip'
 import { GroupCard } from './components/GroupCard'
@@ -20,7 +20,6 @@ import { Pager } from '../../shared/components/Pager'
 import { RecurringCard } from './components/RecurringCard'
 import { signTone } from '../../shared/lib/tone'
 import { useSubcategoryCatalog } from '../../shared/api/subcategories'
-import { useCompose } from '../../shared/lib/composeContext'
 
 const ESSENTIAL_FILTERS = [
   { value: 'false', label: 'Supérfluo' },
@@ -29,7 +28,6 @@ const ESSENTIAL_FILTERS = [
 ]
 
 export default function Transactions() {
-  const { setOpen: setComposeOpen } = useCompose()
   const { params, now, month, query, view, update } = useTransactionFilters()
   const accounts = useAccounts()
   // Os totais do topo vêm dos grupos por categoria, agregados no SQL, qualquer que seja a visão.
@@ -64,13 +62,8 @@ export default function Transactions() {
 
   return (
     <>
-      <div className="page-head">
-        <h1 className="page-title">Transações{month ? ` de ${formatMonthTitle(month)}` : ''}</h1>
-        {/* Viu que falta algo que o banco ainda não mandou? Lança aqui mesmo, por texto ou voz. */}
-        <button type="button" className="btn" onClick={() => setComposeOpen(true)}>
-          <Plus size={16} aria-hidden="true" /> Lançar
-        </button>
-      </div>
+      {/* Para lançar o que o banco ainda não mandou, o botão fixo "Lançar" do canto já está em toda tela. */}
+      <h1 className="page-title">Transações{month ? ` de ${formatMonthTitle(month)}` : ''}</h1>
 
       <div className="filters">
         <button type="button" className="btn" aria-label="Ciclo anterior" disabled={!month} onClick={() => month && update({ mes: shiftMonth(month, -1) })}>
