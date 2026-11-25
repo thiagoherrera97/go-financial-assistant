@@ -17,7 +17,7 @@ const (
 )
 
 var (
-	categories     = []domain.Category{domain.CategoryFood, domain.CategoryTransport, domain.CategoryHealth, domain.CategoryEntertainment, domain.CategoryShopping, domain.CategoryMarket, domain.CategoryInvestment, domain.CategorySalary, domain.CategoryHousing, domain.CategoryBills, domain.CategoryEducation, domain.CategoryPeople, domain.CategoryOther, domain.CategoryReserve}
+	categories     = []domain.Category{domain.CategoryFood, domain.CategoryTransport, domain.CategoryHealth, domain.CategoryEntertainment, domain.CategoryShopping, domain.CategoryMarket, domain.CategoryInvestment, domain.CategorySalary, domain.CategoryHousing, domain.CategoryBills, domain.CategoryEducation, domain.CategoryPeople, domain.CategorySelfCare, domain.CategoryOther, domain.CategoryReserve}
 	paymentMethods = []domain.PaymentMethod{domain.PaymentMethodCash, domain.PaymentMethodCreditCard, domain.PaymentMethodDebitCard, domain.PaymentMethodPix, domain.PaymentMethodOther}
 	kinds          = []domain.PurchaseKind{domain.KindExpense, domain.KindIncome, domain.KindTransfer}
 )

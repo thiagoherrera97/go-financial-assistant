@@ -4,8 +4,8 @@ package domain
 func (c Category) IsKnown() bool {
 	switch c {
 	case CategoryFood, CategoryTransport, CategoryHealth, CategoryEntertainment, CategoryShopping, CategoryMarket,
-		CategoryInvestment, CategorySalary, CategoryHousing, CategoryBills, CategoryEducation, CategoryPeople, CategoryOther,
-		CategoryReserve:
+		CategoryInvestment, CategorySalary, CategoryHousing, CategoryBills, CategoryEducation, CategoryPeople, CategorySelfCare,
+		CategoryOther, CategoryReserve:
 		return true
 	}
 	return false
@@ -37,6 +37,8 @@ func (c Category) Label() string {
 		return "Educação"
 	case CategoryPeople:
 		return "Pessoas"
+	case CategorySelfCare:
+		return "Autocuidado"
 	case CategoryReserve:
 		return "Caixinha"
 	default:

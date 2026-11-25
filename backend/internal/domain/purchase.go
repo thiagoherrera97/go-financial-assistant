@@ -54,6 +54,7 @@ const (
 	CategoryBills         Category = "BILLS"
 	CategoryEducation     Category = "EDUCATION"
 	CategoryPeople        Category = "PEOPLE"
+	CategorySelfCare      Category = "SELF_CARE" // autocuidado: os mimos para si (doce, beleza, spa, presentinho para si)
 	CategoryOther         Category = "OTHER"
 	// CategoryReserve é a caixinha da conta (ex.: Mercado Pago): dinheiro do dia a dia separado para render. Movimento
 	// entre a conta e a caixinha é transferência (não é gasto nem renda) e também não é investimento.

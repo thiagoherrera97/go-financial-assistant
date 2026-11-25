@@ -17,6 +17,7 @@ func TestCategoryLabel(t *testing.T) {
 		{CategoryBills, "Contas"},
 		{CategoryEducation, "Educação"},
 		{CategoryPeople, "Pessoas"},
+		{CategorySelfCare, "Autocuidado"},
 		{CategoryOther, "Outros"},
 		{Category("UNKNOWN"), "Outros"},
 	}

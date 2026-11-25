@@ -15,6 +15,7 @@ const MaxCategorizeItems = 40
 var AICategories = []domain.Category{
 	domain.CategoryFood, domain.CategoryMarket, domain.CategoryTransport, domain.CategoryHealth,
 	domain.CategoryEntertainment, domain.CategoryShopping, domain.CategoryHousing, domain.CategoryBills, domain.CategoryEducation,
+	domain.CategorySelfCare,
 }
 
 // CategorizeContext é o que vai à IA para sugerir categorias: nomes de estabelecimentos já limpos, com

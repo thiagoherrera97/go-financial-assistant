@@ -98,7 +98,7 @@ func TestCategorizeEnumMatchesAppCategories(t *testing.T) {
 		t.Errorf("o Gemini recusa (400) um enum de texto sem format \"enum\": %q", field.Format)
 	}
 	enum := field.Enum
-	if len(enum) != 9 || enum[0] != "FOOD" || enum[8] != "EDUCATION" {
+	if len(enum) != 10 || enum[0] != "FOOD" || enum[9] != "SELF_CARE" {
 		t.Errorf("enum: %v", enum)
 	}
 }

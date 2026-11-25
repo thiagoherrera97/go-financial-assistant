@@ -18,6 +18,7 @@ export const CATEGORIES = [
   { value: 'BILLS', label: 'Contas' },
   { value: 'EDUCATION', label: 'Educação' },
   { value: 'PEOPLE', label: 'Pessoas' },
+  { value: 'SELF_CARE', label: 'Autocuidado' },
   { value: 'OTHER', label: 'Outros' },
   { value: 'RESERVE', label: 'Caixinha' },
 ]

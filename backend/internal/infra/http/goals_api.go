@@ -26,7 +26,7 @@ const (
 )
 
 // cutCategories são as categorias de despesa que aceitam meta de redução.
-var cutCategories = []domain.Category{domain.CategoryFood, domain.CategoryTransport, domain.CategoryHealth, domain.CategoryEntertainment, domain.CategoryShopping, domain.CategoryMarket, domain.CategoryHousing, domain.CategoryBills, domain.CategoryEducation, domain.CategoryPeople, domain.CategoryOther}
+var cutCategories = []domain.Category{domain.CategoryFood, domain.CategoryTransport, domain.CategoryHealth, domain.CategoryEntertainment, domain.CategoryShopping, domain.CategoryMarket, domain.CategoryHousing, domain.CategoryBills, domain.CategoryEducation, domain.CategoryPeople, domain.CategorySelfCare, domain.CategoryOther}
 
 // monthStart é a chave do ciclo do salário atual (sem ciclos, o primeiro dia do mês).
 func (a *api) monthStart() time.Time {

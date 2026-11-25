@@ -38,6 +38,7 @@ colors:
   cat-bills: "#1597a5"
   cat-education: "#6b8e23"
   cat-people: "#b0459b"
+  cat-selfcare: "#a8686c"
 typography:
   hero-number:
     fontFamily: "Figtree, system-ui, -apple-system, Segoe UI, sans-serif"
