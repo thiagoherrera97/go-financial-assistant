@@ -19,6 +19,8 @@ export interface Me {
   secondFactor: boolean
   /** Login desligado (DASHBOARD_AUTH=off): não há o que sair. */
   noAuth?: boolean
+  /** De quem é esta instalação (DISPLAY_NAME ou o primeiro nome dos seus nomes nos extratos); vazio sem nenhum. */
+  name?: string
   /** Ciclo do salário de hoje: o "mês atual" das telas. */
   cycle?: { month: string; startsOn: string; endsOn: string }
 }

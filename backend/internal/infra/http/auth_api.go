@@ -76,9 +76,26 @@ func (a *api) me(w http.ResponseWriter, _ *http.Request) {
 	// cycle é o ciclo do salário de hoje: o "mês atual" das telas (pode ser o mês anterior no calendário).
 	month := a.monthStart()
 	start, end := a.insights.Cycles().Bounds(month)
-	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "secondFactor": a.factor.Active(), "noAuth": a.sessions.open, "cycle": map[string]string{
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "secondFactor": a.factor.Active(), "noAuth": a.sessions.open, "name": a.ownerName(), "cycle": map[string]string{
 		"month": formatMonth(month), "startsOn": start.Format("2006-01-02"), "endsOn": end.Format("2006-01-02"),
 	}})
+}
+
+// ownerName é o nome de quem usa esta instalação (DISPLAY_NAME), ou o primeiro nome do primeiro de OWN_NAMES; "" sem nenhum.
+func (a *api) ownerName() string {
+	if a.settings == nil || a.settings.Service == nil {
+		return ""
+	}
+	if n := strings.TrimSpace(a.settings.Service.Get("DISPLAY_NAME")); n != "" {
+		return n
+	}
+	for _, full := range a.settings.Service.List("OWN_NAMES") {
+		if f := strings.Fields(full); len(f) > 0 {
+			r := []rune(strings.ToLower(f[0]))
+			return strings.ToUpper(string(r[:1])) + string(r[1:])
+		}
+	}
+	return ""
 }
 
 func (a *api) registerAuth(rt routes, loginLimiter *ipRateLimiter) {

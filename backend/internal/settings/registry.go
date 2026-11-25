@@ -28,6 +28,7 @@ const (
 
 // Grupos da página, na ordem em que aparecem.
 const (
+	GroupProfile  = "profile"
 	GroupIncome   = "income"
 	GroupCycle    = "cycle"
 	GroupDigest   = "digest"
@@ -39,6 +40,7 @@ const (
 )
 
 var Groups = []struct{ ID, Title, Help string }{
+	{GroupProfile, "Você", "Como o app te chama. O nome aparece no topo e na aba do navegador, para não confundir duas instalações."},
 	{GroupIncome, "Renda", "Quando e quanto cai o seu salário. Usado no \"a receber\" do Painel e na projeção."},
 	{GroupCycle, "Ciclo do mês", "Onde começa e termina o \"mês\" de todas as telas (orçamento, metas, resumo, CSV). Mudar recalcula também os meses passados."},
 	{GroupDigest, "Resumo semanal", "Mensagem de resumo no seu chat, calculada por código (sem IA)."},
@@ -77,6 +79,7 @@ var Defs = []Def{
 
 	{Key: "SALARY_SCHEDULE", Group: GroupIncome, Label: "Partes do salário (dia=valor)", Help: "Separe as partes por ponto e vírgula, ex.: 5=3000 ou 15=2500; 30=2500. Se o dia cair em fim de semana ou feriado (nacional, bancário ou de SP), conta o dia útil anterior; 30 em fevereiro vira o último dia útil do mês. O crédito real do banco (categoria Salário) confirma cada parte. Vazio desliga.", Kind: KindText, Live: true, Validate: validSalarySchedule},
 
+	{Key: "DISPLAY_NAME", Group: GroupProfile, Label: "Seu nome no app", Help: "Ex.: Thiago. Aparece no topo e na aba do navegador (\"FinAssist de Thiago\"). Vazio, usa o primeiro dos \"Seus nomes nos extratos\".", Kind: KindText, Live: true, Validate: validDisplayName},
 	{Key: "CYCLE_START", Group: GroupCycle, Label: "O mês começa", Help: "No salário: no dia da 1ª parte de \"Partes do salário\" (ou antes, se o crédito chegar adiantado); sem salário configurado, vira o mês do calendário. Num dia fixo: no dia escolhido abaixo. No calendário: do dia 1 ao último dia.", Kind: KindEnum, Options: []string{string(domain.CycleSalary), string(domain.CycleFixedDay), string(domain.CycleCalendar)}, Default: string(domain.CycleSalary), Live: true},
 	{Key: "CYCLE_DAY", Group: GroupCycle, Label: "Dia fixo de início (1 a 31)", Help: "Só vale com \"Num dia fixo\". Se cair em fim de semana ou feriado, começa no dia útil anterior; 31 em meses curtos vira o último dia. Ex.: 5 para quem recebe no dia 5.", Kind: KindInt, Min: 1, Max: 31, Default: "1", Live: true},
 
@@ -248,6 +251,17 @@ func validDigitList(v string) error {
 		if err := validDigits(n); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+// validDisplayName: um nome curto, sem quebra de linha (vai para o topo e para o título da aba).
+func validDisplayName(v string) error {
+	if len([]rune(v)) > 40 {
+		return errors.New("use até 40 caracteres")
+	}
+	if strings.ContainsAny(v, "\n\r<>") {
+		return errors.New("use só letras, números e espaços")
 	}
 	return nil
 }

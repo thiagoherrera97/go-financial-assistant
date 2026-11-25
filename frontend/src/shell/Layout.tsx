@@ -79,7 +79,15 @@ export function Layout({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const { theme, toggle } = useTheme()
-  const noAuth = useMe().data?.noAuth ?? false
+  const me = useMe().data
+  const noAuth = me?.noAuth ?? false
+  const owner = me?.name?.trim() ?? ''
+  const screen = screenLabel(pathname)
+
+  // A aba do navegador diz a tela e de quem é o app: com duas instalações abertas, dá para saber qual é qual.
+  useEffect(() => {
+    document.title = [screen, owner ? `FinAssist de ${owner}` : 'FinAssist'].filter(Boolean).join(' · ')
+  }, [screen, owner])
   const [open, setOpen] = useState(false)
 
   // Em telas estreitas o menu é uma gaveta: Esc fecha.
@@ -104,9 +112,13 @@ export function Layout({ children }: { children: ReactNode }) {
           <button type="button" className="icon-btn" aria-label="Abrir menu" aria-expanded={open} aria-controls="sidebar" onClick={() => setOpen(true)}>
             <Menu size={22} aria-hidden="true" />
           </button>
-          <span className="brand">
-            <span className="brand-mark" aria-hidden="true">F</span>
-            FinAssist
+          {/* No celular o topo diz a tela atual e de quem é o app (o título da página some ao rolar). */}
+          <span className="mobilebar-title">
+            <span className="brand-mark" aria-hidden="true">{owner ? owner.charAt(0).toUpperCase() : 'F'}</span>
+            <span className="mobilebar-text">
+              <strong>{screen || 'FinAssist'}</strong>
+              <small>{owner ? `FinAssist de ${owner}` : 'FinAssist'}</small>
+            </span>
           </span>
           <span className="mobilebar-end">
             <SyncControl compact />
@@ -118,8 +130,11 @@ export function Layout({ children }: { children: ReactNode }) {
         <aside id="sidebar" className={`sidebar ${open ? 'is-open' : ''}`}>
           <div className="side-brand">
             <span className="brand">
-              <span className="brand-mark" aria-hidden="true">F</span>
-              FinAssist
+              <span className="brand-mark" aria-hidden="true">{owner ? owner.charAt(0).toUpperCase() : 'F'}</span>
+              <span className="brand-text">
+                FinAssist
+                {owner && <small className="brand-owner">de {owner}</small>}
+              </span>
             </span>
             <button type="button" className="icon-btn side-close" aria-label="Fechar menu" onClick={() => setOpen(false)}>
               <X size={20} aria-hidden="true" />
@@ -174,4 +189,14 @@ export function Layout({ children }: { children: ReactNode }) {
       </div>
     </ComposeProvider>
   )
+}
+
+/** O nome da tela atual, pelo menu (Configurações fica fora dele). */
+function screenLabel(pathname: string): string {
+  if (pathname.startsWith('/configuracoes')) return 'Configurações'
+  for (const section of SECTIONS) {
+    const item = section.items.find(({ to }) => (to === '/' ? pathname === '/' : pathname.startsWith(to)))
+    if (item) return item.label
+  }
+  return ''
 }
