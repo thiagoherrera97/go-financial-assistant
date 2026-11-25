@@ -168,6 +168,44 @@ func TestDashboard_TransactionsFilterAndPaging(t *testing.T) {
 	}
 }
 
+// Movimentação de caixinha é dinheiro mudando de gaveta: a lista e os grupos a escondem (HideReserve), e o filtro de
+// categoria "Caixinha" a traz de volta.
+func TestDashboard_HideReserveMovements(t *testing.T) {
+	repo, pg := newTestRepo(t)
+	ctx := context.Background()
+
+	seed(t, repo, pg, seedEntry{kind: domain.KindExpense, cat: domain.CategoryFood, desc: "Almoço", amount: 30, date: mar1999.AddDate(0, 0, 1)})
+	seed(t, repo, pg, seedEntry{kind: domain.KindTransfer, dir: domain.TransferDirectionOut, desc: "teste-reserva", amount: 317.2, date: mar1999.AddDate(0, 0, 1)})
+	if _, err := pg.Pool.Exec(ctx, `UPDATE purchases SET category = 'RESERVE' WHERE description = 'teste-reserva'`); err != nil {
+		t.Fatal(err)
+	}
+
+	count := func(f domain.TransactionFilter) int {
+		t.Helper()
+		f.Month, f.Limit = &mar1999, 50
+		_, total, err := repo.Transactions(ctx, f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return total
+	}
+	if n := count(domain.TransactionFilter{}); n != 2 {
+		t.Errorf("sem HideReserve a caixinha aparece: %d", n)
+	}
+	if n := count(domain.TransactionFilter{HideReserve: true}); n != 1 {
+		t.Errorf("HideReserve deveria esconder a caixinha: %d", n)
+	}
+	groups, err := repo.TransactionGroups(ctx, domain.TransactionFilter{Month: &mar1999, HideReserve: true}, domain.GroupByCategory)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, g := range groups {
+		if g.Key == string(domain.CategoryReserve) {
+			t.Errorf("grupo da caixinha não deveria aparecer: %+v", g)
+		}
+	}
+}
+
 func TestInvestments_SaveSnapshotsAndHistory(t *testing.T) {
 	repo, pg := newTestRepo(t)
 	ctx := context.Background()

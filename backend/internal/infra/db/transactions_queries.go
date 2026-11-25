@@ -38,6 +38,9 @@ func transactionWhere(f domain.TransactionFilter) (string, []any) {
 	if f.Category != "" {
 		add("p.category = ?", f.Category)
 	}
+	if f.HideReserve {
+		add("p.category != ?", string(domain.CategoryReserve))
+	}
 	switch f.Subcategory {
 	case "":
 	case "none":

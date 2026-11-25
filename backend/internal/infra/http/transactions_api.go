@@ -39,6 +39,8 @@ func (a *api) filterParams(w http.ResponseWriter, r *http.Request) (domain.Trans
 	if f.Category, ok = enumParam(w, q.Get("category"), "category", categories); !ok {
 		return f, false
 	}
+	// Caixinha só aparece quando pedida pelo filtro de categoria: no resto ela é ruído (uma arrumação vira várias linhas).
+	f.HideReserve = f.Category != string(domain.CategoryReserve)
 	if raw := q.Get("subcategory"); raw != "" && raw != "none" {
 		if _, known := domain.Subcategory(raw).Info(); !known {
 			writeError(w, http.StatusBadRequest, "subcategory inválido")
