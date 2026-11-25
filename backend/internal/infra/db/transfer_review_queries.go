@@ -53,7 +53,7 @@ func (r *TransferReviewRepo) PendingTransfers(ctx context.Context, limit int) ([
 // DecidedTransfers não repete o filtro de elegibilidade: a transferência "entre contas minhas" está CANCELLED e precisa aparecer.
 func (r *TransferReviewRepo) DecidedTransfers(ctx context.Context, limit int) ([]domain.TransferReviewItem, error) {
 	rows, err := r.db.Pool.Query(ctx, `
-		SELECT `+transferItemColumns+`, d.decision, d.decided_at
+		SELECT `+transferItemColumns+`, d.decision, d.decided_at, d.auto
 		FROM transfer_decisions d
 		JOIN payments pay ON pay.id = d.payment_id
 		JOIN purchases p ON p.id = pay.purchase_id
@@ -68,7 +68,7 @@ func (r *TransferReviewRepo) DecidedTransfers(ctx context.Context, limit int) ([
 	var items []domain.TransferReviewItem
 	for rows.Next() {
 		var it domain.TransferReviewItem
-		if err := rows.Scan(&it.PaymentID, &it.Date, &it.Amount, &it.Kind, &it.Account, &it.Description, &it.Category, &it.Decision, &it.DecidedAt); err != nil {
+		if err := rows.Scan(&it.PaymentID, &it.Date, &it.Amount, &it.Kind, &it.Account, &it.Description, &it.Category, &it.Decision, &it.DecidedAt, &it.Auto); err != nil {
 			return nil, fmt.Errorf("erro ao ler transferência decidida: %w", err)
 		}
 		items = append(items, it)
@@ -77,6 +77,61 @@ func (r *TransferReviewRepo) DecidedTransfers(ctx context.Context, limit int) ([
 }
 
 func (r *TransferReviewRepo) DecideTransfer(ctx context.Context, paymentID uuid.UUID, decision domain.TransferDecision, category string) error {
+	return r.decide(ctx, paymentID, decision, category, false)
+}
+
+func (r *TransferReviewRepo) AutoDecideTransfer(ctx context.Context, paymentID uuid.UUID, decision domain.TransferDecision, category string) error {
+	return r.decide(ctx, paymentID, decision, category, true)
+}
+
+func (r *TransferReviewRepo) AutoTransferCandidates(ctx context.Context) ([]domain.TransferReviewItem, error) {
+	rows, err := r.db.Pool.Query(ctx, `
+		SELECT `+transferItemColumns+`
+		FROM payments pay
+		JOIN purchases p ON p.id = pay.purchase_id
+		LEFT JOIN accounts a ON a.id = pay.account_id
+		WHERE `+transferEligible+` AND NOT EXISTS (SELECT 1 FROM transfer_decisions d WHERE d.payment_id = pay.id)
+			AND NOT EXISTS (SELECT 1 FROM transfer_auto_skips s WHERE s.payment_id = pay.id)
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("erro ao listar transferências para decidir sozinho: %w", err)
+	}
+	defer rows.Close()
+	var items []domain.TransferReviewItem
+	for rows.Next() {
+		var it domain.TransferReviewItem
+		if err := rows.Scan(&it.PaymentID, &it.Date, &it.Amount, &it.Kind, &it.Account, &it.Description, &it.Category); err != nil {
+			return nil, fmt.Errorf("erro ao ler transferência: %w", err)
+		}
+		items = append(items, it)
+	}
+	return items, rows.Err()
+}
+
+func (r *TransferReviewRepo) TransferMemory(ctx context.Context) (map[string]domain.RememberedTransfer, error) {
+	rows, err := r.db.Pool.Query(ctx, `
+		SELECT p.description, d.decision, COALESCE(d.applied_category, '')
+		FROM transfer_decisions d
+		JOIN payments pay ON pay.id = d.payment_id
+		JOIN purchases p ON p.id = pay.purchase_id
+		ORDER BY d.decided_at, pay.id
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("erro ao ler as decisões de transferência: %w", err)
+	}
+	defer rows.Close()
+	memory := map[string]domain.RememberedTransfer{}
+	for rows.Next() {
+		var desc, decision, category string
+		if err := rows.Scan(&desc, &decision, &category); err != nil {
+			return nil, fmt.Errorf("erro ao ler decisão: %w", err)
+		}
+		memory[domain.TransferMemoryKey(desc)] = domain.RememberedTransfer{Decision: domain.TransferDecision(decision), Category: category}
+	}
+	return memory, rows.Err()
+}
+
+func (r *TransferReviewRepo) decide(ctx context.Context, paymentID uuid.UUID, decision domain.TransferDecision, category string, auto bool) error {
 	tx, err := r.db.Pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("erro ao decidir transferência: %w", err)
@@ -109,9 +164,9 @@ func (r *TransferReviewRepo) DecideTransfer(ctx context.Context, paymentID uuid.
 		applied = &c
 	}
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO transfer_decisions (payment_id, decision, previous_status, previous_category, applied_category)
-		VALUES ($1, $2, $3, $4, $5)
-	`, paymentID, string(decision), status, prevCategory, applied); err != nil {
+		INSERT INTO transfer_decisions (payment_id, decision, previous_status, previous_category, applied_category, auto)
+		VALUES ($1, $2, $3, $4, $5, $6)
+	`, paymentID, string(decision), status, prevCategory, applied, auto); err != nil {
 		// Duas decisões ao mesmo tempo: a trava não revê o NOT EXISTS (em READ COMMITTED a subconsulta usa o snapshot do
 		// início), então a segunda chega aqui e bate na chave primária. Para ela o pagamento já foi decidido.
 		var pgErr *pgconn.PgError
@@ -166,6 +221,10 @@ func (r *TransferReviewRepo) UndoTransferDecision(ctx context.Context, paymentID
 	}
 	if _, err := tx.Exec(ctx, `DELETE FROM transfer_decisions WHERE payment_id = $1`, paymentID); err != nil {
 		return fmt.Errorf("erro ao apagar a decisão: %w", err)
+	}
+	// Desfeita, ela fica para a pessoa: a decisão automática não a pega de novo.
+	if _, err := tx.Exec(ctx, `INSERT INTO transfer_auto_skips (payment_id) VALUES ($1) ON CONFLICT DO NOTHING`, paymentID); err != nil {
+		return fmt.Errorf("erro ao marcar a transferência como manual: %w", err)
 	}
 
 	// Só desfaz o que a decisão fez e ninguém mudou depois: OWN só mexe no status, e só se ele ainda é CANCELLED;

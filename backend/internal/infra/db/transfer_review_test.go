@@ -559,3 +559,57 @@ func TestMonthlyTotals_OtherShareFollowsTransferDecisions(t *testing.T) {
 		t.Errorf("Entre contas minhas sai das despesas: %v %v %v", s, e, o)
 	}
 }
+
+// A decisão automática fica marcada, entra na memória por nome e, desfeita, a transferência não volta a ser candidata.
+func TestTransferReview_AutoDecisionMemoryAndSkipAfterUndo(t *testing.T) {
+	repo, pg := newTestRepo(t)
+	ctx := context.Background()
+	_, id := trSeed(t, repo, pg, domain.KindExpense, "Pix enviado Teste Auto Pessoa", "Transfer - PIX", "of-test-auto-1", 42)
+	t.Cleanup(func() { pg.Pool.Exec(ctx, `DELETE FROM transfer_auto_skips WHERE payment_id = $1`, id) })
+
+	isCandidate := func() bool {
+		t.Helper()
+		items, err := repo.AutoTransferCandidates(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, it := range items {
+			if it.PaymentID == id {
+				return true
+			}
+		}
+		return false
+	}
+	if !isCandidate() {
+		t.Fatal("pendente deveria ser candidata")
+	}
+	if err := repo.AutoDecideTransfer(ctx, id, domain.TransferPerson, ""); err != nil {
+		t.Fatal(err)
+	}
+	decided, err := repo.DecidedTransfers(ctx, 1000)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var auto bool
+	for _, it := range decided {
+		if it.PaymentID == id {
+			auto = it.Auto
+		}
+	}
+	if !auto {
+		t.Error("a decisão deveria estar marcada como automática")
+	}
+	memory, err := repo.TransferMemory(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if m := memory[domain.TransferMemoryKey("Pix enviado Teste Auto Pessoa")]; m.Decision != domain.TransferPerson {
+		t.Errorf("memória pelo nome: %+v", m)
+	}
+	if err := repo.UndoTransferDecision(ctx, id); err != nil {
+		t.Fatal(err)
+	}
+	if isCandidate() {
+		t.Error("desfeita, não deveria voltar a ser decidida sozinha")
+	}
+}

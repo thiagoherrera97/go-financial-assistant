@@ -144,3 +144,27 @@ func TestAPI_TransfersGuards(t *testing.T) {
 		t.Errorf("DELETE sem sessão = %d", code)
 	}
 }
+
+// Ao abrir a fila, o app decide sozinho pelo nome: o que já foi respondido para o nome e os nomes de pessoa. Empresa fica.
+func TestAPI_TransfersReviewAutoDecides(t *testing.T) {
+	person, company, known, income := uuid.New(), uuid.New(), uuid.New(), uuid.New()
+	r := &fakeReader{
+		autoCands: []domain.TransferReviewItem{
+			{PaymentID: person, Kind: "EXPENSE", Description: "Pix enviado Carlos Eduardo Rocha"},
+			{PaymentID: company, Kind: "INCOME", Description: "Pix recebido ACME PORTAL VIRTUAL S.A."},
+			{PaymentID: known, Kind: "EXPENSE", Description: "PIX ENVIADO   Fernanda Souza da Costa"},
+			{PaymentID: income, Kind: "INCOME", Description: "Pix recebido Fernanda Souza da Costa Lima"},
+		},
+		memory: map[string]domain.RememberedTransfer{
+			domain.TransferMemoryKey("Pix enviado Fernanda Souza da Costa Lima"): {Decision: domain.TransferPayment, Category: "HOUSING"},
+		},
+	}
+	s := newTestAPI(t, r)
+	if rec := do(s, "GET", "/api/transfers/review", "", nil, login(t, s)); rec.Code != 200 {
+		t.Fatalf("%d %s", rec.Code, rec.Body)
+	}
+	want := []string{"auto|" + person.String() + "|PERSON|", "auto|" + known.String() + "|PAYMENT|HOUSING"}
+	if len(r.decideCalls) != len(want) || r.decideCalls[0] != want[0] || r.decideCalls[1] != want[1] {
+		t.Errorf("decisões automáticas = %v, quer %v (empresa e pagamento em entrada ficam na fila)", r.decideCalls, want)
+	}
+}

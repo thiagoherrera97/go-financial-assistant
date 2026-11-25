@@ -39,12 +39,14 @@ type transferJSON struct {
 	Category    string    `json:"category"`
 	Decision    string    `json:"decision,omitempty"`
 	DecidedAt   string    `json:"decidedAt,omitempty"`
+	Auto        bool      `json:"auto,omitempty"`
 }
 
 func toTransferJSON(it domain.TransferReviewItem) transferJSON {
 	j := transferJSON{
 		ID: it.PaymentID, Date: it.Date.Format("2006-01-02"), Amount: it.Amount, Direction: "out",
 		Account: it.Account, Description: it.Description, Category: it.Category, Decision: string(it.Decision),
+		Auto: it.Auto,
 	}
 	if it.Kind == "INCOME" {
 		j.Direction = "in"
@@ -57,6 +59,7 @@ func toTransferJSON(it domain.TransferReviewItem) transferJSON {
 
 // transfersReview: as transferências do banco que ainda esperam a sua decisão e as já decididas. Nada daqui vai à IA nem ao log.
 func (a *api) transfersReview(w http.ResponseWriter, r *http.Request) {
+	a.autoDecideTransfers(r)
 	pending, total, err := a.reader.PendingTransfers(r.Context(), maxTransfersPending)
 	if err != nil {
 		a.fail(w, "transferências", err)
@@ -150,4 +153,27 @@ func (a *api) registerTransfers(rt routes) {
 	writeLimiter := newIPRateLimiter(60, time.Minute)
 	rt.mux.Handle("PUT /api/transfers/review/{paymentId}", writeLimiter.middleware(rt.protected(jsonOnly(a.decideTransfer))))
 	rt.mux.Handle("DELETE /api/transfers/review/{paymentId}", writeLimiter.middleware(rt.protected(sameOriginOnly(a.undoTransfer))))
+}
+
+// autoDecideTransfers decide sozinho, pelo nome, o que dá antes de mostrar a fila: o que a pessoa já respondeu para o mesmo
+// nome e os nomes de pessoa (domain.AutoTransferDecision). Empresa e descrição sem nome continuam na fila. Uma falha aqui
+// não impede a fila de abrir: as transferências só continuam pendentes.
+func (a *api) autoDecideTransfers(r *http.Request) {
+	ctx := r.Context()
+	candidates, err := a.reader.AutoTransferCandidates(ctx)
+	if err != nil || len(candidates) == 0 {
+		return
+	}
+	memory, err := a.reader.TransferMemory(ctx)
+	if err != nil {
+		return
+	}
+	for _, it := range candidates {
+		d, ok := domain.AutoTransferDecision(it.Description, memory)
+		if !ok || (d.Decision == domain.TransferPayment && (it.Kind == "INCOME" || d.Category == "")) {
+			continue
+		}
+		// Pendente que mudou no meio (decidida em outra aba) só é pulada.
+		_ = a.reader.AutoDecideTransfer(ctx, it.PaymentID, d.Decision, d.Category)
+	}
 }

@@ -39,4 +39,5 @@ type TransferReviewItem struct {
 	Category    string
 	Decision    TransferDecision // só nas decididas
 	DecidedAt   *time.Time       // só nas decididas
+	Auto        bool             // decidida sozinha pelo nome (domain.AutoTransferDecision)
 }

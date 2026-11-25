@@ -12,6 +12,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 - **Capi**, a capivara mascote: reage aos números no Painel e é o botão de lançar. Ícones do menu em quadradinhos coloridos por seção; telas com movimento.
 
 ### Alterado
+- **Transferências decididas pelo nome** (em Classificar): nome de pessoa vai sozinho para "Para uma pessoa" e um nome já respondido segue a resposta (com o nome cortado por outro banco também). Empresa e descrição sem nome continuam na fila. As automáticas ficam marcadas em Decididas e, desfeitas, não voltam a ser decididas sozinhas. Migration 041 (`transfer_decisions.auto`, `transfer_auto_skips`).
 - Movimentações de caixinha saem da lista de Transações (voltam pelo filtro "Caixinha").
 - Só um 401 leva ao login; falhas passageiras tentam de novo.
 - **Conferir salário** (em **Classificar**): o salário passa a ser reconhecido também pelo valor (até 10% de diferença da parte). O salário cheio que vem de uma vez (dia 18 em vez de 15 e 30) cobre as partes que faltam, e um extra no dia do salário não toma o lugar dele. O que o app só adivinhou, ou tratou como extra, entra na fila com o palpite marcado: salário do mês inteiro (inclusive o do mês seguinte pago adiantado), uma parte, hora extra, PLR, 13º, férias ou outro. A resposta vale acima de tudo, pode ser desfeita e recalcula o início do mês; o card de salário mostra o nome de cada extra. Migration 039 (`salary_decisions`); `GET /api/salary/review`, `PUT`/`DELETE /api/salary/review/{paymentId}`; `kind`/`kindLabel` nos extras de `GET /api/salary`.

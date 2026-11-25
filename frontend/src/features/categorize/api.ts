@@ -53,6 +53,8 @@ export interface TransferItem {
   /** Só nas decididas. */
   decision?: TransferDecision
   decidedAt?: string
+  /** Decidida sozinha pelo nome (nome de pessoa, ou o mesmo nome que você já respondeu). */
+  auto?: boolean
 }
 
 export interface TransfersReview {

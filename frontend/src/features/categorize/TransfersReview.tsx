@@ -44,9 +44,10 @@ export default function TransfersReview() {
           return (
             <>
               <p className="tile-note">
-                Pix e TED que o banco chamou de transferência e que hoje contam como gasto ou renda. Diga o que cada uma é: &quot;Entre
-                contas minhas&quot; deixa de contar (e pode ser desfeita); &quot;Para uma pessoa&quot; vai para Pessoas; &quot;Pagamento&quot; vai
-                para a categoria que você escolher. Nada muda sem a sua escolha e nenhum nome vai à IA.
+                Pix e TED que o banco chamou de transferência. O app decide sozinho pelo nome: nome de pessoa vai para &quot;Para uma
+                pessoa&quot;, e um nome que você já respondeu segue a sua resposta. Aqui ficam só as que ele não sabe (empresas e
+                descrições sem nome). As automáticas aparecem em Decididas e podem ser desfeitas; desfeita, ela fica para você
+                decidir. Nenhum nome vai à IA.
               </p>
               {data.pending.length > 0 && (
                 <p className="tile-note">
@@ -90,6 +91,7 @@ export default function TransfersReview() {
                         <span className="classify-name">
                           <strong>{cleanLabel(t.description)}</strong>
                           <span className="badge">{t.decision ? DECISION_LABEL[t.decision] : ''}</span>
+                          {t.auto && <span className="badge">automática</span>}
                           <span className="bill-meta">
                             {transferSummary(t)} · {decisionNote(t, label)}
                           </span>

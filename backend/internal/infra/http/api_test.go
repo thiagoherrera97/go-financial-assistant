@@ -60,6 +60,8 @@ type fakeReader struct {
 	pendingTr      []domain.TransferReviewItem
 	decidedTr      []domain.TransferReviewItem
 	decideCalls    []string
+	autoCands      []domain.TransferReviewItem
+	memory         map[string]domain.RememberedTransfer
 	decideErr      error
 	err            error
 }
@@ -995,6 +997,16 @@ func (f *fakeReader) DecidedTransfers(context.Context, int) ([]domain.TransferRe
 func (f *fakeReader) DecideTransfer(_ context.Context, id uuid.UUID, d domain.TransferDecision, category string) error {
 	f.decideCalls = append(f.decideCalls, id.String()+"|"+string(d)+"|"+category)
 	return f.decideErr
+}
+func (f *fakeReader) AutoDecideTransfer(_ context.Context, id uuid.UUID, d domain.TransferDecision, category string) error {
+	f.decideCalls = append(f.decideCalls, "auto|"+id.String()+"|"+string(d)+"|"+category)
+	return nil
+}
+func (f *fakeReader) AutoTransferCandidates(context.Context) ([]domain.TransferReviewItem, error) {
+	return f.autoCands, nil
+}
+func (f *fakeReader) TransferMemory(context.Context) (map[string]domain.RememberedTransfer, error) {
+	return f.memory, nil
 }
 func (f *fakeReader) UndoTransferDecision(_ context.Context, id uuid.UUID) error {
 	f.decideCalls = append(f.decideCalls, "undo|"+id.String())
