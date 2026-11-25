@@ -38,8 +38,10 @@ interface Item {
 }
 
 // O menu é agrupado por assunto; a ordem dentro de cada grupo vai do mais usado ao menos usado.
-const SECTIONS: { title?: string; items: Item[] }[] = [
+// tone: a cor do quadradinho atrás dos ícones da seção (ajuda a achar o grupo de olho; ver .side-ico).
+const SECTIONS: { title?: string; tone: string; items: Item[] }[] = [
   {
+    tone: 'home',
     items: [
       { to: '/', label: 'Painel', Icon: Landmark },
       { to: '/mes', label: 'Ciclo', Icon: FileSpreadsheet },
@@ -48,6 +50,7 @@ const SECTIONS: { title?: string; items: Item[] }[] = [
   },
   {
     title: 'Dia a dia',
+    tone: 'daily',
     items: [
       { to: '/transacoes', label: 'Transações', Icon: ArrowLeftRight },
       { to: '/faturas', label: 'Faturas', Icon: CreditCard },
@@ -58,6 +61,7 @@ const SECTIONS: { title?: string; items: Item[] }[] = [
   },
   {
     title: 'Planejamento',
+    tone: 'plan',
     items: [
       { to: '/revisao', label: 'Revisão', Icon: ScanSearch },
       { to: '/metas', label: 'Metas', Icon: Target },
@@ -67,7 +71,7 @@ const SECTIONS: { title?: string; items: Item[] }[] = [
       { to: '/comparacoes', label: 'Comparações', Icon: GitCompareArrows },
     ],
   },
-  { title: 'Patrimônio', items: [{ to: '/investimentos', label: 'Investimentos', Icon: TrendingUp }] },
+  { title: 'Patrimônio', tone: 'wealth', items: [{ to: '/investimentos', label: 'Investimentos', Icon: TrendingUp }] },
 ]
 
 export function Layout({ children }: { children: ReactNode }) {
@@ -126,11 +130,13 @@ export function Layout({ children }: { children: ReactNode }) {
 
           <nav aria-label="Principal" className="side-nav">
             {SECTIONS.map((section, i) => (
-              <div className="side-section" key={section.title ?? i}>
+              <div className={`side-section tone-${section.tone}`} key={section.title ?? i}>
                 {section.title && <p className="side-title">{section.title}</p>}
                 {section.items.map(({ to, label, Icon }) => (
                   <NavLink key={to} to={to} end={to === '/'} className="side-link" onClick={() => setOpen(false)}>
-                    <Icon size={18} aria-hidden="true" />
+                    <span className="side-ico" aria-hidden="true">
+                      <Icon size={17} />
+                    </span>
                     {label}
                   </NavLink>
                 ))}

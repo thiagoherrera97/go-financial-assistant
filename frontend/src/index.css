@@ -531,6 +531,15 @@ table.tx td { vertical-align: top; }
 .side-link { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 12px; min-height: 40px; padding: 8px 12px; border-radius: 12px; cursor: pointer;
   color: var(--text-secondary); font-size: 0.9375rem; font-weight: 500; transition: background-color 0.15s ease, color 0.15s ease; }
 .side-link svg { flex: none; color: var(--text-muted); transition: color 0.15s ease; }
+/* Ícones do menu num quadradinho tonal com a cor da seção; o item ativo preenche o quadradinho. */
+.tone-home { --tone: var(--accent); }
+.tone-daily { --tone: var(--series-1); }
+.tone-plan { --tone: var(--series-3); }
+.tone-wealth { --tone: var(--series-4); }
+.side-ico { display: inline-grid; place-items: center; flex: none; width: 30px; height: 30px; border-radius: 9px; color: var(--tone, var(--text-muted)); background: color-mix(in srgb, var(--tone, var(--text-muted)) 15%, transparent); transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
+.side-link .side-ico svg, .side-link:hover .side-ico svg, .side-link[aria-current='page'] .side-ico svg { color: inherit; }
+.side-link[aria-current='page'] .side-ico { background: var(--tone); color: #ffffff; }
+.side-foot .side-link { padding-left: 15px; }
 /* Só onde existe mouse: no toque o :hover gruda no último item tocado e parece um segundo item ativo. */
 @media (hover: hover) {
   .side-link:hover { background: var(--surface-2); color: var(--text-primary); }
@@ -609,8 +618,7 @@ table.tx td { vertical-align: top; }
   .split-bar > span { animation: grow-x 0.8s 0.1s cubic-bezier(0.16, 1, 0.3, 1) both; transform-origin: left center; }
   .card, .group-card, .bill { transition: box-shadow 0.25s ease, background-color 0.2s ease, transform 0.2s ease; }
   .side-link svg { transition: color 0.15s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
-  @media (hover: hover) { .side-link:hover svg { transform: translateX(2px); } }
-  .side-link[aria-current='page'] svg { transform: none; }
+  @media (hover: hover) { .side-link:hover .side-ico { transform: scale(1.08); } }
   .btn:active:not(:disabled), .icon-btn:active { transform: scale(0.96); }
   .compose-fab { transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, background-color 0.15s ease; }
   .compose-fab:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(35, 20, 70, 0.12), 0 18px 40px color-mix(in srgb, var(--accent) 35%, transparent); }
