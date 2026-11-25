@@ -223,7 +223,7 @@ Híbrido: no claro, profundidade vem de sombra suave e difusa tingida de violeta
 
 ## Shapes
 
-Raios generosos e consistentes: 24px (herói), 20px (cards), 14px (avisos, formulários internos, cards no celular), 10px (campos de formulário), 12px (ícone-chip de categoria e item de menu), 999px (botões, selos, status, barras, controle segmentado). Cartões de banco usam 16px com proporção 85.6/54 e gradiente da cor do banco. Marcas de banco são círculos. Barras de progresso e medidores têm 4-10px de altura e ponta totalmente arredondada. Sem faixas laterais coloridas: avisos usam fundo tonal.
+Raios generosos e consistentes: 24px (herói), 20px (cards), 14px (avisos, formulários internos, cards no celular), 10px (campos de formulário), 12px (ícone-chip de categoria e item de menu), 999px (botões, selos, status, barras, controle segmentado). Cartões de crédito usam 18px: plástico escuro com a luz da cor do banco vazando do canto superior direito e texto sempre branco, para todo banco ter a mesma presença (nada de vermelho berrante nem cinza lamacento). O herói do Painel tem luz própria: brilho no canto e o roxo afundando para baixo; o total é sempre branco sobre ele. Marcas de banco são círculos. Barras de progresso e medidores têm 4-10px de altura e ponta totalmente arredondada. Sem faixas laterais coloridas: avisos usam fundo tonal.
 
 ## Components
 
@@ -265,6 +265,7 @@ Segmentado: trilha pílula `--surface-2`, opção ativa em superfície branca co
 - **Do** usar variáveis (`--surface`, `--accent`, `--shadow-sm`, `--r-lg`...) e nunca hex solto, para que o tema escuro funcione.
 - **Do** reaproveitar `.card`, `.btn`, `.chip`, `.badge`, `.status` antes de criar variante nova.
 - **Do** manter foco visível (2px roxo, offset 2px) e respeitar `prefers-reduced-motion`.
+- **Do** usar movimento que explica: a tela entra em 0,32s (sobe 8px e aparece), os tiles em sequência curta, barras e medidores enchem do zero até o valor, o total do herói conta até o número enquanto a luz da faixa assenta (o único momento autoral). Curva `cubic-bezier(0.16, 1, 0.3, 1)`, sem quique.
 - **Do** garantir contraste AA nos dois temas; texto sobre o herói é sempre branco.
 
 ### Don't:

@@ -5,7 +5,7 @@ const DURATION_MS = 400
 const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches
 
 /** Número que sobe até o valor em ~400 ms (da última posição mostrada). Desligado com prefers-reduced-motion. */
-export function useCountUp(value: number): number {
+export function useCountUp(value: number, duration = DURATION_MS): number {
   const reduced = reducedMotion()
   const [shown, setShown] = useState(reduced ? value : 0)
   const current = useRef(shown)
@@ -15,13 +15,13 @@ export function useCountUp(value: number): number {
     const from = current.current
     const start = performance.now()
     let frame = requestAnimationFrame(function tick(now) {
-      const t = Math.min(1, (now - start) / DURATION_MS)
-      current.current = from + (value - from) * (1 - (1 - t) ** 3)
+      const t = Math.min(1, (now - start) / duration)
+      current.current = from + (value - from) * (1 - (1 - t) ** 4)
       setShown(current.current)
       if (t < 1) frame = requestAnimationFrame(tick)
     })
     return () => cancelAnimationFrame(frame)
-  }, [value, reduced])
+  }, [value, reduced, duration])
 
   return reduced ? value : shown
 }

@@ -7,12 +7,25 @@
 .bal-muted { color: var(--text-muted); }
 
 /* Herói: faixa roxa com o total; abaixo, em superfície, a participação de cada banco. */
-.bal-hero { background: var(--surface); border: 1px solid var(--card-border); border-radius: var(--r-xl); box-shadow: var(--shadow-sm); overflow: hidden; }
-.bal-hero-band { padding: 28px 28px 26px; background: var(--hero); color: var(--hero-ink); }
+.bal-hero { background: var(--surface); border: 1px solid var(--card-border); border-radius: var(--r-xl); box-shadow: var(--shadow-md); overflow: hidden; }
+/* A faixa tem luz própria: um brilho no canto e o roxo afundando para baixo, como um cartão metálico. */
+.bal-hero-band {
+  position: relative; isolation: isolate; padding: 30px 30px 28px; color: var(--hero-ink);
+  background:
+    radial-gradient(70% 120% at 100% 0%, color-mix(in srgb, var(--hero) 72%, #ffffff) 0%, transparent 60%),
+    radial-gradient(90% 120% at 0% 100%, color-mix(in srgb, var(--hero) 60%, #000000) 0%, transparent 70%),
+    var(--hero);
+  background-size: 160% 160%, 100% 100%, 100% 100%;
+  background-position: 100% 0%, 0 0, 0 0;
+}
 .bal-hero-label { color: var(--hero-muted); font-size: 0.9375rem; font-weight: 500; }
-.bal-hero-value { font-size: clamp(2.25rem, 6vw, 3.25rem); font-weight: 650; letter-spacing: -0.035em; line-height: 1.1; margin: 6px 0 10px; }
+.bal-hero-value { font-size: clamp(2.5rem, 6.5vw, 3.75rem); font-weight: 650; letter-spacing: -0.04em; line-height: 1.05; margin: 8px 0 12px; }
+/* No roxo o total é sempre branco: o verde de "positivo" brigaria com o fundo. Negativo ganha um rosa legível. */
+.bal-hero-value .bal-money.is-good { color: var(--hero-ink); }
+.bal-hero-value .bal-money.is-bad { color: #ffd0d6; }
 .bal-hero-note { font-size: 0.875rem; color: var(--hero-muted); }
-.bal-hero .bal-aside { display: inline-flex; flex-wrap: wrap; gap: 4px; margin-top: 16px; padding: 8px 14px; border-radius: var(--r-md); background: rgba(255, 255, 255, 0.14); color: var(--hero-ink); font-size: 0.8125rem; }
+.bal-hero .bal-aside { display: inline-flex; flex-wrap: wrap; gap: 4px; margin-top: 18px; padding: 8px 14px; border-radius: 16px; background: rgba(255, 255, 255, 0.14); color: var(--hero-muted); font-size: 0.8125rem; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12); }
+.bal-hero .bal-aside strong, .bal-hero .bal-aside .bal-money.is-bad { color: var(--hero-ink); font-weight: 650; }
 .bal-hero-body { padding: 20px 28px 22px; }
 .bal-hero-body:empty { display: none; }
 .bal-share { display: flex; gap: 3px; height: 10px; margin: 0 0 16px; border-radius: 999px; overflow: hidden; }
@@ -45,7 +58,8 @@
 .bal-mark img { width: 100%; height: 100%; object-fit: contain; padding: 15%; }
 
 .bal-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-top: 16px; align-items: stretch; }
-.bal-bank { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--card-border); border-radius: var(--r-lg); box-shadow: var(--shadow-sm); padding: 20px; }
+.bal-bank { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--card-border); border-radius: var(--r-lg); box-shadow: var(--shadow-sm); padding: 20px; transition: box-shadow 0.25s ease; }
+.bal-bank:hover { box-shadow: var(--shadow-md); }
 .bal-bank-head { display: flex; align-items: center; gap: 12px; }
 .bal-bank-id { display: flex; flex-direction: column; min-width: 0; }
 .bal-bank-name { font-size: 1.0625rem; font-weight: 650; letter-spacing: -0.01em; overflow-wrap: anywhere; }
@@ -57,20 +71,36 @@
 .bal-nocard { margin-top: auto; padding-top: 14px; }
 .bal-cards { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin-top: auto; padding-top: 18px; }
 
-/* Cartão: gradiente da cor do banco; a tinta (--on-brand) é a de maior contraste sobre ela. */
-.bal-card { display: flex; flex-direction: column; justify-content: space-between; gap: 6px; aspect-ratio: 85.6 / 54; width: 100%; max-width: 360px; margin-inline: auto; color: var(--on-brand); border-radius: 16px; padding: 18px 20px; box-shadow: 0 6px 18px color-mix(in srgb, var(--brand) 28%, transparent); background: linear-gradient(135deg, var(--brand), color-mix(in srgb, var(--brand) 55%, #000)); }
-.bal-card.is-light { background: linear-gradient(135deg, var(--brand), color-mix(in srgb, var(--brand) 70%, #fff)); }
+/* Cartão: um plástico escuro com a luz da cor do banco vazando do canto. Assim todo cartão tem a mesma
+   presença (nada de vermelho berrante ou cinza lamacento) e o texto é sempre branco sobre escuro. */
+.bal-card {
+  --brand-glow: color-mix(in srgb, var(--brand) 55%, transparent);
+  position: relative; isolation: isolate; overflow: hidden;
+  display: flex; flex-direction: column; justify-content: space-between; gap: 6px; min-height: 210px; width: 100%; max-width: 360px; margin-inline: auto;
+  color: #ffffff; border-radius: 18px; padding: 18px 20px;
+  background:
+    radial-gradient(130% 110% at 100% 0%, var(--brand-glow) 0%, transparent 62%),
+    linear-gradient(155deg, color-mix(in srgb, var(--brand) 30%, #1b1724) 0%, #0f0d15 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), inset 0 0 0 1px rgba(255, 255, 255, 0.06), 0 10px 28px -8px color-mix(in srgb, var(--brand) 45%, rgba(10, 6, 20, 0.6));
+}
+/* Reflexo que atravessa o cartão ao passar o mouse; um filho anima, o cartão fica parado. */
+.bal-card::after {
+  content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.09) 45%, transparent 60%);
+  transform: translateX(-100%);
+}
+.bal-card .bal-money.is-bad { color: #ffffff; }
+.bal-card-sub, .bal-card-row { color: rgba(255, 255, 255, 0.78); }
+.bal-card-row strong { color: #ffffff; }
 .bal-card-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 0.875rem; }
 .bal-card-top svg { vertical-align: -3px; }
 .bal-card-invoice { font-size: 1.75rem; line-height: 1.2; font-weight: 650; letter-spacing: -0.03em; margin-top: 4px; }
 .bal-card-sub { font-size: 0.8125rem; opacity: 0.92; }
 .bal-card-link { display: inline-block; margin-top: 8px; font-size: 0.8125rem; font-weight: 600; color: inherit; text-decoration: underline; text-underline-offset: 3px; }
-.bal-pill { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; padding: 2px 10px; border-radius: 999px; font-size: 0.8125rem; font-weight: 600; background: rgba(255, 255, 255, 0.22); }
-.bal-card.is-light .bal-pill { background: rgba(0, 0, 0, 0.14); }
+.bal-pill { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; padding: 2px 10px; border-radius: 999px; font-size: 0.8125rem; font-weight: 600; background: rgba(255, 255, 255, 0.14); }
 .bal-pill.is-alert { outline: 2px solid currentColor; outline-offset: -2px; }
-.bal-meter { height: 6px; margin: 12px 0 6px; border-radius: 5px; overflow: hidden; background: rgba(255, 255, 255, 0.28); }
-.bal-card.is-light .bal-meter { background: rgba(0, 0, 0, 0.18); }
-.bal-meter i { display: block; height: 100%; border-radius: 5px; background: var(--on-brand); }
+.bal-meter { height: 6px; margin: 12px 0 6px; border-radius: 5px; overflow: hidden; background: rgba(255, 255, 255, 0.16); }
+.bal-meter i { display: block; height: 100%; border-radius: 5px; background: linear-gradient(90deg, color-mix(in srgb, var(--brand) 40%, #ffffff), #ffffff); }
 .bal-card-row { display: flex; justify-content: space-between; gap: 4px 8px; flex-wrap: wrap; font-size: 0.8125rem; }
 .bal-card-flag { display: inline-flex; align-items: center; gap: 4px; font-weight: 700; }
 
@@ -85,8 +115,18 @@
 @media (prefers-reduced-motion: no-preference) {
   .bal-share span { transition: width 0.6s ease; }
   .bal-skel { animation: bal-pulse 1.4s ease-in-out infinite; }
+  /* O momento do Painel: a luz da faixa assenta no canto enquanto o total sobe até o valor. */
+  .bal-hero-band { animation: bal-light 1.1s cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .bal-hero-value { animation: bal-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .bal-share span { animation: bal-grow 0.9s 0.25s cubic-bezier(0.16, 1, 0.3, 1) both; transform-origin: left center; }
+  .bal-meter i, .bal-debt-bar span { animation: bal-grow 0.9s 0.2s cubic-bezier(0.16, 1, 0.3, 1) both; transform-origin: left center; }
+  .bal-card::after { transition: transform 0.9s cubic-bezier(0.16, 1, 0.3, 1); }
+  .bal-card:hover::after { transform: translateX(100%); }
 }
 @keyframes bal-pulse { 50% { opacity: 0.55; } }
+@keyframes bal-light { from { background-position: 30% 60%, 0 0, 0 0; } }
+@keyframes bal-rise { from { opacity: 0.4; transform: translateY(6px); filter: blur(4px); } }
+@keyframes bal-grow { from { transform: scaleX(0); } }
 @media (max-width: 640px) {
   .bal-hero-band { padding: 22px 20px; }
   .bal-hero-body { padding: 16px 20px 18px; }

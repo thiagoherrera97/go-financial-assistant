@@ -14,8 +14,8 @@ const moneyClass = (value: number, hidden: boolean) => {
 }
 
 /** Valor em reais que conta até o número ao carregar; oculto, mostra R$ •••• (e não anima). */
-export function Money({ value, hidden }: Props) {
-  const shown = useCountUp(value)
+export function Money({ value, hidden, duration }: Props & { duration?: number }) {
+  const shown = useCountUp(value, duration)
   return <span className={moneyClass(value, hidden)}>{money(hidden ? value : shown, hidden)}</span>
 }
 

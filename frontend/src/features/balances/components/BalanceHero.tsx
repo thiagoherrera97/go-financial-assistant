@@ -13,7 +13,7 @@ export function BalanceHero({ data, hidden, now }: { data: Balances; hidden: boo
         <p className="bal-hero-label" id="bal-total-label">
           Total em conta
         </p>
-        <p className="bal-hero-value">{data.totalInAccount === null ? '—' : <Money value={data.totalInAccount} hidden={hidden} />}</p>
+        <p className="bal-hero-value">{data.totalInAccount === null ? '—' : <Money value={data.totalInAccount} hidden={hidden} duration={900} />}</p>
         <p className="bal-hero-note">
           {data.totalInAccount === null
             ? 'Nenhuma conta corrente sincronizada'

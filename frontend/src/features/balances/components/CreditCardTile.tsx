@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react'
 import { Link } from 'react-router'
 import { CalendarClock, CreditCard, OctagonAlert, TriangleAlert } from 'lucide-react'
-import { contrast, dueText, inkOn, LEVEL_LABEL, money, nextBillText, safeHex } from '../lib/balances'
+import { dueText, LEVEL_LABEL, money, nextBillText, safeHex } from '../lib/balances'
 import { formatPercent } from '../../../shared/lib/format'
 import { StaticMoney } from './Money'
 import type { BalanceCard, Level } from '../api'
@@ -14,22 +14,19 @@ function LevelIcon({ level }: { level: Level }) {
 }
 
 /**
- * Um cartão de crédito, sempre sozinho (cartões não são somados). Fundo em gradiente da cor do banco; o texto
- * é a tinta de maior contraste sobre ela. Atenção e crítico aparecem com ícone e texto.
+ * Um cartão de crédito, sempre sozinho (cartões não são somados). Cartão escuro com a luz da cor do banco no
+ * canto; o texto é branco. Atenção e crítico aparecem com ícone e texto.
  */
 export function CreditCardTile({ card, color, hidden }: { card: BalanceCard; color: string | null; hidden: boolean }) {
   const brand = safeHex(color)
-  const ink = inkOn(brand)
-  const dark = ink !== '#ffffff'
   const due = dueText(card)
   const nextBill = nextBillText(card)
   const hasLimit = card.limit !== null && card.available !== null && card.usedRatio !== null && card.used !== null
-  // Garantia extra: se nem a melhor tinta chega a 4,5:1 sobre a cor de marca, o gradiente vai para o preto.
-  const readable = contrast(ink, brand) >= 4.5
-  const style = { '--brand': readable ? brand : '#1a1a19', '--on-brand': readable ? ink : '#ffffff' } as CSSProperties
+  // A cor do banco só ilumina o canto de um cartão escuro; o texto é sempre branco, então serve qualquer cor.
+  const style = { '--brand': brand } as CSSProperties
 
   return (
-    <div className={`bal-card ${dark && readable ? 'is-light' : ''}`} style={style}>
+    <div className="bal-card" style={style}>
       <div className="bal-card-top">
         <span>
           <CreditCard size={16} aria-hidden="true" /> {card.name}

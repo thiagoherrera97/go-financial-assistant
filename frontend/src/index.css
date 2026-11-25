@@ -593,6 +593,45 @@ table.tx td { vertical-align: top; }
 /* Esqueleto de carregamento compartilhado */
 .skel { border-radius: var(--r-lg); background: var(--surface-2); }
 
+/* Movimento. Cada tela entra rápido (a página é ferramenta, ninguém espera coreografia); barras e medidores
+   enchem do zero até o valor, porque é isso que eles medem; cards respondem ao mouse com a sombra. */
+@media (prefers-reduced-motion: no-preference) {
+  .route { animation: route-in 0.32s cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .route .tiles > * { animation: route-in 0.45s cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .route .tiles > :nth-child(2) { animation-delay: 40ms; }
+  .route .tiles > :nth-child(3) { animation-delay: 80ms; }
+  .route .tiles > :nth-child(4) { animation-delay: 120ms; }
+  .route .tiles > :nth-child(n + 5) { animation-delay: 160ms; }
+  .bar-fill, .meter-fill, .group-bar div { animation: grow-x 0.8s 0.1s cubic-bezier(0.16, 1, 0.3, 1) both; transform-origin: left center; }
+  .split-bar > span { animation: grow-x 0.8s 0.1s cubic-bezier(0.16, 1, 0.3, 1) both; transform-origin: left center; }
+  .card, .group-card, .bill { transition: box-shadow 0.25s ease, background-color 0.2s ease, transform 0.2s ease; }
+  .side-link svg { transition: color 0.15s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
+  .side-link:hover svg { transform: translateX(2px); }
+  .side-link[aria-current='page'] svg { transform: none; }
+  .btn:active:not(:disabled), .icon-btn:active { transform: scale(0.96); }
+  .compose-fab { transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, background-color 0.15s ease; }
+  .compose-fab:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(35, 20, 70, 0.12), 0 18px 40px color-mix(in srgb, var(--accent) 35%, transparent); }
+}
+@keyframes route-in { from { opacity: 0; transform: translateY(8px); } }
+@keyframes grow-x { from { transform: scaleX(0); } }
+
+/* Profundidade no escuro: sem sombra visível, o card ganha um fio de luz no topo e um degradê quase imperceptível. */
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme='light'])) .card,
+  :root:where(:not([data-theme='light'])) .bal-bank,
+  :root:where(:not([data-theme='light'])) .bal-salary,
+  :root:where(:not([data-theme='light'])) .group-card,
+  :root:where(:not([data-theme='light'])) .bill { background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 92%, #ffffff), var(--surface) 140px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 8px 24px -12px rgba(0, 0, 0, 0.6); }
+}
+:root[data-theme='dark'] .card,
+:root[data-theme='dark'] .bal-bank,
+:root[data-theme='dark'] .bal-salary,
+:root[data-theme='dark'] .group-card,
+:root[data-theme='dark'] .bill { background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 92%, #ffffff), var(--surface) 140px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 8px 24px -12px rgba(0, 0, 0, 0.6); }
+
+/* Card dentro de card continua bloco tonal, sem a luz nem a sombra acima. */
+:root .card .card, :root .card .bill, :root .card .group-card, :root .income-sources .group-card { background: var(--surface-2); box-shadow: none; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
   .sync-spin { animation: none; }

@@ -24,7 +24,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
-import { NavLink, useNavigate } from 'react-router'
+import { NavLink, useLocation, useNavigate } from 'react-router'
 import { useTheme } from '../shared/lib/theme'
 import { logout, useMe } from '../features/auth/api'
 import { SyncControl } from '../shared/components/SyncControl'
@@ -73,6 +73,7 @@ const SECTIONS: { title?: string; items: Item[] }[] = [
 export function Layout({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
+  const { pathname } = useLocation()
   const { theme, toggle } = useTheme()
   const noAuth = useMe().data?.noAuth ?? false
   const [open, setOpen] = useState(false)
@@ -156,7 +157,10 @@ export function Layout({ children }: { children: ReactNode }) {
         </aside>
 
         <main className="content">
-          <div className="container">{children}</div>
+          {/* A chave remonta o miolo a cada tela: a entrada (.route) só anima na troca de página. */}
+          <div className="container route" key={pathname}>
+            {children}
+          </div>
         </main>
 
         <ComposeFab />
