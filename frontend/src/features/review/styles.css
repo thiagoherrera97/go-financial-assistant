@@ -49,3 +49,7 @@
 /* Escrevendo a nota: o campo ocupa a linha inteira. */
 .ess-actions:has(.tx-note-form) { grid-column: 1 / -1; justify-content: flex-start; }
 .ess-actions .tx-note-form { margin-top: 0; }
+/* Contas fixas previstas: ainda não saíram, então borda tracejada e sem sombra (mesma linguagem do "a pagar" das Transações). */
+.ess-expected { margin: 8px 0 4px; }
+.ess-expected .ess-row { background: transparent; border: 1px dashed var(--border-strong); box-shadow: none; }
+.ess-expected .bill-amount { color: var(--text-secondary); }

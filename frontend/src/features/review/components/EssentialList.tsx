@@ -5,6 +5,7 @@ import { CategoryChip } from '../../../shared/components/CategoryChip'
 import { NoteEditor } from '../../../shared/components/NoteEditor'
 import { QueryState } from '../../../shared/components/QueryState'
 import { setClassification, useSubcategorySpend } from '../../../shared/api/subcategories'
+import { useExpectedExpenses } from '../../../shared/api/expectedIncome'
 import { cleanLabel, installmentOf } from '../../../shared/lib/labels'
 import { formatBRL, shortDay } from '../../../shared/lib/format'
 import { useExpenseList, type ExpenseItem } from '../api'
@@ -21,6 +22,11 @@ export function EssentialList({ month }: { month: string }) {
   const [limit, setLimit] = useState(PAGE)
   const spend = useSubcategorySpend(month)
   const txs = useExpenseList(essentialQuery(month, tab, limit))
+  // Contas fixas do ciclo que ainda não saíram (aluguel, financiamento, luz...): ainda não são transação, mas já são gasto
+  // essencial do mês. Entram na aba Essenciais e no total dela, marcadas como previstas.
+  const toPay = useExpectedExpenses(month, true)
+  const expected = toPay.data?.items ?? []
+  const expectedTotal = toPay.data?.total ?? 0
   const queryClient = useQueryClient()
 
   const change = useMutation({
@@ -33,7 +39,7 @@ export function EssentialList({ month }: { month: string }) {
     },
   })
 
-  const totals = spend.data ? { false: spend.data.superfluous, true: spend.data.essential, unknown: spend.data.unknown } : null
+  const totals = spend.data ? { false: spend.data.superfluous, true: spend.data.essential + expectedTotal, unknown: spend.data.unknown } : null
   const linkAll = `/transacoes?${new URLSearchParams({ mes: month, tipo: 'EXPENSE', essencial: tab })}`
 
   return (
@@ -63,6 +69,26 @@ export function EssentialList({ month }: { month: string }) {
         <p className="state error" role="alert">
           Não foi possível mudar. Tente de novo.
         </p>
+      )}
+      {tab === 'true' && expected.length > 0 && (
+        <>
+          <h3 className="chart-title">Contas fixas que ainda vão sair</h3>
+          <ul className="ess-list ess-expected">
+            {expected.map((e) => (
+              <li key={`${e.label}:${e.date}`} className="ess-row">
+                <CategoryChip category="BILLS" size={18} />
+                <span className="ess-name">
+                  <strong>{e.label}</strong>
+                  <span className="bill-meta">
+                    {shortDay(e.date)} · {e.late ? 'atrasada: ainda não saiu da conta' : 'prevista'}
+                  </span>
+                </span>
+                <span className="bill-amount">{formatBRL(e.amount)}</span>
+              </li>
+            ))}
+          </ul>
+          <h3 className="chart-title section-gap">Já lançadas</h3>
+        </>
       )}
       <QueryState query={txs}>
         {(page) =>
