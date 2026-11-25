@@ -1,4 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
+import { Capi } from './Capi'
 import { Mic, Plus, SendHorizontal, Square, X } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { ApiError } from '../api/request'
@@ -154,7 +155,10 @@ export function ComposePanel() {
         style={keyboard ? { bottom: keyboard.bottom, maxHeight: keyboard.height - 8 } : undefined}
       >
         <header className="compose-head">
-          <h2 id="compose-title">Lançar</h2>
+          <h2 id="compose-title">
+            <Capi mood="happy" size={34} />
+            Lançar
+          </h2>
           <button type="button" className="icon-btn" aria-label="Fechar" disabled={recording} onClick={() => setOpen(false)}>
             <X size={20} aria-hidden="true" />
           </button>
@@ -224,13 +228,21 @@ export function ComposePanel() {
   )
 }
 
-/** Botão fixo no canto: abre o painel de qualquer tela. */
+/** Botão fixo no canto: a Capi abre o painel de qualquer tela (no desktop, com o texto "Lançar" ao lado). */
 export function ComposeFab() {
   const { open, setOpen } = useCompose()
   if (open) return null
   return (
-    <button type="button" className="compose-fab btn btn-primary" onClick={() => setOpen(true)}>
-      <Plus size={18} aria-hidden="true" /> Lançar
+    <button type="button" className="compose-fab" aria-label="Lançar uma transação" onClick={() => setOpen(true)}>
+      <span className="compose-fab-capi">
+        <Capi mood="neutral" size={58} />
+        <span className="compose-fab-plus" aria-hidden="true">
+          <Plus size={14} strokeWidth={3} />
+        </span>
+      </span>
+      <span className="compose-fab-label" aria-hidden="true">
+        Lançar
+      </span>
     </button>
   )
 }

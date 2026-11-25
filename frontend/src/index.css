@@ -620,8 +620,9 @@ table.tx td { vertical-align: top; }
   .side-link svg { transition: color 0.15s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
   @media (hover: hover) { .side-link:hover .side-ico { transform: scale(1.08); } }
   .btn:active:not(:disabled), .icon-btn:active { transform: scale(0.96); }
-  .compose-fab { transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, background-color 0.15s ease; }
-  .compose-fab:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(35, 20, 70, 0.12), 0 18px 40px color-mix(in srgb, var(--accent) 35%, transparent); }
+  .compose-fab { transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease; }
+  .compose-fab:hover { transform: translateY(-2px); }
+  .compose-fab:active { transform: scale(0.96); }
 }
 @keyframes route-in { from { opacity: 0; transform: translateY(8px); } }
 @keyframes grow-x { from { transform: scaleX(0); } }
@@ -652,9 +653,36 @@ table.tx td { vertical-align: top; }
 .page-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .page-head .page-title { margin-bottom: 20px; }
 .compose-fab {
+  all: unset; box-sizing: border-box; cursor: pointer;
   position: fixed; right: max(20px, env(safe-area-inset-right)); bottom: max(20px, env(safe-area-inset-bottom)); z-index: 40;
-  min-height: 48px; padding: 0 20px; border-radius: 999px; box-shadow: var(--shadow-md);
+  display: inline-flex; align-items: center; gap: 10px; padding: 4px; border-radius: 999px;
+  background: var(--accent); color: var(--on-accent); font-weight: 650; font-size: 0.9375rem;
+  box-shadow: 0 4px 10px rgba(35, 20, 70, 0.18), 0 14px 32px color-mix(in srgb, var(--accent) 30%, transparent);
 }
+.compose-fab:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+/* A Capi num círculo claro; o "+" no canto diz que tocar nela adiciona. */
+.compose-fab-capi { position: relative; display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; background: #f3ecff; overflow: visible; }
+.compose-fab-capi .capi { margin-top: 2px; }
+.compose-fab-plus { position: absolute; right: -2px; bottom: -2px; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: var(--on-accent); box-shadow: 0 0 0 3px var(--accent); }
+.compose-fab-label { padding-right: 16px; }
+@media (max-width: 899px) { .compose-fab-label { display: none; } .compose-fab { padding: 3px; } }
+.compose-head h2 { display: inline-flex; align-items: center; gap: 8px; }
+
+/* Capi: piscar de vez em quando, a tangerina balança e os brilhos acendem; nada disso com movimento reduzido. */
+.capi .capi-eyes { transform-box: fill-box; transform-origin: center; }
+@media (prefers-reduced-motion: no-preference) {
+  .capi-neutral .capi-eyes { animation: capi-blink 5s 1.5s infinite; }
+  .capi-happy .capi-orange { transform-box: fill-box; transform-origin: bottom center; animation: capi-wobble 2.4s ease-in-out 0.8s 2; }
+  .capi-happy .capi-spark { transform-box: fill-box; transform-origin: center; animation: capi-twinkle 1.6s ease-in-out 0.9s 3; }
+  .capi-happy .capi-spark-2 { animation-delay: 1.3s; }
+  .capi-worried .capi-sweat { animation: capi-sweat 2.2s ease-in 0.8s infinite; }
+  .compose-fab:hover .compose-fab-capi .capi { animation: capi-hop 0.5s cubic-bezier(0.34, 1.4, 0.64, 1); }
+}
+@keyframes capi-blink { 0%, 94%, 100% { transform: scaleY(1); } 97% { transform: scaleY(0.1); } }
+@keyframes capi-wobble { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-10deg); } 75% { transform: rotate(10deg); } }
+@keyframes capi-twinkle { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(0.5); opacity: 0.4; } }
+@keyframes capi-sweat { 0% { transform: translateY(0); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(10px); opacity: 0; } }
+@keyframes capi-hop { 40% { transform: translateY(-5px) rotate(-6deg); } }
 .compose-scrim { position: fixed; inset: 0; z-index: 44; background: rgba(14, 8, 28, 0.32); }
 .compose {
   position: fixed; z-index: 45; right: 20px; bottom: 20px; width: min(420px, calc(100vw - 40px)); height: min(560px, calc(100dvh - 40px));
@@ -689,4 +717,5 @@ table.tx td { vertical-align: top; }
 @media (max-width: 640px) {
   .compose { right: 0; bottom: 0; left: 0; width: 100%; height: min(78dvh, 620px); border-radius: var(--r-lg) var(--r-lg) 0 0; }
   .compose-fab { right: 16px; bottom: max(16px, env(safe-area-inset-bottom)); }
+  .content { padding-bottom: 104px; }
 }

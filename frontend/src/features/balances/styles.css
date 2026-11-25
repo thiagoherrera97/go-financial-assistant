@@ -18,6 +18,19 @@
   background-size: 160% 160%, 100% 100%, 100% 100%;
   background-position: 100% 0%, 0 0, 0 0;
 }
+/* A Capi mora no canto direito da faixa, com a fala num balão acima dela. */
+.bal-capi { position: absolute; right: 22px; bottom: 0; z-index: 1; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; pointer-events: none; }
+.bal-capi .capi { display: block; margin-bottom: -8px; filter: drop-shadow(0 8px 14px rgba(20, 8, 50, 0.35)); }
+.bal-capi-line { max-width: 200px; padding: 7px 12px; border-radius: 14px 14px 4px 14px; background: #ffffff; color: #2a1a4a; font-size: 0.8125rem; font-weight: 600; line-height: 1.35; box-shadow: 0 6px 16px rgba(20, 8, 50, 0.25); }
+.bal-hero-band > :not(.bal-capi) { position: relative; z-index: 2; max-width: calc(100% - 230px); }
+/* No celular a Capi desce para uma faixa própria no pé do herói, com a fala ao lado. */
+@media (max-width: 640px) {
+  .bal-capi { right: 12px; left: 20px; flex-direction: row; justify-content: flex-end; align-items: flex-end; gap: 8px; }
+  .bal-capi .capi { width: 78px; height: 78px; margin-bottom: -6px; flex: none; }
+  .bal-capi-line { max-width: none; margin-bottom: 26px; font-size: 0.8125rem; border-radius: 14px 14px 4px 14px; }
+  .bal-hero-band > :not(.bal-capi) { max-width: none; }
+  .bal-hero .bal-hero-band { padding-bottom: 92px; }
+}
 .bal-hero-label { color: var(--hero-muted); font-size: 0.9375rem; font-weight: 500; }
 .bal-hero-value { font-size: clamp(2.5rem, 6.5vw, 3.75rem); font-weight: 650; letter-spacing: -0.04em; line-height: 1.05; margin: 8px 0 12px; }
 /* No roxo o total é sempre branco: o verde de "positivo" brigaria com o fundo. Negativo ganha um rosa legível. */
@@ -122,7 +135,10 @@
   .bal-meter i, .bal-debt-bar span { animation: bal-grow 0.9s 0.2s cubic-bezier(0.16, 1, 0.3, 1) both; transform-origin: left center; }
   .bal-card::after { transition: transform 0.9s cubic-bezier(0.16, 1, 0.3, 1); }
   .bal-card:hover::after { transform: translateX(100%); }
+  .bal-capi { animation: capi-pop 0.7s 0.35s cubic-bezier(0.34, 1.4, 0.64, 1) both; transform-origin: bottom right; }
+  .bal-capi-line { animation: capi-pop 0.5s 0.75s cubic-bezier(0.16, 1, 0.3, 1) both; transform-origin: bottom right; }
 }
+@keyframes capi-pop { from { opacity: 0; transform: translateY(16px) scale(0.85); } }
 @keyframes bal-pulse { 50% { opacity: 0.55; } }
 @keyframes bal-light { from { background-position: 30% 60%, 0 0, 0 0; } }
 @keyframes bal-rise { from { opacity: 0.4; transform: translateY(6px); filter: blur(4px); } }
