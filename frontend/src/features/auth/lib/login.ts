@@ -10,3 +10,14 @@ export function loginErrorMessage(error: unknown, step: 'password' | 'code'): st
   if (error.message === 'erro inesperado') return 'Não foi possível entrar. Tente de novo.'
   return error.message.charAt(0).toUpperCase() + error.message.slice(1) + '.'
 }
+
+/**
+ * Só a API dizendo "sem sessão" (401) leva ao login. Falha de rede, app reiniciando (502) ou o celular voltando
+ * do bloqueio com o Tailscale ainda reconectando não são falta de login: mandar para a tela de senha nesses casos
+ * deixava preso no login quem nem usa senha (DASHBOARD_AUTH=off).
+ */
+export const needsLogin = (error: unknown): boolean => error instanceof ApiError && error.status === 401
+
+/** Repete a checagem de sessão em falhas passageiras (até 3 vezes); 4xx é resposta definitiva. */
+export const retryMe = (failures: number, error: unknown): boolean =>
+  failures < 3 && !(error instanceof ApiError && error.status >= 400 && error.status < 500)

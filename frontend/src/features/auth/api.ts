@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { postJSON, request } from '../../shared/api/request'
+import { retryMe } from './lib/login'
 
 /** Com o segundo fator ativo, a senha certa não abre a sessão: o código vai ao chat ({ step: 'code' }). */
 export interface LoginResult {
@@ -22,6 +23,6 @@ export interface Me {
   cycle?: { month: string; startsOn: string; endsOn: string }
 }
 
-// Sem retry em 401/403: repetir não muda o resultado e só atrasa o redirecionamento ao login.
+// Sem retry em 401/403 (repetir não muda o resultado); falha de rede e 5xx tentam de novo (retryMe).
 export const useMe = () =>
-  useQuery({ queryKey: ['me'], queryFn: () => request<Me>('/api/me'), retry: false, staleTime: 60_000 })
+  useQuery({ queryKey: ['me'], queryFn: () => request<Me>('/api/me'), retry: retryMe, staleTime: 60_000 })

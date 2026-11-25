@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
 import { isSetupRequired } from '../../shared/api/request'
-import { login, loginCode } from './api'
+import { login, loginCode, useMe } from './api'
 import { loginErrorMessage } from './lib/login'
 
 export default function Login() {
@@ -50,6 +50,12 @@ export default function Login() {
     setStep('password')
     setResent(false)
   }
+
+  // Já há sessão, ou o login está desligado (DASHBOARD_AUTH=off): a tela de senha não tem o que fazer, volta ao app.
+  const me = useMe()
+  useEffect(() => {
+    if (me.data) navigate('/', { replace: true })
+  }, [me.data, navigate])
 
   // Login aberto com o app ainda não configurado (ou reaberto por SETUP_REOPEN): o caminho é o setup.
   const setupRequired = isSetupRequired(passwordStep.error)
